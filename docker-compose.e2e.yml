@@ -1,0 +1,53 @@
+# e2e 전용 스택. 실제 DB를 건드리지 않도록 API와 Postgres를 따로 띄우고, 끝나면 통째로 버린다.
+# Playwright가 직접 올리고 내린다(e2e/global-setup.ts). 직접 실행할 일은 없다.
+name: module-guard-e2e
+services:
+  api:
+    build: ./backend
+    image: module-guard-api
+    ports:
+      - "127.0.0.1:8001:8000"
+    environment:
+      APP_ENVIRONMENT: development
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/terraform_intelligence
+      WORKSPACE_ROOT: /tmp/terraform-intelligence
+      SNAPSHOT_ROOT: /data/snapshots
+      CORS_ORIGINS: '["http://localhost:3100"]'
+      # Login runs against the development fake provider (app/dev/oauth.py), never GitHub.
+      # The browser reaches the API on 8001; the API reaches itself on 8000.
+      GITHUB_CLIENT_ID: e2e-client
+      GITHUB_CLIENT_SECRET: e2e-only-not-a-real-secret
+      SESSION_SECRET: e2e-only-not-a-real-session-secret
+      FRONTEND_URL: http://localhost:3100
+      API_PUBLIC_URL: http://localhost:8001
+      GITHUB_AUTHORIZE_URL: http://localhost:8001/api/dev/oauth/authorize
+      GITHUB_TOKEN_URL: http://localhost:8000/api/dev/oauth/token
+      GITHUB_USER_URL: http://localhost:8000/api/dev/oauth/user
+    depends_on:
+      postgres:
+        condition: service_healthy
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=1g,mode=1777
+      - /data/snapshots:size=256m,uid=10001,gid=10001,mode=0700
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5)"]
+      interval: 3s
+      timeout: 6s
+      retries: 20
+      start_period: 5s
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: terraform_intelligence
+    # 디스크에 남기지 않는다.
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d terraform_intelligence"]
+      interval: 2s
+      timeout: 5s
+      retries: 20

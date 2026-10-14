@@ -1,0 +1,9 @@
+# Local-only demonstration. Never deploy this override to production.
+services:
+  api:
+    environment:
+      APP_ENVIRONMENT: development
+  frontend:
+    build:
+      args:
+        NEXT_PUBLIC_ENABLE_TEST_UI: "true"

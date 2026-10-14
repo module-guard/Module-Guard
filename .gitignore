@@ -1,0 +1,25 @@
+node_modules/
+.next/
+.next-dev/
+.next-e2e/
+out/
+*.tsbuildinfo
+.DS_Store
+.env*.local
+
+# Python backend
+backend/.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+backend/.env
+*.sqlite
+
+backend/.venv-checkov/
+playwright-report/
+test-results/
+backups/
+.env

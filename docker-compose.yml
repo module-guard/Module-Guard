@@ -1,0 +1,81 @@
+services:
+  frontend:
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
+        NEXT_PUBLIC_ENABLE_TEST_UI: ${NEXT_PUBLIC_ENABLE_TEST_UI:-false}
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+  api:
+    build: ./backend
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      APP_ENVIRONMENT: ${APP_ENVIRONMENT:-production}
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/terraform_intelligence
+      WORKSPACE_ROOT: /tmp/terraform-intelligence
+      SNAPSHOT_ROOT: /data/snapshots
+      KEEP_SCAN_WORKSPACE: "false"
+      CHECKOV_TIMEOUT_SECONDS: "300"
+      MAX_REPOSITORY_SIZE_MB: "200"
+      LOG_LEVEL: INFO
+      CORS_ORIGINS: '${CORS_ORIGINS:-["http://localhost:3000"]}'
+      # GitHub login. Values come from the untracked root .env; unset means login is unavailable.
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+      SESSION_SECRET: ${SESSION_SECRET:-}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      API_PUBLIC_URL: ${API_PUBLIC_URL:-http://localhost:8000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=1g,mode=1777
+    volumes:
+      - snapshot_data:/data/snapshots
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    mem_limit: 2g
+    cpus: 2
+    stop_grace_period: 10m
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5)"]
+      interval: 15s
+      timeout: 6s
+      retries: 5
+      start_period: 30s
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: terraform_intelligence
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d terraform_intelligence"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+volumes:
+  postgres_data:
+  snapshot_data:
