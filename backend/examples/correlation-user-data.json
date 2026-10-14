@@ -1,0 +1,485 @@
+{
+  "finding": {
+    "id": "6ae5fa5f-b99c-4b37-9117-e568355c8ea7",
+    "rule_id": "TFCR002",
+    "scanner": "correlation",
+    "severity": "CRITICAL",
+    "title": "Mutable external module influences instance bootstrap configuration",
+    "resource": "aws_instance.web",
+    "resource_type": "aws_instance",
+    "file_path": "main.tf",
+    "line_start": 3,
+    "line_end": 3,
+    "description": "Data from \"module.bootstrap.script\" flows through the recorded graph path into \"aws_instance.web.user_data\". The associated Git module is unpinned or references a mutable branch, increasing supply-chain variability. The external module implementation is opaque and was not downloaded or analyzed. ",
+    "guideline": "Pin the Git module to a full immutable commit SHA and review the output used by instance bootstrap code.",
+    "check_result": "FAILED",
+    "raw_data": {
+      "schema_version": 1,
+      "rule_name": "MUTABLE_EXTERNAL_MODULE_TO_CODE_EXECUTION",
+      "source": "module.bootstrap.script",
+      "sink": "aws_instance.web.user_data",
+      "source_entity": "module.bootstrap",
+      "sink_entity": "aws_instance.web",
+      "source_attribute": "script",
+      "sink_attribute": "user_data",
+      "source_finding_ids": [
+        "decb5a8b-aa03-4c35-991b-46e2fdbd5e71",
+        "275181fd-29e2-4f50-b9df-316d27f621a1"
+      ],
+      "related_finding_ids": [],
+      "source_trust_rule": "TFSC004",
+      "checkov_rule": null,
+      "flow_edge_ids": [
+        "3db0d5c3-7eec-43a0-b77b-d58d2d7447ff",
+        "a714dd0a-718e-4a1f-8a9e-fc42afe24c3c"
+      ],
+      "dependency_edge_ids": [],
+      "flow_path": [
+        "module.bootstrap.script",
+        "local.script",
+        "aws_instance.web.user_data"
+      ],
+      "path_quality": "OPAQUE",
+      "confidence": "MEDIUM",
+      "score": {
+        "components": {
+          "mutable_dependency": 3,
+          "sink_criticality": 4,
+          "checkov": 0,
+          "source_trust": 3,
+          "opaque": 1,
+          "direct_resolved": 0
+        },
+        "total": 11,
+        "policy": "TFCR002",
+        "version": 1
+      },
+      "source_endpoint": {
+        "address": "module.bootstrap.script",
+        "entity_id": "fe22e7bf-af97-4100-a14a-bcb9dbe78cc4",
+        "entity_address": "module.bootstrap",
+        "entity_type": "MODULE",
+        "attribute_path": "script",
+        "resolved": false,
+        "external": true,
+        "opaque": true,
+        "reason": "external_module",
+        "module_path": [],
+        "boundary_entity_id": "fe22e7bf-af97-4100-a14a-bcb9dbe78cc4",
+        "boundary_address": "module.bootstrap",
+        "module_source": "git::https://github.com/example/bootstrap.git?ref=main",
+        "module_source_type": "GIT",
+        "module_expansion": "external",
+        "file_path": "main.tf",
+        "line_start": 1,
+        "line_end": 1,
+        "source_category": "MODULE_OUTPUT",
+        "sink_category": "UNKNOWN"
+      },
+      "sink_endpoint": {
+        "address": "aws_instance.web.user_data",
+        "entity_id": "d588095f-3b2d-477a-9ed6-f98ec85a55da",
+        "entity_address": "aws_instance.web",
+        "entity_type": "RESOURCE",
+        "attribute_path": "user_data",
+        "resolved": true,
+        "external": false,
+        "opaque": false,
+        "reason": null,
+        "module_path": [],
+        "boundary_entity_id": null,
+        "boundary_address": null,
+        "module_source": null,
+        "module_source_type": null,
+        "module_expansion": null,
+        "file_path": "main.tf",
+        "line_start": 3,
+        "line_end": 3,
+        "source_category": "RESOURCE_ATTRIBUTE",
+        "sink_category": "CODE_EXECUTION"
+      },
+      "checkov_mappings": [],
+      "limitations": [
+        "Static potential influence, not runtime evaluation or proof of exploitation."
+      ],
+      "attack_path": [
+        {
+          "type": "SOURCE_TRUST",
+          "address": "module.bootstrap",
+          "rule": "TFSC004",
+          "finding_id": "275181fd-29e2-4f50-b9df-316d27f621a1"
+        },
+        {
+          "type": "FLOW",
+          "address": "module.bootstrap.script"
+        },
+        {
+          "type": "FLOW",
+          "address": "local.script"
+        },
+        {
+          "type": "SINK",
+          "address": "aws_instance.web.user_data",
+          "category": "CODE_EXECUTION"
+        }
+      ],
+      "dedup_key": [
+        "TFCR002",
+        "module.bootstrap.script",
+        "aws_instance.web.user_data",
+        null
+      ],
+      "suppressed_rule_ids": [
+        "TFCR008"
+      ]
+    },
+    "scan_id": "008d366c-8d61-4412-8341-28a5a43d948f",
+    "created_at": "2026-10-10T07:17:27.262786"
+  },
+  "evidence": {
+    "schema_version": 1,
+    "rule_name": "MUTABLE_EXTERNAL_MODULE_TO_CODE_EXECUTION",
+    "source": "module.bootstrap.script",
+    "sink": "aws_instance.web.user_data",
+    "source_entity": "module.bootstrap",
+    "sink_entity": "aws_instance.web",
+    "source_attribute": "script",
+    "sink_attribute": "user_data",
+    "source_finding_ids": [
+      "decb5a8b-aa03-4c35-991b-46e2fdbd5e71",
+      "275181fd-29e2-4f50-b9df-316d27f621a1"
+    ],
+    "related_finding_ids": [],
+    "source_trust_rule": "TFSC004",
+    "checkov_rule": null,
+    "flow_edge_ids": [
+      "3db0d5c3-7eec-43a0-b77b-d58d2d7447ff",
+      "a714dd0a-718e-4a1f-8a9e-fc42afe24c3c"
+    ],
+    "dependency_edge_ids": [],
+    "flow_path": [
+      "module.bootstrap.script",
+      "local.script",
+      "aws_instance.web.user_data"
+    ],
+    "path_quality": "OPAQUE",
+    "confidence": "MEDIUM",
+    "score": {
+      "components": {
+        "mutable_dependency": 3,
+        "sink_criticality": 4,
+        "checkov": 0,
+        "source_trust": 3,
+        "opaque": 1,
+        "direct_resolved": 0
+      },
+      "total": 11,
+      "policy": "TFCR002",
+      "version": 1
+    },
+    "source_endpoint": {
+      "address": "module.bootstrap.script",
+      "entity_id": "fe22e7bf-af97-4100-a14a-bcb9dbe78cc4",
+      "entity_address": "module.bootstrap",
+      "entity_type": "MODULE",
+      "attribute_path": "script",
+      "resolved": false,
+      "external": true,
+      "opaque": true,
+      "reason": "external_module",
+      "module_path": [],
+      "boundary_entity_id": "fe22e7bf-af97-4100-a14a-bcb9dbe78cc4",
+      "boundary_address": "module.bootstrap",
+      "module_source": "git::https://github.com/example/bootstrap.git?ref=main",
+      "module_source_type": "GIT",
+      "module_expansion": "external",
+      "file_path": "main.tf",
+      "line_start": 1,
+      "line_end": 1,
+      "source_category": "MODULE_OUTPUT",
+      "sink_category": "UNKNOWN"
+    },
+    "sink_endpoint": {
+      "address": "aws_instance.web.user_data",
+      "entity_id": "d588095f-3b2d-477a-9ed6-f98ec85a55da",
+      "entity_address": "aws_instance.web",
+      "entity_type": "RESOURCE",
+      "attribute_path": "user_data",
+      "resolved": true,
+      "external": false,
+      "opaque": false,
+      "reason": null,
+      "module_path": [],
+      "boundary_entity_id": null,
+      "boundary_address": null,
+      "module_source": null,
+      "module_source_type": null,
+      "module_expansion": null,
+      "file_path": "main.tf",
+      "line_start": 3,
+      "line_end": 3,
+      "source_category": "RESOURCE_ATTRIBUTE",
+      "sink_category": "CODE_EXECUTION"
+    },
+    "checkov_mappings": [],
+    "limitations": [
+      "Static potential influence, not runtime evaluation or proof of exploitation."
+    ],
+    "attack_path": [
+      {
+        "type": "SOURCE_TRUST",
+        "address": "module.bootstrap",
+        "rule": "TFSC004",
+        "finding_id": "275181fd-29e2-4f50-b9df-316d27f621a1"
+      },
+      {
+        "type": "FLOW",
+        "address": "module.bootstrap.script"
+      },
+      {
+        "type": "FLOW",
+        "address": "local.script"
+      },
+      {
+        "type": "SINK",
+        "address": "aws_instance.web.user_data",
+        "category": "CODE_EXECUTION"
+      }
+    ],
+    "dedup_key": [
+      "TFCR002",
+      "module.bootstrap.script",
+      "aws_instance.web.user_data",
+      null
+    ],
+    "suppressed_rule_ids": [
+      "TFCR008"
+    ],
+    "source_trust": [
+      {
+        "id": "275181fd-29e2-4f50-b9df-316d27f621a1",
+        "rule_id": "TFSC004",
+        "scanner": "source_trust",
+        "severity": "HIGH",
+        "title": "Git module references a mutable branch",
+        "resource": "module.bootstrap",
+        "resource_type": "module",
+        "file_path": "main.tf",
+        "line_start": 1,
+        "line_end": 1,
+        "description": "Git module references a mutable branch. The branch 'main' may resolve to new code without a configuration change.",
+        "guideline": "Pin the module source to a full immutable commit SHA or a controlled versioned release.",
+        "check_result": "FAILED",
+        "raw_data": {
+          "source": "git::https://github.com/example/bootstrap.git?ref=main",
+          "version": null,
+          "version_type": "MISSING",
+          "module_path": [],
+          "entity_id": "fe22e7bf-af97-4100-a14a-bcb9dbe78cc4",
+          "source_type": "GIT",
+          "ref": "main",
+          "ref_type": "BRANCH",
+          "immutable": false,
+          "rule_name": "BRANCH_REFERENCED_GIT_MODULE"
+        },
+        "scan_id": "008d366c-8d61-4412-8341-28a5a43d948f",
+        "created_at": "2026-10-10T07:17:27.262786"
+      },
+      {
+        "id": "decb5a8b-aa03-4c35-991b-46e2fdbd5e71",
+        "rule_id": "TFSC006",
+        "scanner": "source_trust",
+        "severity": "INFO",
+        "title": "Module uses an external Git source",
+        "resource": "module.bootstrap",
+        "resource_type": "module",
+        "file_path": "main.tf",
+        "line_start": 1,
+        "line_end": 1,
+        "description": "Module uses an external Git source. This is a dependency surface observation, not a maliciousness verdict.",
+        "guideline": "Review the source owner and change controls. An external source alone does not imply malicious code.",
+        "check_result": "FAILED",
+        "raw_data": {
+          "source": "git::https://github.com/example/bootstrap.git?ref=main",
+          "version": null,
+          "version_type": "MISSING",
+          "module_path": [],
+          "entity_id": "fe22e7bf-af97-4100-a14a-bcb9dbe78cc4",
+          "source_type": "GIT",
+          "ref": "main",
+          "ref_type": "BRANCH",
+          "immutable": false,
+          "rule_name": "EXTERNAL_GIT_MODULE"
+        },
+        "scan_id": "008d366c-8d61-4412-8341-28a5a43d948f",
+        "created_at": "2026-10-10T07:17:27.262785"
+      }
+    ],
+    "checkov": [],
+    "edges": [
+      {
+        "id": "3db0d5c3-7eec-43a0-b77b-d58d2d7447ff",
+        "type": "PROPAGATES_THROUGH_LOCAL",
+        "source_entity_id": "fe22e7bf-af97-4100-a14a-bcb9dbe78cc4",
+        "target_entity_id": "926a7b12-485b-4f9f-b9d0-7c6267486f36",
+        "expression": "module.bootstrap.script",
+        "metadata": {
+          "graph_kind": "data_flow",
+          "flow_schema_version": 1,
+          "source": {
+            "address": "module.bootstrap.script",
+            "entity_id": "fe22e7bf-af97-4100-a14a-bcb9dbe78cc4",
+            "entity_address": "module.bootstrap",
+            "entity_type": "MODULE",
+            "attribute_path": "script",
+            "resolved": false,
+            "external": true,
+            "opaque": true,
+            "reason": "external_module",
+            "module_path": [],
+            "boundary_entity_id": "fe22e7bf-af97-4100-a14a-bcb9dbe78cc4",
+            "boundary_address": "module.bootstrap",
+            "module_source": "git::https://github.com/example/bootstrap.git?ref=main",
+            "module_source_type": "GIT",
+            "module_expansion": "external",
+            "file_path": "main.tf",
+            "line_start": 1,
+            "line_end": 1,
+            "source_category": "MODULE_OUTPUT",
+            "sink_category": "UNKNOWN"
+          },
+          "target": {
+            "address": "local.script",
+            "entity_id": "926a7b12-485b-4f9f-b9d0-7c6267486f36",
+            "entity_address": "local.script",
+            "entity_type": "LOCAL",
+            "attribute_path": null,
+            "resolved": true,
+            "external": false,
+            "opaque": false,
+            "reason": null,
+            "module_path": [],
+            "boundary_entity_id": null,
+            "boundary_address": null,
+            "module_source": null,
+            "module_source_type": null,
+            "module_expansion": null,
+            "file_path": "main.tf",
+            "line_start": 2,
+            "line_end": 2,
+            "source_category": "LOCAL_VALUE",
+            "sink_category": "UNKNOWN"
+          },
+          "source_address": "module.bootstrap.script",
+          "target_address": "local.script",
+          "resolved": false,
+          "opaque": true,
+          "external": true,
+          "cross_module": false,
+          "source_category": "MODULE_OUTPUT",
+          "sink_category": "UNKNOWN",
+          "transformations": [],
+          "conditional": false,
+          "collection_iteration": false,
+          "traversal": "module.bootstrap.script",
+          "referenced_attribute": "script",
+          "potential": true,
+          "object_precision": "aggregate"
+        }
+      },
+      {
+        "id": "a714dd0a-718e-4a1f-8a9e-fc42afe24c3c",
+        "type": "SINKS_TO_RESOURCE_ATTRIBUTE",
+        "source_entity_id": "926a7b12-485b-4f9f-b9d0-7c6267486f36",
+        "target_entity_id": "d588095f-3b2d-477a-9ed6-f98ec85a55da",
+        "expression": "local.script",
+        "metadata": {
+          "graph_kind": "data_flow",
+          "flow_schema_version": 1,
+          "source": {
+            "address": "local.script",
+            "entity_id": "926a7b12-485b-4f9f-b9d0-7c6267486f36",
+            "entity_address": "local.script",
+            "entity_type": "LOCAL",
+            "attribute_path": null,
+            "resolved": true,
+            "external": false,
+            "opaque": false,
+            "reason": null,
+            "module_path": [],
+            "boundary_entity_id": null,
+            "boundary_address": null,
+            "module_source": null,
+            "module_source_type": null,
+            "module_expansion": null,
+            "file_path": "main.tf",
+            "line_start": 2,
+            "line_end": 2,
+            "source_category": "LOCAL_VALUE",
+            "sink_category": "UNKNOWN"
+          },
+          "target": {
+            "address": "aws_instance.web.user_data",
+            "entity_id": "d588095f-3b2d-477a-9ed6-f98ec85a55da",
+            "entity_address": "aws_instance.web",
+            "entity_type": "RESOURCE",
+            "attribute_path": "user_data",
+            "resolved": true,
+            "external": false,
+            "opaque": false,
+            "reason": null,
+            "module_path": [],
+            "boundary_entity_id": null,
+            "boundary_address": null,
+            "module_source": null,
+            "module_source_type": null,
+            "module_expansion": null,
+            "file_path": "main.tf",
+            "line_start": 3,
+            "line_end": 3,
+            "source_category": "RESOURCE_ATTRIBUTE",
+            "sink_category": "CODE_EXECUTION"
+          },
+          "source_address": "local.script",
+          "target_address": "aws_instance.web.user_data",
+          "resolved": true,
+          "opaque": false,
+          "external": false,
+          "cross_module": false,
+          "source_category": "LOCAL_VALUE",
+          "sink_category": "CODE_EXECUTION",
+          "transformations": [],
+          "conditional": false,
+          "collection_iteration": false,
+          "traversal": "local.script",
+          "referenced_attribute": null,
+          "potential": true,
+          "object_precision": "aggregate"
+        }
+      }
+    ],
+    "missing_edge_ids": [],
+    "missing_finding_ids": []
+  },
+  "attack_path": [
+    {
+      "type": "SOURCE_TRUST",
+      "address": "module.bootstrap",
+      "rule": "TFSC004",
+      "finding_id": "275181fd-29e2-4f50-b9df-316d27f621a1"
+    },
+    {
+      "type": "FLOW",
+      "address": "module.bootstrap.script"
+    },
+    {
+      "type": "FLOW",
+      "address": "local.script"
+    },
+    {
+      "type": "SINK",
+      "address": "aws_instance.web.user_data",
+      "category": "CODE_EXECUTION"
+    }
+  ]
+}

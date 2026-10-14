@@ -1,0 +1,556 @@
+{
+  "finding": {
+    "id": "6762163e-f571-4ef0-9356-7458b2b86a16",
+    "rule_id": "TFCR001",
+    "scanner": "correlation",
+    "severity": "CRITICAL",
+    "title": "Mutable external module influences an IAM policy",
+    "resource": "aws_iam_role_policy.admin",
+    "resource_type": "aws_iam_role_policy",
+    "file_path": "main.tf",
+    "line_start": 3,
+    "line_end": 6,
+    "description": "Data from \"module.policy_source.policy\" flows through the recorded graph path into \"aws_iam_role_policy.admin.policy\". The associated Git module is unpinned or references a mutable branch, increasing supply-chain variability. Checkov independently reports a configuration issue on the mapped resource/attribute; this does not establish that the dependency caused it. The external module implementation is opaque and was not downloaded or analyzed. ",
+    "guideline": "Pin the Git module to a full immutable commit SHA; review the influencing output; restrict IAM actions and resources to least privilege.",
+    "check_result": "FAILED",
+    "raw_data": {
+      "schema_version": 1,
+      "rule_name": "MUTABLE_EXTERNAL_MODULE_TO_IAM_POLICY",
+      "source": "module.policy_source.policy",
+      "sink": "aws_iam_role_policy.admin.policy",
+      "source_entity": "module.policy_source",
+      "sink_entity": "aws_iam_role_policy.admin",
+      "source_attribute": "policy",
+      "sink_attribute": "policy",
+      "source_finding_ids": [
+        "cae1c086-8c87-4dc9-b67e-452a79d99280",
+        "a2497f4c-7cd1-4348-b2a1-f14e6a1ad293"
+      ],
+      "related_finding_ids": [
+        "bbb89479-9002-454b-af8e-57dbca0af21b"
+      ],
+      "source_trust_rule": "TFSC004",
+      "checkov_rule": "CKV_AWS_62",
+      "flow_edge_ids": [
+        "eb43c048-b77e-4ef8-bcfa-9ff0fee234cc",
+        "b45e29c6-1e77-4d80-a38b-02c76348ff3d"
+      ],
+      "dependency_edge_ids": [],
+      "flow_path": [
+        "module.policy_source.policy",
+        "local.policy",
+        "aws_iam_role_policy.admin.policy"
+      ],
+      "path_quality": "OPAQUE",
+      "confidence": "MEDIUM",
+      "score": {
+        "components": {
+          "mutable_dependency": 3,
+          "sink_criticality": 4,
+          "checkov": 3,
+          "source_trust": 3,
+          "opaque": 1,
+          "direct_resolved": 0
+        },
+        "total": 14,
+        "policy": "TFCR001",
+        "version": 1
+      },
+      "source_endpoint": {
+        "address": "module.policy_source.policy",
+        "entity_id": "5f82788d-efdd-41b7-a6de-22ad088369e6",
+        "entity_address": "module.policy_source",
+        "entity_type": "MODULE",
+        "attribute_path": "policy",
+        "resolved": false,
+        "external": true,
+        "opaque": true,
+        "reason": "external_module",
+        "module_path": [],
+        "boundary_entity_id": "5f82788d-efdd-41b7-a6de-22ad088369e6",
+        "boundary_address": "module.policy_source",
+        "module_source": "git::https://github.com/example/policy.git?ref=main",
+        "module_source_type": "GIT",
+        "module_expansion": "external",
+        "file_path": "main.tf",
+        "line_start": 1,
+        "line_end": 1,
+        "source_category": "MODULE_OUTPUT",
+        "sink_category": "UNKNOWN"
+      },
+      "sink_endpoint": {
+        "address": "aws_iam_role_policy.admin.policy",
+        "entity_id": "1d9bab3b-a2ef-413f-a344-f2d2194260e7",
+        "entity_address": "aws_iam_role_policy.admin",
+        "entity_type": "RESOURCE",
+        "attribute_path": "policy",
+        "resolved": true,
+        "external": false,
+        "opaque": false,
+        "reason": null,
+        "module_path": [],
+        "boundary_entity_id": null,
+        "boundary_address": null,
+        "module_source": null,
+        "module_source_type": null,
+        "module_expansion": null,
+        "file_path": "main.tf",
+        "line_start": 3,
+        "line_end": 6,
+        "source_category": "RESOURCE_ATTRIBUTE",
+        "sink_category": "IAM_POLICY"
+      },
+      "checkov_mappings": [
+        {
+          "finding_id": "bbb89479-9002-454b-af8e-57dbca0af21b",
+          "entity": "aws_iam_role_policy.admin",
+          "method": "exact_address",
+          "confidence": "HIGH",
+          "level": "attribute",
+          "attributes": [
+            "policy"
+          ]
+        }
+      ],
+      "limitations": [
+        "Static potential influence, not runtime evaluation or proof of exploitation."
+      ],
+      "attack_path": [
+        {
+          "type": "SOURCE_TRUST",
+          "address": "module.policy_source",
+          "rule": "TFSC004",
+          "finding_id": "a2497f4c-7cd1-4348-b2a1-f14e6a1ad293"
+        },
+        {
+          "type": "FLOW",
+          "address": "module.policy_source.policy"
+        },
+        {
+          "type": "FLOW",
+          "address": "local.policy"
+        },
+        {
+          "type": "SINK",
+          "address": "aws_iam_role_policy.admin.policy",
+          "category": "IAM_POLICY"
+        },
+        {
+          "type": "CHECKOV",
+          "address": "aws_iam_role_policy.admin",
+          "rule": "CKV_AWS_62",
+          "finding_id": "bbb89479-9002-454b-af8e-57dbca0af21b"
+        }
+      ],
+      "dedup_key": [
+        "TFCR001",
+        "module.policy_source.policy",
+        "aws_iam_role_policy.admin.policy",
+        "CKV_AWS_62"
+      ],
+      "suppressed_rule_ids": [
+        "TFCR005",
+        "TFCR008"
+      ]
+    },
+    "scan_id": "117319bf-3c0b-4655-a43a-f31a4aaaa32d",
+    "created_at": "2026-10-10T07:17:27.247019"
+  },
+  "evidence": {
+    "schema_version": 1,
+    "rule_name": "MUTABLE_EXTERNAL_MODULE_TO_IAM_POLICY",
+    "source": "module.policy_source.policy",
+    "sink": "aws_iam_role_policy.admin.policy",
+    "source_entity": "module.policy_source",
+    "sink_entity": "aws_iam_role_policy.admin",
+    "source_attribute": "policy",
+    "sink_attribute": "policy",
+    "source_finding_ids": [
+      "cae1c086-8c87-4dc9-b67e-452a79d99280",
+      "a2497f4c-7cd1-4348-b2a1-f14e6a1ad293"
+    ],
+    "related_finding_ids": [
+      "bbb89479-9002-454b-af8e-57dbca0af21b"
+    ],
+    "source_trust_rule": "TFSC004",
+    "checkov_rule": "CKV_AWS_62",
+    "flow_edge_ids": [
+      "eb43c048-b77e-4ef8-bcfa-9ff0fee234cc",
+      "b45e29c6-1e77-4d80-a38b-02c76348ff3d"
+    ],
+    "dependency_edge_ids": [],
+    "flow_path": [
+      "module.policy_source.policy",
+      "local.policy",
+      "aws_iam_role_policy.admin.policy"
+    ],
+    "path_quality": "OPAQUE",
+    "confidence": "MEDIUM",
+    "score": {
+      "components": {
+        "mutable_dependency": 3,
+        "sink_criticality": 4,
+        "checkov": 3,
+        "source_trust": 3,
+        "opaque": 1,
+        "direct_resolved": 0
+      },
+      "total": 14,
+      "policy": "TFCR001",
+      "version": 1
+    },
+    "source_endpoint": {
+      "address": "module.policy_source.policy",
+      "entity_id": "5f82788d-efdd-41b7-a6de-22ad088369e6",
+      "entity_address": "module.policy_source",
+      "entity_type": "MODULE",
+      "attribute_path": "policy",
+      "resolved": false,
+      "external": true,
+      "opaque": true,
+      "reason": "external_module",
+      "module_path": [],
+      "boundary_entity_id": "5f82788d-efdd-41b7-a6de-22ad088369e6",
+      "boundary_address": "module.policy_source",
+      "module_source": "git::https://github.com/example/policy.git?ref=main",
+      "module_source_type": "GIT",
+      "module_expansion": "external",
+      "file_path": "main.tf",
+      "line_start": 1,
+      "line_end": 1,
+      "source_category": "MODULE_OUTPUT",
+      "sink_category": "UNKNOWN"
+    },
+    "sink_endpoint": {
+      "address": "aws_iam_role_policy.admin.policy",
+      "entity_id": "1d9bab3b-a2ef-413f-a344-f2d2194260e7",
+      "entity_address": "aws_iam_role_policy.admin",
+      "entity_type": "RESOURCE",
+      "attribute_path": "policy",
+      "resolved": true,
+      "external": false,
+      "opaque": false,
+      "reason": null,
+      "module_path": [],
+      "boundary_entity_id": null,
+      "boundary_address": null,
+      "module_source": null,
+      "module_source_type": null,
+      "module_expansion": null,
+      "file_path": "main.tf",
+      "line_start": 3,
+      "line_end": 6,
+      "source_category": "RESOURCE_ATTRIBUTE",
+      "sink_category": "IAM_POLICY"
+    },
+    "checkov_mappings": [
+      {
+        "finding_id": "bbb89479-9002-454b-af8e-57dbca0af21b",
+        "entity": "aws_iam_role_policy.admin",
+        "method": "exact_address",
+        "confidence": "HIGH",
+        "level": "attribute",
+        "attributes": [
+          "policy"
+        ]
+      }
+    ],
+    "limitations": [
+      "Static potential influence, not runtime evaluation or proof of exploitation."
+    ],
+    "attack_path": [
+      {
+        "type": "SOURCE_TRUST",
+        "address": "module.policy_source",
+        "rule": "TFSC004",
+        "finding_id": "a2497f4c-7cd1-4348-b2a1-f14e6a1ad293"
+      },
+      {
+        "type": "FLOW",
+        "address": "module.policy_source.policy"
+      },
+      {
+        "type": "FLOW",
+        "address": "local.policy"
+      },
+      {
+        "type": "SINK",
+        "address": "aws_iam_role_policy.admin.policy",
+        "category": "IAM_POLICY"
+      },
+      {
+        "type": "CHECKOV",
+        "address": "aws_iam_role_policy.admin",
+        "rule": "CKV_AWS_62",
+        "finding_id": "bbb89479-9002-454b-af8e-57dbca0af21b"
+      }
+    ],
+    "dedup_key": [
+      "TFCR001",
+      "module.policy_source.policy",
+      "aws_iam_role_policy.admin.policy",
+      "CKV_AWS_62"
+    ],
+    "suppressed_rule_ids": [
+      "TFCR005",
+      "TFCR008"
+    ],
+    "source_trust": [
+      {
+        "id": "cae1c086-8c87-4dc9-b67e-452a79d99280",
+        "rule_id": "TFSC006",
+        "scanner": "source_trust",
+        "severity": "INFO",
+        "title": "Module uses an external Git source",
+        "resource": "module.policy_source",
+        "resource_type": "module",
+        "file_path": "main.tf",
+        "line_start": 1,
+        "line_end": 1,
+        "description": "Module uses an external Git source. This is a dependency surface observation, not a maliciousness verdict.",
+        "guideline": "Review the source owner and change controls. An external source alone does not imply malicious code.",
+        "check_result": "FAILED",
+        "raw_data": {
+          "source": "git::https://github.com/example/policy.git?ref=main",
+          "version": null,
+          "version_type": "MISSING",
+          "module_path": [],
+          "entity_id": "5f82788d-efdd-41b7-a6de-22ad088369e6",
+          "source_type": "GIT",
+          "ref": "main",
+          "ref_type": "BRANCH",
+          "immutable": false,
+          "rule_name": "EXTERNAL_GIT_MODULE"
+        },
+        "scan_id": "117319bf-3c0b-4655-a43a-f31a4aaaa32d",
+        "created_at": "2026-10-10T07:17:27.247015"
+      },
+      {
+        "id": "a2497f4c-7cd1-4348-b2a1-f14e6a1ad293",
+        "rule_id": "TFSC004",
+        "scanner": "source_trust",
+        "severity": "HIGH",
+        "title": "Git module references a mutable branch",
+        "resource": "module.policy_source",
+        "resource_type": "module",
+        "file_path": "main.tf",
+        "line_start": 1,
+        "line_end": 1,
+        "description": "Git module references a mutable branch. The branch 'main' may resolve to new code without a configuration change.",
+        "guideline": "Pin the module source to a full immutable commit SHA or a controlled versioned release.",
+        "check_result": "FAILED",
+        "raw_data": {
+          "source": "git::https://github.com/example/policy.git?ref=main",
+          "version": null,
+          "version_type": "MISSING",
+          "module_path": [],
+          "entity_id": "5f82788d-efdd-41b7-a6de-22ad088369e6",
+          "source_type": "GIT",
+          "ref": "main",
+          "ref_type": "BRANCH",
+          "immutable": false,
+          "rule_name": "BRANCH_REFERENCED_GIT_MODULE"
+        },
+        "scan_id": "117319bf-3c0b-4655-a43a-f31a4aaaa32d",
+        "created_at": "2026-10-10T07:17:27.247018"
+      }
+    ],
+    "checkov": [
+      {
+        "id": "bbb89479-9002-454b-af8e-57dbca0af21b",
+        "rule_id": "CKV_AWS_62",
+        "scanner": "checkov",
+        "severity": "HIGH",
+        "title": "IAM administrative privileges",
+        "resource": "aws_iam_role_policy.admin",
+        "resource_type": "aws_iam_role_policy",
+        "file_path": "/main.tf",
+        "line_start": null,
+        "line_end": null,
+        "description": null,
+        "guideline": null,
+        "check_result": "FAILED",
+        "raw_data": {
+          "check_result": {
+            "evaluated_keys": [
+              "policy"
+            ]
+          }
+        },
+        "scan_id": "117319bf-3c0b-4655-a43a-f31a4aaaa32d",
+        "created_at": "2026-10-10T07:17:27.247019"
+      }
+    ],
+    "edges": [
+      {
+        "id": "eb43c048-b77e-4ef8-bcfa-9ff0fee234cc",
+        "type": "PROPAGATES_THROUGH_LOCAL",
+        "source_entity_id": "5f82788d-efdd-41b7-a6de-22ad088369e6",
+        "target_entity_id": "dea7fb25-333d-4ea6-85b4-6281c8a2aa69",
+        "expression": "module.policy_source.policy",
+        "metadata": {
+          "graph_kind": "data_flow",
+          "flow_schema_version": 1,
+          "source": {
+            "address": "module.policy_source.policy",
+            "entity_id": "5f82788d-efdd-41b7-a6de-22ad088369e6",
+            "entity_address": "module.policy_source",
+            "entity_type": "MODULE",
+            "attribute_path": "policy",
+            "resolved": false,
+            "external": true,
+            "opaque": true,
+            "reason": "external_module",
+            "module_path": [],
+            "boundary_entity_id": "5f82788d-efdd-41b7-a6de-22ad088369e6",
+            "boundary_address": "module.policy_source",
+            "module_source": "git::https://github.com/example/policy.git?ref=main",
+            "module_source_type": "GIT",
+            "module_expansion": "external",
+            "file_path": "main.tf",
+            "line_start": 1,
+            "line_end": 1,
+            "source_category": "MODULE_OUTPUT",
+            "sink_category": "UNKNOWN"
+          },
+          "target": {
+            "address": "local.policy",
+            "entity_id": "dea7fb25-333d-4ea6-85b4-6281c8a2aa69",
+            "entity_address": "local.policy",
+            "entity_type": "LOCAL",
+            "attribute_path": null,
+            "resolved": true,
+            "external": false,
+            "opaque": false,
+            "reason": null,
+            "module_path": [],
+            "boundary_entity_id": null,
+            "boundary_address": null,
+            "module_source": null,
+            "module_source_type": null,
+            "module_expansion": null,
+            "file_path": "main.tf",
+            "line_start": 2,
+            "line_end": 2,
+            "source_category": "LOCAL_VALUE",
+            "sink_category": "UNKNOWN"
+          },
+          "source_address": "module.policy_source.policy",
+          "target_address": "local.policy",
+          "resolved": false,
+          "opaque": true,
+          "external": true,
+          "cross_module": false,
+          "source_category": "MODULE_OUTPUT",
+          "sink_category": "UNKNOWN",
+          "transformations": [],
+          "conditional": false,
+          "collection_iteration": false,
+          "traversal": "module.policy_source.policy",
+          "referenced_attribute": "policy",
+          "potential": true,
+          "object_precision": "aggregate"
+        }
+      },
+      {
+        "id": "b45e29c6-1e77-4d80-a38b-02c76348ff3d",
+        "type": "SINKS_TO_RESOURCE_ATTRIBUTE",
+        "source_entity_id": "dea7fb25-333d-4ea6-85b4-6281c8a2aa69",
+        "target_entity_id": "1d9bab3b-a2ef-413f-a344-f2d2194260e7",
+        "expression": "local.policy",
+        "metadata": {
+          "graph_kind": "data_flow",
+          "flow_schema_version": 1,
+          "source": {
+            "address": "local.policy",
+            "entity_id": "dea7fb25-333d-4ea6-85b4-6281c8a2aa69",
+            "entity_address": "local.policy",
+            "entity_type": "LOCAL",
+            "attribute_path": null,
+            "resolved": true,
+            "external": false,
+            "opaque": false,
+            "reason": null,
+            "module_path": [],
+            "boundary_entity_id": null,
+            "boundary_address": null,
+            "module_source": null,
+            "module_source_type": null,
+            "module_expansion": null,
+            "file_path": "main.tf",
+            "line_start": 2,
+            "line_end": 2,
+            "source_category": "LOCAL_VALUE",
+            "sink_category": "UNKNOWN"
+          },
+          "target": {
+            "address": "aws_iam_role_policy.admin.policy",
+            "entity_id": "1d9bab3b-a2ef-413f-a344-f2d2194260e7",
+            "entity_address": "aws_iam_role_policy.admin",
+            "entity_type": "RESOURCE",
+            "attribute_path": "policy",
+            "resolved": true,
+            "external": false,
+            "opaque": false,
+            "reason": null,
+            "module_path": [],
+            "boundary_entity_id": null,
+            "boundary_address": null,
+            "module_source": null,
+            "module_source_type": null,
+            "module_expansion": null,
+            "file_path": "main.tf",
+            "line_start": 3,
+            "line_end": 6,
+            "source_category": "RESOURCE_ATTRIBUTE",
+            "sink_category": "IAM_POLICY"
+          },
+          "source_address": "local.policy",
+          "target_address": "aws_iam_role_policy.admin.policy",
+          "resolved": true,
+          "opaque": false,
+          "external": false,
+          "cross_module": false,
+          "source_category": "LOCAL_VALUE",
+          "sink_category": "IAM_POLICY",
+          "transformations": [],
+          "conditional": false,
+          "collection_iteration": false,
+          "traversal": "local.policy",
+          "referenced_attribute": null,
+          "potential": true,
+          "object_precision": "aggregate"
+        }
+      }
+    ],
+    "missing_edge_ids": [],
+    "missing_finding_ids": []
+  },
+  "attack_path": [
+    {
+      "type": "SOURCE_TRUST",
+      "address": "module.policy_source",
+      "rule": "TFSC004",
+      "finding_id": "a2497f4c-7cd1-4348-b2a1-f14e6a1ad293"
+    },
+    {
+      "type": "FLOW",
+      "address": "module.policy_source.policy"
+    },
+    {
+      "type": "FLOW",
+      "address": "local.policy"
+    },
+    {
+      "type": "SINK",
+      "address": "aws_iam_role_policy.admin.policy",
+      "category": "IAM_POLICY"
+    },
+    {
+      "type": "CHECKOV",
+      "address": "aws_iam_role_policy.admin",
+      "rule": "CKV_AWS_62",
+      "finding_id": "bbb89479-9002-454b-af8e-57dbca0af21b"
+    }
+  ]
+}

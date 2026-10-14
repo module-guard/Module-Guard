@@ -1,0 +1,54 @@
+[
+  {
+    "rule_id": "TFSC006",
+    "scanner": "source_trust",
+    "severity": "INFO",
+    "title": "Module uses an external Git source",
+    "resource": "module.external",
+    "resource_type": "module",
+    "file_path": "main.tf",
+    "line_start": 1,
+    "line_end": 3,
+    "description": "Module uses an external Git source. This is a dependency surface observation, not a maliciousness verdict.",
+    "guideline": "Review the source owner and change controls. An external source alone does not imply malicious code.",
+    "check_result": "FAILED",
+    "raw_data": {
+      "source": "git::https://github.com/example/terraform-module.git?ref=main",
+      "version": null,
+      "version_type": "MISSING",
+      "module_path": [],
+      "entity_id": "47553ce5-3ef8-49e9-9f6f-2b3974ef1505",
+      "source_type": "GIT",
+      "ref": "main",
+      "ref_type": "BRANCH",
+      "immutable": false,
+      "rule_name": "EXTERNAL_GIT_MODULE"
+    }
+  },
+  {
+    "rule_id": "TFSC004",
+    "scanner": "source_trust",
+    "severity": "HIGH",
+    "title": "Git module references a mutable branch",
+    "resource": "module.external",
+    "resource_type": "module",
+    "file_path": "main.tf",
+    "line_start": 1,
+    "line_end": 3,
+    "description": "Git module references a mutable branch. The branch 'main' may resolve to new code without a configuration change.",
+    "guideline": "Pin the module source to a full immutable commit SHA or a controlled versioned release.",
+    "check_result": "FAILED",
+    "raw_data": {
+      "source": "git::https://github.com/example/terraform-module.git?ref=main",
+      "version": null,
+      "version_type": "MISSING",
+      "module_path": [],
+      "entity_id": "47553ce5-3ef8-49e9-9f6f-2b3974ef1505",
+      "source_type": "GIT",
+      "ref": "main",
+      "ref_type": "BRANCH",
+      "immutable": false,
+      "rule_name": "BRANCH_REFERENCED_GIT_MODULE"
+    }
+  }
+]

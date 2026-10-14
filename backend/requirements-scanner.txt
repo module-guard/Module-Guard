@@ -1,0 +1,2 @@
+# Separate venv: Checkov uses a fork that also owns the hcl2 package.
+checkov==3.3.26

@@ -1,0 +1,310 @@
+{
+  "finding": {
+    "id": "9122a5ac-19da-4cdf-9fa3-5aa0fb020a83",
+    "rule_id": "TFCR008",
+    "scanner": "correlation",
+    "severity": "MEDIUM",
+    "title": "Opaque external module output reaches a sensitive sink",
+    "resource": "aws_lambda_function.app",
+    "resource_type": "aws_lambda_function",
+    "file_path": "main.tf",
+    "line_start": 3,
+    "line_end": 5,
+    "description": "Data from \"module.external.environment\" flows through the recorded graph path into \"aws_lambda_function.app.environment.variables\". The external module implementation is opaque and was not downloaded or analyzed. ",
+    "guideline": "Review the external output and implementation before trusting it at this sink. Pin dependency versions and retain reviewable source provenance.",
+    "check_result": "FAILED",
+    "raw_data": {
+      "schema_version": 1,
+      "rule_name": "OPAQUE_EXTERNAL_FLOW_TO_SENSITIVE_SINK",
+      "source": "module.external.environment",
+      "sink": "aws_lambda_function.app.environment.variables",
+      "source_entity": "module.external",
+      "sink_entity": "aws_lambda_function.app",
+      "source_attribute": "environment",
+      "sink_attribute": "environment.variables",
+      "source_finding_ids": [],
+      "related_finding_ids": [],
+      "source_trust_rule": null,
+      "checkov_rule": null,
+      "flow_edge_ids": [
+        "3551c4c7-611c-472a-9ce9-5c6f227590e5"
+      ],
+      "dependency_edge_ids": [],
+      "flow_path": [
+        "module.external.environment",
+        "aws_lambda_function.app.environment.variables"
+      ],
+      "path_quality": "OPAQUE",
+      "confidence": "MEDIUM",
+      "score": {
+        "components": {
+          "mutable_dependency": 0,
+          "sink_criticality": 2,
+          "checkov": 0,
+          "source_trust": 0,
+          "opaque": 1,
+          "direct_resolved": 0
+        },
+        "total": 3,
+        "policy": "TFCR008",
+        "version": 1
+      },
+      "source_endpoint": {
+        "address": "module.external.environment",
+        "entity_id": "d9ed64d0-4fc5-4ed4-8139-cdf0a61c238b",
+        "entity_address": "module.external",
+        "entity_type": "MODULE",
+        "attribute_path": "environment",
+        "resolved": false,
+        "external": true,
+        "opaque": true,
+        "reason": "external_module",
+        "module_path": [],
+        "boundary_entity_id": "d9ed64d0-4fc5-4ed4-8139-cdf0a61c238b",
+        "boundary_address": "module.external",
+        "module_source": "example/config/aws",
+        "module_source_type": "REGISTRY",
+        "module_expansion": "external",
+        "file_path": "main.tf",
+        "line_start": 1,
+        "line_end": 2,
+        "source_category": "MODULE_OUTPUT",
+        "sink_category": "UNKNOWN"
+      },
+      "sink_endpoint": {
+        "address": "aws_lambda_function.app.environment.variables",
+        "entity_id": "de3682c1-ea58-47a4-a31b-e625bffbb691",
+        "entity_address": "aws_lambda_function.app",
+        "entity_type": "RESOURCE",
+        "attribute_path": "environment.variables",
+        "resolved": true,
+        "external": false,
+        "opaque": false,
+        "reason": null,
+        "module_path": [],
+        "boundary_entity_id": null,
+        "boundary_address": null,
+        "module_source": null,
+        "module_source_type": null,
+        "module_expansion": null,
+        "file_path": "main.tf",
+        "line_start": 3,
+        "line_end": 5,
+        "source_category": "RESOURCE_ATTRIBUTE",
+        "sink_category": "ENVIRONMENT"
+      },
+      "checkov_mappings": [],
+      "limitations": [
+        "Static potential influence, not runtime evaluation or proof of exploitation."
+      ],
+      "attack_path": [
+        {
+          "type": "FLOW",
+          "address": "module.external.environment"
+        },
+        {
+          "type": "SINK",
+          "address": "aws_lambda_function.app.environment.variables",
+          "category": "ENVIRONMENT"
+        }
+      ],
+      "dedup_key": [
+        "TFCR008",
+        "module.external.environment",
+        "aws_lambda_function.app.environment.variables",
+        null
+      ]
+    },
+    "scan_id": "13a18f40-c370-4d6c-bc1c-710326dc9114",
+    "created_at": "2026-10-10T07:17:27.271071"
+  },
+  "evidence": {
+    "schema_version": 1,
+    "rule_name": "OPAQUE_EXTERNAL_FLOW_TO_SENSITIVE_SINK",
+    "source": "module.external.environment",
+    "sink": "aws_lambda_function.app.environment.variables",
+    "source_entity": "module.external",
+    "sink_entity": "aws_lambda_function.app",
+    "source_attribute": "environment",
+    "sink_attribute": "environment.variables",
+    "source_finding_ids": [],
+    "related_finding_ids": [],
+    "source_trust_rule": null,
+    "checkov_rule": null,
+    "flow_edge_ids": [
+      "3551c4c7-611c-472a-9ce9-5c6f227590e5"
+    ],
+    "dependency_edge_ids": [],
+    "flow_path": [
+      "module.external.environment",
+      "aws_lambda_function.app.environment.variables"
+    ],
+    "path_quality": "OPAQUE",
+    "confidence": "MEDIUM",
+    "score": {
+      "components": {
+        "mutable_dependency": 0,
+        "sink_criticality": 2,
+        "checkov": 0,
+        "source_trust": 0,
+        "opaque": 1,
+        "direct_resolved": 0
+      },
+      "total": 3,
+      "policy": "TFCR008",
+      "version": 1
+    },
+    "source_endpoint": {
+      "address": "module.external.environment",
+      "entity_id": "d9ed64d0-4fc5-4ed4-8139-cdf0a61c238b",
+      "entity_address": "module.external",
+      "entity_type": "MODULE",
+      "attribute_path": "environment",
+      "resolved": false,
+      "external": true,
+      "opaque": true,
+      "reason": "external_module",
+      "module_path": [],
+      "boundary_entity_id": "d9ed64d0-4fc5-4ed4-8139-cdf0a61c238b",
+      "boundary_address": "module.external",
+      "module_source": "example/config/aws",
+      "module_source_type": "REGISTRY",
+      "module_expansion": "external",
+      "file_path": "main.tf",
+      "line_start": 1,
+      "line_end": 2,
+      "source_category": "MODULE_OUTPUT",
+      "sink_category": "UNKNOWN"
+    },
+    "sink_endpoint": {
+      "address": "aws_lambda_function.app.environment.variables",
+      "entity_id": "de3682c1-ea58-47a4-a31b-e625bffbb691",
+      "entity_address": "aws_lambda_function.app",
+      "entity_type": "RESOURCE",
+      "attribute_path": "environment.variables",
+      "resolved": true,
+      "external": false,
+      "opaque": false,
+      "reason": null,
+      "module_path": [],
+      "boundary_entity_id": null,
+      "boundary_address": null,
+      "module_source": null,
+      "module_source_type": null,
+      "module_expansion": null,
+      "file_path": "main.tf",
+      "line_start": 3,
+      "line_end": 5,
+      "source_category": "RESOURCE_ATTRIBUTE",
+      "sink_category": "ENVIRONMENT"
+    },
+    "checkov_mappings": [],
+    "limitations": [
+      "Static potential influence, not runtime evaluation or proof of exploitation."
+    ],
+    "attack_path": [
+      {
+        "type": "FLOW",
+        "address": "module.external.environment"
+      },
+      {
+        "type": "SINK",
+        "address": "aws_lambda_function.app.environment.variables",
+        "category": "ENVIRONMENT"
+      }
+    ],
+    "dedup_key": [
+      "TFCR008",
+      "module.external.environment",
+      "aws_lambda_function.app.environment.variables",
+      null
+    ],
+    "source_trust": [],
+    "checkov": [],
+    "edges": [
+      {
+        "id": "3551c4c7-611c-472a-9ce9-5c6f227590e5",
+        "type": "SINKS_TO_RESOURCE_ATTRIBUTE",
+        "source_entity_id": "d9ed64d0-4fc5-4ed4-8139-cdf0a61c238b",
+        "target_entity_id": "de3682c1-ea58-47a4-a31b-e625bffbb691",
+        "expression": "module.external.environment",
+        "metadata": {
+          "graph_kind": "data_flow",
+          "flow_schema_version": 1,
+          "source": {
+            "address": "module.external.environment",
+            "entity_id": "d9ed64d0-4fc5-4ed4-8139-cdf0a61c238b",
+            "entity_address": "module.external",
+            "entity_type": "MODULE",
+            "attribute_path": "environment",
+            "resolved": false,
+            "external": true,
+            "opaque": true,
+            "reason": "external_module",
+            "module_path": [],
+            "boundary_entity_id": "d9ed64d0-4fc5-4ed4-8139-cdf0a61c238b",
+            "boundary_address": "module.external",
+            "module_source": "example/config/aws",
+            "module_source_type": "REGISTRY",
+            "module_expansion": "external",
+            "file_path": "main.tf",
+            "line_start": 1,
+            "line_end": 2,
+            "source_category": "MODULE_OUTPUT",
+            "sink_category": "UNKNOWN"
+          },
+          "target": {
+            "address": "aws_lambda_function.app.environment.variables",
+            "entity_id": "de3682c1-ea58-47a4-a31b-e625bffbb691",
+            "entity_address": "aws_lambda_function.app",
+            "entity_type": "RESOURCE",
+            "attribute_path": "environment.variables",
+            "resolved": true,
+            "external": false,
+            "opaque": false,
+            "reason": null,
+            "module_path": [],
+            "boundary_entity_id": null,
+            "boundary_address": null,
+            "module_source": null,
+            "module_source_type": null,
+            "module_expansion": null,
+            "file_path": "main.tf",
+            "line_start": 3,
+            "line_end": 5,
+            "source_category": "RESOURCE_ATTRIBUTE",
+            "sink_category": "ENVIRONMENT"
+          },
+          "source_address": "module.external.environment",
+          "target_address": "aws_lambda_function.app.environment.variables",
+          "resolved": false,
+          "opaque": true,
+          "external": true,
+          "cross_module": false,
+          "source_category": "MODULE_OUTPUT",
+          "sink_category": "ENVIRONMENT",
+          "transformations": [],
+          "conditional": false,
+          "collection_iteration": false,
+          "traversal": "module.external.environment",
+          "referenced_attribute": "environment",
+          "potential": true,
+          "object_precision": "aggregate"
+        }
+      }
+    ],
+    "missing_edge_ids": [],
+    "missing_finding_ids": []
+  },
+  "attack_path": [
+    {
+      "type": "FLOW",
+      "address": "module.external.environment"
+    },
+    {
+      "type": "SINK",
+      "address": "aws_lambda_function.app.environment.variables",
+      "category": "ENVIRONMENT"
+    }
+  ]
+}

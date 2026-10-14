@@ -1,0 +1,516 @@
+{
+  "schema_version": 1,
+  "analysis": {
+    "schema_version": 1,
+    "stages": {
+      "parse": {
+        "status": "COMPLETED",
+        "error_code": null,
+        "message": null
+      },
+      "graph": {
+        "status": "COMPLETED",
+        "error_code": null,
+        "message": null
+      },
+      "source_trust": {
+        "status": "COMPLETED",
+        "error_code": null,
+        "message": null
+      }
+    },
+    "entities": 11,
+    "edges": 21,
+    "modules": 1,
+    "external_modules": 1,
+    "providers": 1,
+    "source_trust_findings": 0,
+    "unresolved_references": 2,
+    "files_parsed": 1,
+    "files_failed": 0,
+    "max_observed_module_depth": 1,
+    "external_transitive_depth_unknown": true,
+    "diagnostics": []
+  },
+  "nodes": [
+    {
+      "id": "509091c0-e263-4ffe-ab53-f7fcf1c2a85b",
+      "address": "aws_instance.web",
+      "type": "RESOURCE",
+      "metadata": {
+        "module_path": [],
+        "attribute_scopes": {},
+        "resolved": true
+      },
+      "file_path": "main.tf",
+      "line_start": 33,
+      "line_end": 40
+    },
+    {
+      "id": "00f3de25-449d-4ed4-9d43-9c3c73f8cb22",
+      "address": "aws_security_group.web",
+      "type": "RESOURCE",
+      "metadata": {
+        "module_path": [],
+        "attribute_scopes": {},
+        "resolved": true
+      },
+      "file_path": "main.tf",
+      "line_start": 30,
+      "line_end": 32
+    },
+    {
+      "id": "333c37cc-cc2d-4127-a271-cc3c911c5de3",
+      "address": "data.aws_ami.ubuntu",
+      "type": "DATA",
+      "metadata": {
+        "module_path": [],
+        "attribute_scopes": {},
+        "resolved": true
+      },
+      "file_path": "main.tf",
+      "line_start": 26,
+      "line_end": 29
+    },
+    {
+      "id": "0e02c1a9-60b2-418d-a088-1f45de98ca13",
+      "address": "local.name",
+      "type": "LOCAL",
+      "metadata": {
+        "module_path": [],
+        "attribute_scopes": {},
+        "resolved": true
+      },
+      "file_path": "main.tf",
+      "line_start": 18,
+      "line_end": 18
+    },
+    {
+      "id": "5f5da9df-7983-477e-9aa2-e081fbaa3143",
+      "address": "module.vpc",
+      "type": "MODULE",
+      "metadata": {
+        "module_path": [],
+        "attribute_scopes": {},
+        "source": "terraform-aws-modules/vpc/aws",
+        "version": "~> 5.0",
+        "expansion": "external",
+        "source_type": "REGISTRY",
+        "ref": null,
+        "ref_type": "MISSING",
+        "immutable": false,
+        "version_type": "BOUNDED",
+        "resolved": true
+      },
+      "file_path": "main.tf",
+      "line_start": 20,
+      "line_end": 25
+    },
+    {
+      "id": "36e181ac-b966-4a7f-a564-fd9621e11cef",
+      "address": "output.instance_id",
+      "type": "OUTPUT",
+      "metadata": {
+        "module_path": [],
+        "attribute_scopes": {},
+        "resolved": true
+      },
+      "file_path": "main.tf",
+      "line_start": 41,
+      "line_end": 43
+    },
+    {
+      "id": "0a94e364-d34e-450b-8a12-6c5f8f937686",
+      "address": "provider.aws",
+      "type": "PROVIDER",
+      "metadata": {
+        "module_path": [],
+        "attribute_scopes": {},
+        "alias": null,
+        "resolved": true
+      },
+      "file_path": "main.tf",
+      "line_start": 7,
+      "line_end": 9
+    },
+    {
+      "id": "eddd7291-d162-4394-9342-3131332df997",
+      "address": "provider.aws.west",
+      "type": "PROVIDER",
+      "metadata": {
+        "module_path": [],
+        "attribute_scopes": {},
+        "alias": "west",
+        "resolved": true
+      },
+      "file_path": "main.tf",
+      "line_start": 10,
+      "line_end": 13
+    },
+    {
+      "id": "b573d54c-aaa9-4156-937a-5162846f6a2e",
+      "address": "required_provider.aws",
+      "type": "REQUIRED_PROVIDER",
+      "metadata": {
+        "source": "hashicorp/aws",
+        "version": "~> 5.0",
+        "module_path": [],
+        "version_type": "BOUNDED",
+        "resolved": true
+      },
+      "file_path": "main.tf",
+      "line_start": 4,
+      "line_end": 4
+    },
+    {
+      "id": "facfcf99-134b-436d-8403-ee3eb9854a79",
+      "address": "root",
+      "type": "ROOT_MODULE",
+      "metadata": {
+        "module_path": [],
+        "graph_schema_version": 1,
+        "terraform_configurations": [
+          {
+            "file_path": "main.tf",
+            "line_start": 1,
+            "line_end": 6,
+            "attributes": {
+              "required_version": "\">= 1.0\"",
+              "required_providers[0].aws": "{ source = \"hashicorp/aws\", version = \"~> 5.0\" }"
+            }
+          }
+        ],
+        "resolved": true
+      },
+      "file_path": ".",
+      "line_start": null,
+      "line_end": null
+    },
+    {
+      "id": "b8941921-7d3b-43f0-8f81-433f85e07cb7",
+      "address": "var.region",
+      "type": "VARIABLE",
+      "metadata": {
+        "module_path": [],
+        "attribute_scopes": {},
+        "resolved": true
+      },
+      "file_path": "main.tf",
+      "line_start": 14,
+      "line_end": 16
+    },
+    {
+      "id": "unresolved:var.not_declared",
+      "address": "var.not_declared",
+      "type": "UNRESOLVED",
+      "metadata": {
+        "resolved": false,
+        "declared": false
+      },
+      "file_path": null,
+      "line_start": null,
+      "line_end": null
+    },
+    {
+      "id": "unresolved:module.vpc.private_subnets",
+      "address": "module.vpc.private_subnets",
+      "type": "UNRESOLVED",
+      "metadata": {
+        "resolved": false,
+        "declared": false
+      },
+      "file_path": null,
+      "line_start": null,
+      "line_end": null
+    }
+  ],
+  "edges": [
+    {
+      "id": "ccca8317-de9d-4bf3-8c52-eecb29adcc55",
+      "source": "00f3de25-449d-4ed4-9d43-9c3c73f8cb22",
+      "target": "0e02c1a9-60b2-418d-a088-1f45de98ca13",
+      "target_address": "local.name",
+      "type": "READS_LOCAL",
+      "expression": "local.name",
+      "attribute_name": "name",
+      "metadata": {
+        "traversal": "local.name",
+        "target_attribute": null,
+        "resolved": true
+      }
+    },
+    {
+      "id": "d0908673-4dfe-4931-92e4-7e647cb289ad",
+      "source": "00f3de25-449d-4ed4-9d43-9c3c73f8cb22",
+      "target": "0a94e364-d34e-450b-8a12-6c5f8f937686",
+      "target_address": "provider.aws",
+      "type": "USES_PROVIDER",
+      "expression": null,
+      "attribute_name": null,
+      "metadata": {
+        "binding": "inferred_from_resource_type",
+        "resolved": true
+      }
+    },
+    {
+      "id": "62788237-b472-4c18-a0a9-2631fe0223e9",
+      "source": "0a94e364-d34e-450b-8a12-6c5f8f937686",
+      "target": "b8941921-7d3b-43f0-8f81-433f85e07cb7",
+      "target_address": "var.region",
+      "type": "READS_VARIABLE",
+      "expression": "var.region",
+      "attribute_name": "region",
+      "metadata": {
+        "traversal": "var.region",
+        "target_attribute": null,
+        "resolved": true
+      }
+    },
+    {
+      "id": "4a826b10-775b-4c12-a3a9-713dfd361e9a",
+      "source": "0a94e364-d34e-450b-8a12-6c5f8f937686",
+      "target": "b573d54c-aaa9-4156-937a-5162846f6a2e",
+      "target_address": "required_provider.aws",
+      "type": "USES_PROVIDER",
+      "expression": null,
+      "attribute_name": null,
+      "metadata": {
+        "binding": "requirement",
+        "resolved": true
+      }
+    },
+    {
+      "id": "3806b013-ff3e-47ca-a127-c6b59728be5a",
+      "source": "0e02c1a9-60b2-418d-a088-1f45de98ca13",
+      "target": "b8941921-7d3b-43f0-8f81-433f85e07cb7",
+      "target_address": "var.region",
+      "type": "READS_VARIABLE",
+      "expression": "\"example-${var.region}\"",
+      "attribute_name": "value",
+      "metadata": {
+        "traversal": "var.region",
+        "target_attribute": null,
+        "resolved": true
+      }
+    },
+    {
+      "id": "c22f482a-d23d-4359-a616-d0a4af8afc6f",
+      "source": "333c37cc-cc2d-4127-a271-cc3c911c5de3",
+      "target": "0a94e364-d34e-450b-8a12-6c5f8f937686",
+      "target_address": "provider.aws",
+      "type": "USES_PROVIDER",
+      "expression": null,
+      "attribute_name": null,
+      "metadata": {
+        "binding": "inferred_from_resource_type",
+        "resolved": true
+      }
+    },
+    {
+      "id": "f7b18d6e-6472-49ec-a1e4-4f413193b9bb",
+      "source": "36e181ac-b966-4a7f-a564-fd9621e11cef",
+      "target": "509091c0-e263-4ffe-ab53-f7fcf1c2a85b",
+      "target_address": "aws_instance.web",
+      "type": "REFERENCES",
+      "expression": "aws_instance.web.id",
+      "attribute_name": "value",
+      "metadata": {
+        "traversal": "aws_instance.web.id",
+        "target_attribute": "id",
+        "resolved": true
+      }
+    },
+    {
+      "id": "383ef225-3c95-434a-a2f1-5b7d74529543",
+      "source": "36e181ac-b966-4a7f-a564-fd9621e11cef",
+      "target": "509091c0-e263-4ffe-ab53-f7fcf1c2a85b",
+      "target_address": "aws_instance.web",
+      "type": "RESOURCE_DEPENDS_ON",
+      "expression": "aws_instance.web.id",
+      "attribute_name": "value",
+      "metadata": {
+        "traversal": "aws_instance.web.id",
+        "target_attribute": "id",
+        "resolved": true
+      }
+    },
+    {
+      "id": "3df9c34f-aecb-49c9-9004-9fae07fe0cb7",
+      "source": "509091c0-e263-4ffe-ab53-f7fcf1c2a85b",
+      "target": "5f5da9df-7983-477e-9aa2-e081fbaa3143",
+      "target_address": "module.vpc",
+      "type": "CONSUMES_MODULE_OUTPUT",
+      "expression": "module.vpc.private_subnets[0]",
+      "attribute_name": "subnet_id",
+      "metadata": {
+        "traversal": "module.vpc.private_subnets[0]",
+        "target_attribute": "private_subnets",
+        "resolved": true
+      }
+    },
+    {
+      "id": "c163312d-8edc-4615-98cc-cc62c5598600",
+      "source": "509091c0-e263-4ffe-ab53-f7fcf1c2a85b",
+      "target": "00f3de25-449d-4ed4-9d43-9c3c73f8cb22",
+      "target_address": "aws_security_group.web",
+      "type": "EXPLICIT_DEPENDS_ON",
+      "expression": "[module.vpc, aws_security_group.web]",
+      "attribute_name": "depends_on",
+      "metadata": {
+        "traversal": "aws_security_group.web",
+        "target_attribute": null,
+        "resolved": true
+      }
+    },
+    {
+      "id": "0b12ee6e-a517-463d-a9d6-97e4459968d3",
+      "source": "509091c0-e263-4ffe-ab53-f7fcf1c2a85b",
+      "target": "5f5da9df-7983-477e-9aa2-e081fbaa3143",
+      "target_address": "module.vpc",
+      "type": "EXPLICIT_DEPENDS_ON",
+      "expression": "[module.vpc, aws_security_group.web]",
+      "attribute_name": "depends_on",
+      "metadata": {
+        "traversal": "module.vpc",
+        "target_attribute": null,
+        "resolved": true
+      }
+    },
+    {
+      "id": "163c26a1-4f58-445a-83ff-560c4a7e0e03",
+      "source": "509091c0-e263-4ffe-ab53-f7fcf1c2a85b",
+      "target": "333c37cc-cc2d-4127-a271-cc3c911c5de3",
+      "target_address": "data.aws_ami.ubuntu",
+      "type": "READS_DATA",
+      "expression": "data.aws_ami.ubuntu.id",
+      "attribute_name": "ami",
+      "metadata": {
+        "traversal": "data.aws_ami.ubuntu.id",
+        "target_attribute": "id",
+        "resolved": true
+      }
+    },
+    {
+      "id": "793020aa-2fbf-402d-b443-876de50618ae",
+      "source": "509091c0-e263-4ffe-ab53-f7fcf1c2a85b",
+      "target": "0e02c1a9-60b2-418d-a088-1f45de98ca13",
+      "target_address": "local.name",
+      "type": "READS_LOCAL",
+      "expression": "{ literal = \"var.not_a_reference\", name = local.name }",
+      "attribute_name": "tags",
+      "metadata": {
+        "traversal": "local.name",
+        "target_attribute": null,
+        "resolved": true
+      }
+    },
+    {
+      "id": "4dd335dc-91cb-4907-807d-3b8fb689c3e9",
+      "source": "509091c0-e263-4ffe-ab53-f7fcf1c2a85b",
+      "target": "unresolved:var.not_declared",
+      "target_address": "var.not_declared",
+      "type": "READS_VARIABLE",
+      "expression": "unknown_function(var.not_declared)",
+      "attribute_name": "user_data",
+      "metadata": {
+        "traversal": "var.not_declared",
+        "target_attribute": null,
+        "resolved": false
+      }
+    },
+    {
+      "id": "3fc4e55b-0bda-4f9f-a1c2-a123f03a1a38",
+      "source": "509091c0-e263-4ffe-ab53-f7fcf1c2a85b",
+      "target": "unresolved:module.vpc.private_subnets",
+      "target_address": "module.vpc.private_subnets",
+      "type": "REFERENCES",
+      "expression": "module.vpc.private_subnets[0]",
+      "attribute_name": "subnet_id",
+      "metadata": {
+        "traversal": "module.vpc.private_subnets[0]",
+        "target_attribute": "private_subnets",
+        "module_output": true,
+        "resolved": false
+      }
+    },
+    {
+      "id": "4945f8d0-17de-485a-99f6-021c4605e5a6",
+      "source": "509091c0-e263-4ffe-ab53-f7fcf1c2a85b",
+      "target": "eddd7291-d162-4394-9342-3131332df997",
+      "target_address": "provider.aws.west",
+      "type": "USES_PROVIDER",
+      "expression": "aws.west",
+      "attribute_name": "provider",
+      "metadata": {
+        "traversal": "aws.west",
+        "target_attribute": null,
+        "resolved": true
+      }
+    },
+    {
+      "id": "7a17bd74-7a4a-41ff-92ab-780a54056f2f",
+      "source": "5f5da9df-7983-477e-9aa2-e081fbaa3143",
+      "target": "0e02c1a9-60b2-418d-a088-1f45de98ca13",
+      "target_address": "local.name",
+      "type": "READS_LOCAL",
+      "expression": "local.name",
+      "attribute_name": "name",
+      "metadata": {
+        "traversal": "local.name",
+        "target_attribute": null,
+        "resolved": true
+      }
+    },
+    {
+      "id": "5324c8c4-22b8-47f1-986c-cf89264223f8",
+      "source": "5f5da9df-7983-477e-9aa2-e081fbaa3143",
+      "target": "eddd7291-d162-4394-9342-3131332df997",
+      "target_address": "provider.aws.west",
+      "type": "USES_PROVIDER",
+      "expression": "{ aws = aws.west }",
+      "attribute_name": "providers",
+      "metadata": {
+        "traversal": "aws.west",
+        "target_attribute": null,
+        "resolved": true
+      }
+    },
+    {
+      "id": "eed83d22-8975-40b2-b7d7-e0a8b09baf12",
+      "source": "eddd7291-d162-4394-9342-3131332df997",
+      "target": "b573d54c-aaa9-4156-937a-5162846f6a2e",
+      "target_address": "required_provider.aws",
+      "type": "USES_PROVIDER",
+      "expression": null,
+      "attribute_name": null,
+      "metadata": {
+        "binding": "requirement",
+        "resolved": true
+      }
+    },
+    {
+      "id": "2e647eab-2fe5-41ba-89de-4a5b5649859c",
+      "source": "facfcf99-134b-436d-8403-ee3eb9854a79",
+      "target": "5f5da9df-7983-477e-9aa2-e081fbaa3143",
+      "target_address": "module.vpc",
+      "type": "CALLS_MODULE",
+      "expression": null,
+      "attribute_name": null,
+      "metadata": {
+        "resolved": true
+      }
+    },
+    {
+      "id": "ad12d692-452a-46ad-9da7-27a1e2978b97",
+      "source": "facfcf99-134b-436d-8403-ee3eb9854a79",
+      "target": "b573d54c-aaa9-4156-937a-5162846f6a2e",
+      "target_address": "required_provider.aws",
+      "type": "USES_PROVIDER",
+      "expression": null,
+      "attribute_name": null,
+      "metadata": {
+        "resolved": true
+      }
+    }
+  ]
+}
