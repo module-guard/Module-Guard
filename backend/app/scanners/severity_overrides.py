@@ -10,8 +10,9 @@ LOW     operational hygiene, resilience or manageability
 CRITICAL is never assigned here: one static rule cannot show real exposure, since modules
 switch most resources by variable. It is reserved for correlated findings.
 
-Every entry was checked against the rule implementation in the pinned Checkov
-(requirements-scanner.txt). Coverage measurement and how to re-apply: docs/severity-mapping.md.
+Rule semantics come from the pinned Checkov (requirements-scanner.txt): every rule's name and
+target resources from `checkov --list`, and the implementation itself for CKV_AWS_62/63 and
+the rules whose name alone is ambiguous. Measurement and re-apply: docs/severity-mapping.md.
 """
 
 from app.models.enums import Severity
@@ -29,11 +30,10 @@ SEVERITY_OVERRIDES: dict[str, Severity] = {
     "CKV_AWS_56": HIGH,  # S3 restrict public buckets off
     "CKV2_AWS_6": HIGH,  # S3 bucket without a public access block
     "CKV_AWS_79": HIGH,  # IMDSv1 allowed: SSRF can steal instance credentials
-    # aws_iam_{role,user,group}_policy, aws_iam_policy and the SSO inline policy. 62 fails on an
-    # Allow statement with Action "*" and Resource "*" (full admin); 63 on Action "*" for any
-    # resource. Both are TFCR001's privileged-IAM allowlist (app/correlation/scoring.py).
-    "CKV_AWS_62": HIGH,
-    "CKV_AWS_63": HIGH,
+    # aws_iam_{role,user,group}_policy, aws_iam_policy and the SSO inline policy; both are
+    # TFCR001's privileged-IAM allowlist (app/correlation/scoring.py).
+    "CKV_AWS_62": HIGH,  # Allow with Action "*" and Resource "*": full administrator
+    "CKV_AWS_63": HIGH,  # Allow with Action "*" on any resource: every API of every service
     "CKV_AWS_1": HIGH,  # 62 for data aws_iam_policy_document (not in TFCR001's allowlist)
     "CKV_AWS_49": HIGH,  # 63 for data aws_iam_policy_document (not in TFCR001's allowlist)
     "CKV_AWS_286": HIGH,  # IAM policy resource allows privilege escalation
@@ -103,7 +103,7 @@ SEVERITY_OVERRIDES: dict[str, Severity] = {
     # --- LOW: hygiene, resilience, manageability
     "CKV_AWS_273": LOW,  # access not through SSO
     # Fires for every registry module pinned by version tag; supply chain is assessed by TFSC.
-    "CKV_TF_1": LOW,
+    "CKV_TF_1": LOW,  # module source not pinned to a commit hash
     "CKV_TF_2": LOW,  # module source not pinned to a version tag; supply chain is TFSC's job
     "CKV_AWS_21": LOW,  # S3 versioning
     "CKV_AWS_144": LOW,  # S3 cross-region replication

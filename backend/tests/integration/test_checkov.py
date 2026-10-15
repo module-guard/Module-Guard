@@ -97,3 +97,25 @@ def result_guideline(result, rule):
         for check in report["results"]["failed_checks"]
         if check["check_id"] == rule
     )
+
+
+def test_tfcr001_is_critical_when_checkov_sends_no_severity(sessions, settings):
+    # The real Checkov output for CKV_AWS_62 carries no severity. With the mapping it is HIGH,
+    # which is what TFCR001 needs to promote the correlation to CRITICAL.
+    from sqlalchemy import select
+    from test_correlation_api import iam_report
+    from test_graph_api import service_for
+
+    from app.models import Finding
+
+    report = iam_report()
+    del report["results"]["failed_checks"][0]["severity"]
+    service = service_for(sessions, settings, report, "correlation/mutable_git_to_iam")
+    scan = service.create("https://github.com/org/repo")
+    service.run(scan.scan_id)
+    with sessions() as session:
+        rows = session.scalars(select(Finding).where(Finding.scan_id == scan.scan_id)).all()
+    by_rule = {row.rule_id: row for row in rows}
+    assert by_rule["CKV_AWS_62"].severity == Severity.HIGH
+    assert by_rule["CKV_AWS_62"].raw_data["severity_source"] == "moduleguard"
+    assert by_rule["TFCR001"].severity == Severity.CRITICAL

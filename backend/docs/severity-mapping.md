@@ -26,7 +26,7 @@ Finding/Scan 스키마와 DB는 바뀌지 않습니다. 채운 값은 기존 `se
 | LOW | 운영 위생, 복원력, 관리 편의 | 백업·Multi-AZ·모니터링, 태그, 설명 누락 |
 | CRITICAL | **지정하지 않음.** 모듈은 대부분의 리소스를 변수로 켜고 끄므로 정적 규칙 하나로 실제 노출을 판단할 수 없습니다. 상관 탐지(TFCR) 전용입니다. | |
 
-모든 항목은 고정된 Checkov 3.3.26(`requirements-scanner.txt`)의 규칙 구현을 열어 대상 리소스와 실패 조건을 확인했고, 줄마다 근거 주석을 달았습니다. `tests/unit/test_severity_overrides.py`가 표 전체를 다시 적어 두므로 의도하지 않은 수정은 테스트에서 실패합니다.
+고정된 Checkov 3.3.26(`requirements-scanner.txt`) 기준으로 모든 규칙의 이름·대상 리소스를 `checkov --list`로 확인했고, CKV_AWS_62/63과 이름만으로 의미가 모호한 규칙(CKV_AWS_133, 211, 304, 382, 283, 258, 45, 93)은 구현 코드를 열어 실패 조건을 확인했습니다. 줄마다 근거 주석을 달았습니다. `tests/unit/test_severity_overrides.py`가 표 전체를 다시 적어 두므로 의도하지 않은 수정은 테스트에서 실패합니다.
 
 ### CKV_AWS_62 / CKV_AWS_63과 TFCR001
 
@@ -36,7 +36,7 @@ TFCR001은 정확히 매핑된 HIGH/CRITICAL `CKV_AWS_62`·`CKV_AWS_63`이 있�
 - CKV_AWS_62: `Effect = Allow`이고 `Action`에 `"*"`, `Resource`에 `"*"`가 함께 있는 문장 (전체 관리자)
 - CKV_AWS_63: `Effect = Allow`이고 `Action`에 `"*"`가 있는 문장 (리소스 무관)
 - 둘 다 **HIGH**입니다. 같은 의미의 `data "aws_iam_policy_document"` 규칙(CKV_AWS_1, CKV_AWS_49)도 HIGH로 지정했지만 TFCR001 allowlist에는 넣지 않았습니다(상관 규칙은 수정하지 않음).
-- 실제 Checkov로 관리자 정책을 검사해 두 규칙이 HIGH + 권장 조치로 나오는지 `tests/integration/test_checkov.py`가 확인합니다.
+- 실제 Checkov로 관리자 정책을 검사해 두 규칙이 HIGH + 권장 조치로 나오는지, 그리고 Checkov가 심각도를 보내지 않는 CKV_AWS_62로 파이프라인 전체를 돌렸을 때 TFCR001이 CRITICAL이 되는지 `tests/integration/test_checkov.py`가 확인합니다. 같은 입력으로 이전 `main`에서는 CKV_AWS_62 UNKNOWN, TFCR001 HIGH였습니다.
 
 ## 측정: terraform-aws-modules
 
