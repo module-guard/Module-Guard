@@ -161,7 +161,6 @@ def test_snapshot_or_version_failure_fails_the_scan(
     "source,code",
     [
         ("file:///etc", 422),
-        ("terraform-aws-modules/vpc/aws", 501),
         ("https://token@github.com/org/repo", 422),
     ],
 )
@@ -174,6 +173,21 @@ def test_reject_before_persist(sessions, settings, report, source, code):
     with sessions() as session:
         assert session.scalar(select(func.count(Scan.id))) == 0
         assert session.scalar(select(func.count(Module.id))) == 0
+
+
+def test_registry_address_is_accepted_for_a_direct_scan(sessions, settings, report):
+    # The Registry address is no longer rejected (was 501); it scans through the same pipeline.
+    service = make_service(sessions, settings, report)
+    with TestClient(create_app(settings, sessions, service)) as client:
+        response = client.post("/api/scans", json={"source": "terraform-aws-modules/vpc/aws"})
+        assert response.status_code == 202
+        scan = wait_terminal(client, response.json()["scan_id"])
+        assert scan["status"] == "COMPLETED"
+    with sessions() as session:
+        module = session.scalar(select(Module))
+        assert module.source_type == "TERRAFORM_REGISTRY"
+        assert module.source_url == "terraform-aws-modules/vpc/aws"
+        assert module.provider == "aws"
 
 
 @pytest.mark.parametrize("failure", ["collect", "empty", "timeout", "normalize", "database"])
@@ -211,6 +225,44 @@ def test_failed_pipeline_cleanup(sessions, settings, report, failure, monkeypatc
         if failure == "normalize":
             assert scan.raw_result == {}
     assert not (settings.workspace_root / str(accepted.scan_id)).exists()
+
+
+def test_failed_stage_and_error_code_are_recorded(sessions, settings, report, monkeypatch):
+    # A failure before any analysis stage is attributed to collection.
+    service = make_service(sessions, settings, report)
+    service.collector.collect = Mock(side_effect=RuntimeError("secret-token"))
+    with TestClient(create_app(settings, sessions, service)) as client:
+        scan = run_scan(client)
+        assert scan["status"] == "FAILED"
+        assert (scan["failed_stage"], scan["error_code"]) == ("collect", "RuntimeError")
+        assert "secret-token" not in client.get(f"/api/scans/{scan['id']}").text
+
+    # A Checkov failure leaves the scan FAILED with the Checkov stage named.
+    service = make_service(sessions, settings, report)
+    service.scanner.scan = Mock(side_effect=ScanTimeoutError("Scanner timed out."))
+    with TestClient(create_app(settings, sessions, service)) as client:
+        scan = run_scan(client)
+        assert scan["status"] == "FAILED"
+        assert (scan["failed_stage"], scan["error_code"]) == ("checkov", "ScanTimeoutError")
+
+    # A failure while persisting results is attributed to the persistence stage.
+    service = make_service(sessions, settings, report)
+    monkeypatch.setattr(
+        "app.services.scan_service.FindingRepository.add_many",
+        Mock(side_effect=RuntimeError("boom")),
+    )
+    with TestClient(create_app(settings, sessions, service)) as client:
+        scan = run_scan(client)
+        assert scan["status"] == "FAILED"
+        assert (scan["failed_stage"], scan["error_code"]) == ("persistence", "RuntimeError")
+
+
+def test_completed_scan_has_no_failure_attribution(sessions, settings, report):
+    service = make_service(sessions, settings, report)
+    with TestClient(create_app(settings, sessions, service)) as client:
+        scan = run_scan(client)
+        assert scan["status"] == "COMPLETED"
+        assert scan["failed_stage"] is None and scan["error_code"] is None
 
 
 def test_partial_persisted_and_duplicate_delivery(sessions, settings, report):

@@ -3,7 +3,7 @@ from starlette.concurrency import run_in_threadpool
 
 from app.auth.dependencies import CurrentUser, verify_origin
 from app.core.exceptions import UploadRejectedError, UploadTooLargeError
-from app.schemas.publish import GitHubImportRequest, UploadReport
+from app.schemas.publish import GitHubImportRequest, RegistryImportRequest, UploadReport
 
 router = APIRouter(prefix="/uploads", tags=["uploads"], dependencies=[Depends(verify_origin)])
 ZIP_TYPES = {"application/zip", "application/x-zip-compressed", "application/octet-stream"}
@@ -45,3 +45,12 @@ async def prepare_github(payload: GitHubImportRequest, request: Request, user: C
     service = request.app.state.publish_service
     with service.limiter.slot(user.id):
         return await run_in_threadpool(service.prepare_github, user.id, payload.url)
+
+
+@router.post("/registry", response_model=UploadReport)
+async def prepare_registry(payload: RegistryImportRequest, request: Request, user: CurrentUser):
+    service = request.app.state.publish_service
+    with service.limiter.slot(user.id):
+        return await run_in_threadpool(
+            service.prepare_registry, user.id, payload.address, payload.version
+        )
