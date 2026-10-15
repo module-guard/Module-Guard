@@ -96,7 +96,7 @@ module.external.subnet_id → aws_instance.web.subnet_id
 
 FlowSourceClassifier는 교체 가능한 분류 계층입니다.
 
-- USER_INPUT: variable
+- USER_INPUT: variable. `sensitive = true`인 variable도 USER_INPUT으로 유지하며, endpoint에 `sensitive_input=true`를 별도로 남깁니다(그 외 endpoint는 false). child module variable(`module.x.var.y`)도 선언 기준으로 같은 표시를 받습니다.
 - LOCAL_VALUE: local
 - MODULE_OUTPUT: module/output
 - RESOURCE_ATTRIBUTE: resource
@@ -106,17 +106,21 @@ FlowSourceClassifier는 교체 가능한 분류 계층입니다.
 
 SECRET_SOURCE는 resource type 기반의 후보 분류이며 실제 secret의 존재나 속성별 민감도를 검증하지 않습니다. Source category를 전체 trace에 전파하거나 taint로 계산하지 않습니다.
 
-SensitiveSinkRule 목록으로 확장합니다.
+SensitiveSinkRule 목록으로 확장합니다. Attribute 이름은 각 provider 스키마(hashicorp/aws, google, azurerm)의 실제 인자 이름이며, nested block(`aws_security_group.ingress`)은 root attribute 이름으로 매칭합니다(`ingress[0].cidr_blocks` → `ingress`).
 
-| Resource / attribute | Category |
+| Category | Resource.attribute |
 |---|---|
-| aws_instance.user_data, aws_launch_template.user_data | CODE_EXECUTION |
-| aws_iam_policy.policy, aws_iam_role_policy.policy | IAM_POLICY |
-| aws_lambda_function.environment | ENVIRONMENT |
-| aws_ecs_task_definition.container_definitions | COMMAND |
-| aws_ssm_parameter.value | SECRET_STORAGE |
+| CODE_EXECUTION | aws_instance.user_data, aws_instance.user_data_base64, aws_launch_template.user_data, aws_launch_configuration.user_data, google_compute_instance.metadata_startup_script, azurerm_linux_virtual_machine.custom_data |
+| NETWORK | aws_security_group.ingress, aws_security_group.egress, aws_security_group_rule.cidr_blocks, aws_vpc_security_group_ingress_rule.cidr_ipv4, aws_db_instance.publicly_accessible, aws_instance.associate_public_ip_address, google_compute_firewall.source_ranges, azurerm_network_security_rule.source_address_prefix |
+| CREDENTIAL | aws_db_instance.password, aws_rds_cluster.master_password, aws_docdb_cluster.master_password, aws_redshift_cluster.master_password, aws_elasticache_replication_group.auth_token, azurerm_linux_virtual_machine.admin_password, google_sql_user.password |
+| IAM_POLICY | aws_iam_policy.policy, aws_iam_role_policy.policy, aws_iam_role.assume_role_policy, aws_iam_user_policy.policy, aws_iam_group_policy.policy, aws_s3_bucket_policy.policy, aws_kms_key.policy |
+| ENVIRONMENT | aws_lambda_function.environment |
+| COMMAND | aws_ecs_task_definition.container_definitions |
+| SECRET_STORAGE | aws_ssm_parameter.value, aws_secretsmanager_secret_version.secret_string |
 
-나머지는 UNKNOWN입니다. NETWORK, CREDENTIAL 등의 category는 새 rule로 추가할 수 있습니다. 분류는 관찰 metadata이고 vulnerability 판단은 아닙니다.
+나머지는 UNKNOWN입니다. 분류는 관찰 metadata이고 vulnerability 판단은 아닙니다. 예를 들어 `aws_security_group.ingress`가 NETWORK라는 것은 값이 네트워크 노출 설정에 도달한다는 뜻이지 그 규칙이 열려 있다는 뜻이 아닙니다.
+
+Correlation(TFCR006/008)은 CREDENTIAL 등 sink category를 사용하므로 sink 규칙이 늘면 해당 경로가 있는 module에서 correlation Finding이 정당하게 늘 수 있습니다. NETWORK는 현재 correlation 규칙의 sensitive 집합에 포함되지 않습니다. 분류 예시는 `tests/fixtures/data_flow/sensitive_sinks/main.tf`에 있습니다.
 
 ## API
 
@@ -130,9 +134,32 @@ curl --get 'http://localhost:8000/api/scans/SCAN_ID/flow-trace' \
   --data-urlencode 'max_depth=10'
 ```
 
-- `/flows`: source/target는 정확한 logical address, edge_type, entity_type(양쪽 endpoint 중 하나) 필터. limit=1..100, offset≥0. summary는 **필터 후·페이지 적용 전** 개수이며 nodes는 반환 edge의 endpoint만 포함합니다.
-- `/flows/{entity_address}`: 정확한 entity 또는 logical address의 직접 upstream/downstream edge. 전이 경로는 trace API를 사용합니다. 각 방향 최대 1000개, 잘리면 truncated=true. 존재하는 flow 없는 entity는 빈 목록, 없는 entity/scan은 404입니다.
-- `/flow-trace`: cycle-safe simple paths. from/to는 logical address이며 자동 suffix/prefix 확장을 하지 않습니다. 최대 depth 기본10/상한30, 최대 path20, 탐색 step100000. 설정이 더 작으면 적용합니다. `path_edge_ids`로 각 경로의 근거 edge를 제공합니다. depth/path/step 한도에 닿으면 truncated=true이며 found=false도 경로 부재의 증명이 아닐 수 있습니다.
+- `/flows`: source/target는 정확한 logical address, edge_type, entity_type(양쪽 endpoint 중 하나) 필터. limit=1..100, offset≥0. 필터·정렬·limit/offset·COUNT는 DB에서 수행합니다(`app/repositories/flow_repository.py`). summary는 **필터 후·페이지 적용 전** 개수이며 nodes는 반환 edge의 endpoint만 포함합니다. 정렬은 기존과 같이 source_entity_id, edge_type, target_address, id 순입니다.
+- `/flows/{entity_address}`: 정확한 entity 또는 logical address의 직접 upstream/downstream edge. 전이 경로는 trace API를 사용합니다. 각 방향 최대 1000개, 잘리면 truncated=true. `nodes`는 반환된 upstream·downstream edge 양 끝 노드(address 기준 중복 제거)입니다. 존재하는 flow 없는 entity는 빈 목록, 없는 entity/scan은 404입니다.
+- `/flow-trace`: cycle-safe simple paths. from/to는 logical address이며 자동 suffix/prefix 확장을 하지 않습니다. 최대 depth 기본10/상한30, 최대 path20, 탐색 step100000. 설정이 더 작으면 적용합니다. `path_edge_ids`로 각 경로의 근거 edge id를, `path_edges`로 같은 순서·길이의 edge 전체(type/expression/metadata 포함)를 제공합니다. `path_edges[i][j]`는 `paths[i][j]` → `paths[i][j+1]` edge입니다. depth/path/step 한도에 닿으면 truncated=true이며 found=false도 경로 부재의 증명이 아닐 수 있습니다.
+- `FlowNode`(세 API 공통)는 기존 `metadata`(endpoint 원본)를 그대로 두고, 그래프 렌더링용으로 다음 값을 endpoint에서 꺼내 채웁니다: `source_category`, `sink_category`(str|null), `opaque`, `external`(기본 false), `resolved`(기본 true), `sensitive_input`(기본 false). 이 필드가 생기기 전에 저장된 scan은 endpoint에 없는 값이 기본값으로 채워집니다.
+
+```json
+{
+  "found": true,
+  "paths": [[
+    {"id": "var.bootstrap", "address": "var.bootstrap", "entity_type": "VARIABLE",
+     "source_category": "USER_INPUT", "sink_category": "UNKNOWN",
+     "opaque": false, "external": false, "resolved": true, "sensitive_input": false,
+     "metadata": {"...": "endpoint 원본"}},
+    {"id": "local.encoded", "...": "..."}
+  ]],
+  "path_edge_ids": [["5f0c...", "..."]],
+  "path_edges": [[
+    {"id": "5f0c...", "source": "var.bootstrap", "target": "local.encoded",
+     "type": "PROPAGATES_THROUGH_LOCAL", "expression": "base64encode(var.bootstrap)",
+     "metadata": {"...": "..."}}
+  ]],
+  "truncated": false,
+  "explored_steps": 4,
+  "max_depth": 10
+}
+```
 - 기존 `/graph`는 dependency graph만 반환합니다. `analysis.edges`는 DB에 저장된 전체 edge 수이며 `analysis.dependency_edges`가 dependency 개수입니다. `analysis.data_flow`에는 flows/cross_module_flows/opaque_external_flows/unresolved_flows를 추가합니다. 이전 scan에는 data_flow가 null일 수 있습니다.
 - 빈/과거 scan은 빈 flow 응답을 반환합니다. source trust/checkov Finding API와 summary는 flow 수에 영향을 받지 않습니다.
 
@@ -159,13 +186,15 @@ cd backend
 # PostgreSQL 테스트는 별도 임시 schema에서 downgrade/re-upgrade까지 검증합니다.
 TEST_DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/terraform_intelligence \
   .venv/bin/pytest tests/integration/test_postgres.py -q
+# /flows SQL 필터·페이지네이션을 PostgreSQL(JSONB)에서 기존 방식과 비교
+TEST_DATABASE_URL=... .venv/bin/pytest -m postgres -q
 # frontend 루트
 npm run typecheck
 ```
 
 ## 성능과 다음 단계
 
-Address→entity, entity→reference, module_path→variable/output 인덱스를 사용합니다. 함수/조건 구조는 unique expression별로 한 번 읽습니다. Entity/edge는 batch로 저장하고 flow 조회는 edge마다 DB query를 하지 않습니다. Flow API는 한 scan의 flow edge를 한 번 load해서 필터링하며 대규모 그래프의 SQL pagination은 후속 최적화 지점입니다. Trace는 adjacency index와 depth/path/step budget으로 시간·메모리를 제한합니다. `MAX_FLOW_EDGES=100000`, `MAX_FLOW_PATHS=20`, `MAX_FLOW_DEPTH=30`, `MAX_FLOW_SEARCH_STEPS=100000`을 설정할 수 있습니다.
+Address→entity, entity→reference, module_path→variable/output 인덱스를 사용합니다. 함수/조건 구조는 unique expression별로 한 번 읽습니다. Entity/edge는 batch로 저장하고 flow 조회는 edge마다 DB query를 하지 않습니다. `/flows`는 JSON(SQLite)/JSONB(PostgreSQL) metadata 필터와 limit/offset, COUNT·집계를 DB에서 수행하므로 한 scan의 flow edge 전체를 메모리에 올리지 않습니다. JSON 접근은 SQLAlchemy JSON accessor(SQLite `JSON_EXTRACT`, PostgreSQL `->>`/`#>>`)로 두 DB에서 동일하게 동작합니다. 별도 JSONB index는 추가하지 않았습니다(migration 없음). Entity/trace API는 경로 탐색을 위해 한 scan의 flow edge를 한 번 load합니다. Trace는 adjacency index와 depth/path/step budget으로 시간·메모리를 제한합니다. `MAX_FLOW_EDGES=100000`, `MAX_FLOW_PATHS=20`, `MAX_FLOW_DEPTH=30`, `MAX_FLOW_SEARCH_STEPS=100000`을 설정할 수 있습니다.
 
 4차 Correlation 단계는 endpoint의 entity UUID, source range, module hierarchy, module boundary, source/sink category, expression/transformations, potential/opaque/unresolved 상태와 path edge UUID를 재사용할 수 있습니다. full evaluator, runtime resolution, 외부 module 내부 경로, field-sensitive flow, instance expansion, taint 전파·severity, trust 점수, 공격 시나리오 Finding, graph UI는 이번 범위에 없습니다.
 
