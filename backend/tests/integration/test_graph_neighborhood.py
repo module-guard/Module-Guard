@@ -124,7 +124,8 @@ def test_limit_and_exact_boundary(neighborhood, limit, truncated):
 
 def test_missing_scan_center_and_legacy_graph(neighborhood, sessions):
     client, base, scan_id, _ = neighborhood
-    assert client.get(base + "/neighborhood", params={"address": "missing"}).status_code == 404
+    for address in ("missing", ""):
+        assert client.get(base + "/neighborhood", params={"address": address}).status_code == 404
     assert (
         client.get(
             f"/api/scans/{uuid4()}/graph/neighborhood", params={"address": "local.a"}
@@ -152,7 +153,6 @@ def test_missing_scan_center_and_legacy_graph(neighborhood, sessions):
     "params",
     [
         {},
-        {"address": ""},
         {"address": "local.a", "depth": 0},
         {"address": "local.a", "depth": 4},
         {"address": "local.a", "depth": "bad"},

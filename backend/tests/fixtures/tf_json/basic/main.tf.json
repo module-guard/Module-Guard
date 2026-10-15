@@ -1,0 +1,45 @@
+{
+  "//": "All supported declarations, references, aliases and local module calls.",
+  "terraform": {
+    "required_version": ">= 1.0",
+    "required_providers": {
+      "aws": {"source": "hashicorp/aws", "version": "5.1.0"}
+    }
+  },
+  "variable": {
+    "region": {"type": "string", "default": "ap-northeast-2"},
+    "literal": {"default": {"text": "${var.not_a_reference}"}}
+  },
+  "locals": {
+    "name": "web-${var.region}",
+    "nested": {"values": ["${var.region}", "var.not_a_reference"]},
+    "dynamic": "${var.region}"
+  },
+  "provider": {
+    "aws": [{"region": "${var.region}"}, {"alias": "west", "region": "us-west-2"}]
+  },
+  "module": {
+    "network": {"source": "./modules/network", "region": "${var.region}", "providers": {"aws": "aws.west"}},
+    "copy": {"source": "./modules/network", "region": "us-west-2"},
+    "external": {"source": "terraform-aws-modules/vpc/aws", "version": "5.1.0", "name": "${local.name}"}
+  },
+  "data": {"aws_ami": {"ubuntu": {"most_recent": true, "filter": [{"name": "region", "values": ["${var.region}"]}]}}},
+  "resource": {
+    "aws_instance": {
+      "web": {
+        "//": "provider/depends_on use literal reference strings in Terraform JSON.",
+        "provider": "aws.west",
+        "depends_on": ["module.network"],
+        "subnet_id": "${module.network.subnet_id}",
+        "ami": "${data.aws_ami.ubuntu.id}",
+        "tags": {"Name": "${local.name}"},
+        "description": "var.not_a_reference"
+      }
+    }
+  },
+  "output": {
+    "instance_id": {"value": "${aws_instance.web.id}", "description": "${var.not_a_reference}"},
+    "subnet_id": {"value": "${module.network.subnet_id}"},
+    "external_id": {"value": "${module.external.id}"}
+  }
+}

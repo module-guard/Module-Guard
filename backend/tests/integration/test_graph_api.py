@@ -200,3 +200,69 @@ def test_graph_node_module_paths(sessions, settings, report):
         response = client.get(base + "/neighborhood", params={"address": address})
         assert response.status_code == 200
         assert response.json()["nodes"][0] == nodes[address]
+
+
+def test_provider_official_and_version_pinned(sessions, settings, report):
+    service = service_for(sessions, settings, report, "source_trust/provider_metadata")
+    accepted = service.create("https://github.com/org/providers")
+    service.run(accepted.scan_id)
+    with TestClient(create_app(settings, sessions, service)) as client:
+        response = client.get(f"/api/scans/{accepted.scan_id}/dependencies")
+        assert response.status_code == 200
+        providers = {provider["name"]: provider for provider in response.json()["providers"]}
+        assert {name: (p["official"], p["version_pinned"]) for name, p in providers.items()} == {
+            "aws": (True, True),
+            "random": (True, False),
+            "custom": (False, True),
+            "private": (False, False),
+            "legacy": (False, False),
+        }
+
+
+def test_json_scan_persists_graph_and_neighborhood(sessions, settings, report):
+    service = service_for(sessions, settings, report, "tf_json/basic")
+    accepted = service.create("https://github.com/org/json")
+    service.run(accepted.scan_id)
+    with TestClient(create_app(settings, sessions, service)) as client:
+        base = f"/api/scans/{accepted.scan_id}"
+        scan = client.get(base).json()
+        assert scan["analysis"]["files_parsed"] == 3
+        assert scan["analysis"]["stages"]["parse"]["status"] == "COMPLETED"
+        assert scan["analysis"]["stages"]["graph"]["status"] == "COMPLETED"
+        graph = client.get(base + "/graph").json()
+        assert graph["nodes"] and graph["edges"]
+        assert all(
+            node["line_start"] is None and node["line_end"] is None for node in graph["nodes"]
+        )
+        node = next(
+            node
+            for node in graph["nodes"]
+            if node["address"] == "module.network.module.subnet.aws_subnet.private"
+        )
+        assert node["module_path"] == ["network", "subnet"]
+        response = client.get(base + "/graph/neighborhood", params={"address": node["address"]})
+        assert response.status_code == 200 and response.json()["center"] == node["id"]
+        placeholder = next(
+            node for node in graph["nodes"] if node["address"] == "module.external.id"
+        )
+        assert (
+            placeholder["id"] == "unresolved:module.external.id"
+            and placeholder["module_path"] == []
+        )
+        nested_placeholders = [
+            node
+            for node in graph["nodes"]
+            if node["type"] == "UNRESOLVED" and node["address"].startswith("module.network.")
+        ]
+        assert nested_placeholders and all(
+            node["module_path"] == [] for node in nested_placeholders
+        )
+        provider = client.get(base + "/dependencies").json()["providers"][0]
+        assert provider["official"] and provider["version_pinned"]
+
+
+def test_all_json_files_unparseable_stage(tmp_path):
+    (tmp_path / "broken.tf.json").write_text('{"resource":')
+    result = StaticAnalysisService().run(tmp_path, uuid4())
+    assert result.summary.stages["parse"].status == "FAILED"
+    assert result.summary.stages["graph"].status == "SKIPPED"

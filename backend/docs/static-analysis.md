@@ -21,6 +21,7 @@ SourceCollector → workspace → Terraform discovery
 |---|---|
 | 교체 가능한 parser interface / domain | `app/parsers/base.py`, `domain.py` |
 | python-hcl2 syntax tree → 선언 Entity | `app/parsers/hcl.py` |
+| Terraform JSON → 같은 선언·expression 모델 | `app/parsers/json.py` |
 | expression syntax tree → Reference | `app/parsers/references.py` |
 | Node / Edge / Reference 모델 | `app/graphs/domain.py` |
 | 주소 lookup과 dependency edge 구성 | `app/graphs/builder.py` |
@@ -32,17 +33,27 @@ SourceCollector → workspace → Terraform discovery
 
 ## Parser와 semantic identity
 
-파서 범위는 **repository root 디렉터리의 `.tf` 파일과, 이 root에서 실제로 호출하는 로컬 모듈**입니다. `examples/` 등 호출되지 않은 디렉터리를 별도 root처럼 합치지 않습니다. Checkov는 종전과 같이 제외 경로를 뺀 repository 전체를 검사하므로 두 분석의 coverage는 다릅니다.
+파서 범위는 **repository root 디렉터리의 `.tf`·`.tf.json` 파일과, 이 root에서 실제로 호출하는 로컬 모듈**입니다. `examples/` 등 호출되지 않은 디렉터리를 별도 root처럼 합치지 않습니다. Checkov는 종전과 같이 제외 경로를 뺀 repository 전체를 검사하므로 두 분석의 coverage는 다릅니다.
 
 지원 선언은 ROOT_MODULE, MODULE, RESOURCE, DATA, VARIABLE, OUTPUT, LOCAL, PROVIDER, REQUIRED_PROVIDER입니다. `terraform` 블록의 속성과 source range는 소유 root/module의 `metadata.terraform_configurations`에 보존합니다. `required_providers`의 각 항목은 독립 Entity입니다. provider alias는 `provider.aws.west`처럼 별도 주소를 갖습니다.
 
-- `attributes`는 attribute path → **원래 HCL expression 문자열**입니다. 예: `subnet_id: "module.vpc.private_subnets[0]"`, `ingress[0].cidr_blocks: "var.cidrs"`.
-- `file_path`는 repository 상대 경로이며 source range는 Lark의 실제 token 위치에서 얻습니다. 합성 root에는 line을 만들지 않습니다.
+- `.tf`의 `attributes`는 attribute path → **원래 HCL expression 문자열**입니다. 예: `subnet_id: "module.vpc.private_subnets[0]"`, `ingress[0].cidr_blocks: "var.cidrs"`. `.tf.json`의 값은 아래 설명한 정규화된 expression 문자열입니다.
+- `file_path`는 repository 상대 경로이며 `.tf` source range는 Lark의 실제 token 위치에서 얻습니다. `.tf.json`과 합성 root의 `line_start`/`line_end`는 null이며 가짜 줄 번호를 만들지 않습니다.
 - Entity UUID는 scan별 식별자입니다. 같은 scan의 선언 주소는 UNIQUE입니다. 서로 다른 scan을 비교할 때는 address 및 module path/commit을 함께 사용해야 합니다.
 - 예: `module.network.module.subnet.aws_subnet.private`, `metadata.module_path = ["network", "subnet"]`.
 - 같은 real directory를 여러 이름으로 호출하면 syntax는 한 번만 파싱하고 호출별 Entity를 생성합니다. ancestry real path set으로 cycle을 차단하며, 전역 cache를 단순 visited skip으로 사용해 호출 주소를 잃지 않습니다.
 - source가 `./` 또는 `../`인 경우만 로컬 재귀 탐색합니다. root 밖, symlink, excluded directory, cycle, 누락 경로는 진단과 boundary module Entity로 남기며 읽지 않습니다.
-- 파일 단위 파싱 오류·크기 초과는 해당 파일만 제외합니다. syntax가 깨진 파일 내부의 블록 복구는 지원하지 않습니다. `.tf.json`은 기존 Checkov 검사 대상으로 유지하되 새 그래프 파서는 지원하지 않으며 진단으로 알립니다.
+- 파일 단위 파싱 오류·크기 초과는 해당 파일만 제외합니다. syntax가 깨진 파일 내부의 블록 복구는 지원하지 않습니다. `.tf`와 `.tf.json`에 같은 파일 크기·Entity·주소 상한과 로컬 모듈 경로 정책을 적용합니다.
+
+### Terraform JSON 지원 범위
+
+[Terraform JSON 문법](https://developer.hashicorp.com/terraform/language/syntax/json)의 최상위 `resource`, `data`, `module`, `variable`, `output`, `locals`, `provider`, `terraform`를 지원합니다. `required_providers`는 `.tf`와 같은 REQUIRED_PROVIDER Entity로 만들고 terraform 설정은 소유 root/module의 `metadata.terraform_configurations`에 저장합니다. JSON의 label 계층과 block 배열, provider alias, 로컬 모듈 재귀 호출을 지원합니다. `.tf`와 `.tf.json`이 같은 모듈 안에 함께 있거나 서로 다른 형식의 로컬 모듈을 호출할 수 있습니다. 같은 디렉터리의 syntax는 한 번 읽고 호출별 Entity를 생성합니다.
+
+JSON 값은 기존 HCL ReferenceExtractor가 읽을 수 있는 expression으로 정규화합니다. 문자열의 `${...}`와 template directive 안의 참조는 HCL과 같은 lexical scope 규칙으로 추출하며, 문자열 자체가 `var.name`인 경우나 `$${...}`로 escape한 경우는 참조가 아닙니다. 일반 object/array 내부의 expression도 분석합니다. provider schema를 다운로드하지 않으므로 중첩 object가 provider block인지 object argument인지는 구분하지 않고 상위 attribute의 expression으로 보존합니다.
+
+Terraform JSON의 특수 매핑도 적용합니다. resource/data의 `provider`, 선언의 `depends_on`, module의 `providers`는 interpolation 없이 쓴 참조 문자열을 연결합니다. variable의 default/description, output의 description, module의 source/version, provider alias/version, terraform 설정은 literal로 처리하여 그 안의 `${...}`가 가짜 참조를 만들지 않습니다. variable type은 HCL type expression 형태로 보존합니다. 값 평가·instance 확장은 수행하지 않습니다.
+
+JSON decoder가 source range를 주지 않으므로 JSON 선언과 terraform 설정의 줄 정보는 모두 null입니다. 알 수 없는 최상위 block은 `UNSUPPORTED_JSON_BLOCK`, resource/data/provider의 JSON `dynamic` block은 `UNSUPPORTED_JSON_DYNAMIC` 진단을 남기고 해당 부분을 제외합니다. 그 외 지원 선언은 유지하고 분석 단계는 PARTIAL로 표시합니다. 깨진 JSON, block 형태 오류, 중복 object key, NaN/Infinity와 같은 비표준 JSON 상수는 `FILE_PARSE_FAILED`로 해당 파일만 제외합니다. 유효한 다른 파일과 기존 Checkov 결과는 보존합니다.
 
 ## Reference / Edge
 
@@ -121,7 +132,7 @@ Scan의 기존 상태 enum과 응답 필드는 유지합니다. 새 nullable `an
 
 - Checkov 성공 + graph/parser/analyzer 실패: 유효 Checkov Finding을 보존하고 전체 Scan은 COMPLETED, `partial_result=true`입니다.
 - Checkov 실패 + static 분석 성공: **기존 실패 의미를 보존해 전체 Scan은 FAILED**지만, Entity/Graph/Source Trust Finding과 단계별 결과는 저장·조회할 수 있습니다.
-- 일부 파일 실패: 유효 파일을 분석하고 PARTIAL. 모든 `.tf` 파일 파싱 실패: parse FAILED, 후속 단계 SKIPPED.
+- 일부 파일 실패: 유효 파일을 분석하고 PARTIAL. 모든 `.tf`·`.tf.json` 파일 파싱 실패: parse FAILED, 후속 단계 SKIPPED.
 - 그래프 구성 실패 시 파싱된 Entity는 보존합니다. Source Trust 실패 시 Graph는 보존합니다.
 - 안전한 Checkov 실행을 위한 기존 local module path preflight는 유지합니다. preflight 파싱이 실패하거나 source 경계가 불확실하면 Checkov 실행은 차단하지만 독립 static 분석은 계속합니다.
 - DB 저장 실패는 전체 Scan FAILED이며 저장 transaction은 rollback됩니다. 정상 종료/오류 모두 workspace 정리 정책을 유지합니다.

@@ -14,6 +14,7 @@ from app.parsers.domain import (
     TerraformParseResult,
     qualify,
 )
+from app.parsers.json import parse_json_entities
 from app.utils.filesystem import EXCLUDED_DIRECTORIES
 
 
@@ -73,22 +74,22 @@ class HCLTerraformParser(TerraformParser):
                 if path.is_symlink():
                     diagnose("UNSAFE_PATH", path, "Symbolic link skipped.", [])
                     continue
-                if path.name.endswith(".tf.json"):
-                    diagnose(
-                        "UNSUPPORTED_JSON",
-                        path,
-                        "Graph parsing currently supports .tf files only.",
-                        [],
-                    )
-                if not path.is_file() or path.suffix != ".tf":
+                if not path.is_file() or not path.name.endswith((".tf", ".tf.json")):
                     continue
                 candidate_count += 1
                 try:
                     if path.stat().st_size > self.max_file_bytes:
                         raise ValueError("file size limit")
                     text = path.read_text(encoding="utf-8")
-                    tree = hcl2.parses_to_tree(text)
-                    declarations.extend(self._entities(tree, text, str(path.relative_to(root))))
+                    file_path = str(path.relative_to(root))
+                    if path.name.endswith(".tf.json"):
+                        entities, diagnostics = parse_json_entities(text, file_path)
+                        declarations.extend(entities)
+                        for code, message in diagnostics:
+                            diagnose(code, path, message, [])
+                    else:
+                        tree = hcl2.parses_to_tree(text)
+                        declarations.extend(self._entities(tree, text, file_path))
                     result.files_parsed += 1
                 except Exception:
                     result.files_failed += 1
@@ -99,7 +100,12 @@ class HCLTerraformParser(TerraformParser):
                         [],
                     )
             if candidate_count == 0:
-                diagnose("NO_HCL_FILES", directory, "Module directory contains no .tf files.", [])
+                diagnose(
+                    "NO_HCL_FILES",
+                    directory,
+                    "Module directory contains no .tf or .tf.json files.",
+                    [],
+                )
             cache[directory] = declarations
             return declarations
 

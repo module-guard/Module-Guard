@@ -41,7 +41,7 @@ def get_graph(scan_id: UUID, session: SessionDep):
 def get_graph_neighborhood(
     scan_id: UUID,
     session: SessionDep,
-    address: Annotated[str, Query(min_length=1)],
+    address: Annotated[str, Query()],
     depth: Annotated[int, Query(ge=1, le=3)] = 1,
     direction: Literal["both", "out", "in"] = "both",
     edge_type: Annotated[list[str] | None, Query()] = None,

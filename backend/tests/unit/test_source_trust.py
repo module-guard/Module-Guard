@@ -46,3 +46,21 @@ def test_dynamic_version_is_not_misreported_missing(tmp_path):
         'module "x" { source = "org/repo/aws" version = var.version }'
     )
     assert SourceTrustAnalyzer().analyze(tmp_path) == []
+
+
+def test_json_source_trust_and_unknown_source_locations():
+    findings = SourceTrustAnalyzer().analyze(FIXTURES / "tf_json/basic")
+    # Only the two child modules' missing aws requirements are unresolved graph edges;
+    # no required provider was declared there, so there are no provider trust findings.
+    assert findings == []
+
+
+def test_json_missing_versions_keep_tfsc_identity_and_null_lines(tmp_path):
+    (tmp_path / "main.tf.json").write_text("""{
+      "module": {"external": {"source": "org/module/aws"}},
+      "terraform": {"required_providers": {"aws": {"source": "hashicorp/aws"}}}
+    }""")
+    findings = SourceTrustAnalyzer().analyze(tmp_path)
+    assert {finding.rule_id for finding in findings} == {"TFSC001", "TFSC007"}
+    assert all(f.line_start is None and f.line_end is None for f in findings)
+    assert all(f.severity == RULES[f.rule_id][1] for f in findings)
