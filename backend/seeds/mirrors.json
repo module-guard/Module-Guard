@@ -1,0 +1,100 @@
+{
+  "account": {
+    "login": "terraform-aws-modules-mirror",
+    "name": "terraform-aws-modules 미러"
+  },
+  "modules": [
+    {
+      "repository": "terraform-aws-modules/terraform-aws-vpc",
+      "tag": "v6.7.3",
+      "commit": "b3abd6df2ecf052451a361ed55b8f06f8742a795",
+      "description": "VPC, subnets, route tables, NAT and internet gateways"
+    },
+    {
+      "repository": "terraform-aws-modules/terraform-aws-s3-bucket",
+      "tag": "v5.17.0",
+      "commit": "9afa4fc8c8f1e0b3fd913474c1bef8d0c454b235",
+      "description": "S3 bucket with policies, encryption, versioning and lifecycle rules"
+    },
+    {
+      "repository": "terraform-aws-modules/terraform-aws-iam",
+      "tag": "v6.8.2",
+      "commit": "55514b7873c411040395e024a422684998da77c2",
+      "description": "IAM users, roles, policies, groups and OIDC providers"
+    },
+    {
+      "repository": "terraform-aws-modules/terraform-aws-eks",
+      "tag": "v21.29.0",
+      "commit": "91f11ea01656c26b8e6b8eb1b74f19863f60056c",
+      "description": "EKS cluster with managed node groups, Fargate profiles and add-ons"
+    },
+    {
+      "repository": "terraform-aws-modules/terraform-aws-rds",
+      "tag": "v7.2.2",
+      "commit": "175da043429cbbe41c512f976105719f6d0e538c",
+      "description": "RDS instance with parameter, option and subnet groups",
+      "acknowledge_warnings": true,
+      "reviewed": "examples/의 견본 비밀번호 4곳(UberSecret…: blue-green-deployment, replica-mysql, replica-postgres / Supe…: complete-mssql), CKV_SECRET_6 경고, 2026-10-14 사용자 확인"
+    },
+    {
+      "repository": "terraform-aws-modules/terraform-aws-security-group",
+      "tag": "v6.0.0",
+      "commit": "58d8e895915f5573767081142d063b7caf7a2b47",
+      "description": "EC2 security group and its ingress and egress rules"
+    },
+    {
+      "repository": "terraform-aws-modules/terraform-aws-ec2-instance",
+      "tag": "v6.4.1",
+      "commit": "294fb8928bc0f7e0d9ba5bea41a8236c9a7a95d9",
+      "description": "EC2 instance, on-demand or spot, with volumes and instance profile"
+    },
+    {
+      "repository": "terraform-aws-modules/terraform-aws-alb",
+      "tag": "v10.5.1",
+      "commit": "6c6e48c10d450d01cf6715346e926df0b858efc2",
+      "description": "Application and Network Load Balancer with listeners and target groups"
+    },
+    {
+      "repository": "terraform-aws-modules/terraform-aws-lambda",
+      "tag": "v8.12.0",
+      "commit": "fb581b2212bcbcfcd38762823b63d4fe3eff7c64",
+      "description": "Lambda function, layers and packaging of the deployment artifact"
+    },
+    {
+      "repository": "terraform-aws-modules/terraform-aws-ecs",
+      "tag": "v7.6.1",
+      "commit": "60b428812ddcffe48abc6af0988fe826c89da961",
+      "description": "ECS cluster, services, task definitions and capacity providers"
+    },
+    {
+      "repository": "terraform-aws-modules/terraform-aws-autoscaling",
+      "tag": "v9.3.2",
+      "commit": "f90a581bcca0bab571022a021db155f2860e9b32",
+      "description": "Auto Scaling group with launch template and scaling policies"
+    },
+    {
+      "repository": "terraform-aws-modules/terraform-aws-kms",
+      "tag": "v4.2.2",
+      "commit": "d25e459bd43d8d0bdff7c250ba6b237a12be7381",
+      "description": "KMS key, aliases, key policy and grants"
+    },
+    {
+      "repository": "terraform-aws-modules/terraform-aws-cloudfront",
+      "tag": "v6.7.1",
+      "commit": "5b9a0a480220b84f29f02d84ff71dd5340953f68",
+      "description": "CloudFront distribution with origins, behaviors and access control"
+    },
+    {
+      "repository": "terraform-aws-modules/terraform-aws-dynamodb-table",
+      "tag": "v5.5.2",
+      "commit": "c38423ae6c92825e7cc4376c7f81deb20a676f2b",
+      "description": "DynamoDB table with indexes, autoscaling and global replicas"
+    },
+    {
+      "repository": "terraform-aws-modules/terraform-aws-sqs",
+      "tag": "v5.2.2",
+      "commit": "dd73a96c0155bc324dda5256f3e7a9ea2c710195",
+      "description": "SQS queue with dead-letter queue, policy and encryption"
+    }
+  ]
+}
