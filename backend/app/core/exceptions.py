@@ -10,6 +10,10 @@ class RegistryNotSupportedError(DomainError):
     status_code = 501
 
 
+class RegistryModuleNotFoundError(DomainError):
+    status_code = 404
+
+
 class RepositoryCloneError(DomainError):
     status_code = 502
 
