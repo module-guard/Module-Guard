@@ -136,6 +136,7 @@ Scan의 기존 상태 enum과 응답 필드는 유지합니다. 새 nullable `an
 |---|---|
 | `GET /api/scans/{id}/entities` | entity_type, resource_type, limit, offset |
 | `GET /api/scans/{id}/graph` | 전체 저장 graph + unresolved 표시 노드 |
+| `GET /api/scans/{id}/graph/neighborhood` | address, depth, direction, edge_type (반복 가능), limit |
 | `GET /api/scans/{id}/dependencies` | module / required-provider dependency summary |
 | 기존 `GET /api/scans/{id}/findings` | `scanner` filter 추가 |
 | 기존 `GET /api/scans/{id}` | nullable `analysis` summary 추가 |
@@ -151,6 +152,82 @@ curl -sS "http://localhost:8000/api/scans/$SCAN_ID/findings?scanner=source_trust
 ```
 
 프론트엔드의 `src/lib/api.ts`에 `api.entities`, `api.graph`, `api.dependencies`와 응답 타입을 추가했습니다. 기존 화면의 demo mode와 mock data는 유지됩니다.
+
+### 중심 노드의 이웃 그래프
+
+`GET /api/scans/{scan_id}/graph/neighborhood`는 `/graph`와 같은 dependency edge를 사용하며 data flow edge를 제외합니다.
+
+| Query | 계약 |
+|---|---|
+| `address` | 필수. `GraphNodeResponse.address`와 정확히 일치하는 중심 주소 |
+| `depth` | 기본 1, 1~3 |
+| `direction` | `both` (기본), `out`, `in` |
+| `edge_type` | 생략 시 전체. `edge_type=READS_LOCAL&edge_type=READS_VARIABLE`처럼 반복 지정 |
+| `limit` | 중심·합성 노드를 포함한 최대 노드 수. 기본 150, 1~500 |
+
+`out`은 source → target (중심이 의존하는 대상), `in`은 target → source (중심에 의존하는 선언) 방향입니다. edge type 필터는 탐색과 반환 edge 모두에 적용됩니다. 한 검사의 entity·edge를 각각 한 번 조회한 뒤 메모리에서 BFS를 수행하며, 같은 깊이의 이웃은 address 순으로 탐색합니다. 반환 nodes는 중심부터 BFS 발견 순서입니다. depth 안에서 방문할 새 노드가 limit 때문에 제외될 때만 `truncated=true`입니다. depth 자체로 잘린 경우나 정확히 limit개인 경우는 false입니다. 반환 edge는 선택한 노드가 양 끝인 edge 전체이며 방향을 바꾸지 않습니다. 순환·자기 참조·병렬 edge가 노드 수를 중복 증가시키지 않습니다.
+
+미해결 target은 `/graph`와 동일한 `unresolved:<address>` ID의 합성 노드로 반환합니다. 이 노드의 address로도 중심을 지정할 수 있습니다. 검사나 중심 address가 없으면 404, query 범위를 벗어나면 422입니다. 기존 검사 조회 권한도 동일하게 적용됩니다. 기존 `/graph` 경로와 응답은 유지됩니다.
+
+요청 예시:
+
+```text
+GET /api/scans/{scan_id}/graph/neighborhood?address=local.name&depth=1&direction=out&edge_type=READS_VARIABLE&limit=150
+```
+
+응답 예시 (UUID는 예시 값):
+
+```json
+{
+  "schema_version": 1,
+  "center": "11111111-1111-4111-8111-111111111111",
+  "depth": 1,
+  "direction": "out",
+  "truncated": false,
+  "nodes": [
+    {
+      "id": "11111111-1111-4111-8111-111111111111",
+      "address": "local.name",
+      "type": "LOCAL",
+      "metadata": {"module_path": [], "resolved": true},
+      "module_path": [],
+      "name": "name",
+      "resource_type": null,
+      "file_path": "main.tf",
+      "line_start": null,
+      "line_end": null
+    },
+    {
+      "id": "22222222-2222-4222-8222-222222222222",
+      "address": "var.region",
+      "type": "VARIABLE",
+      "metadata": {"module_path": [], "resolved": true},
+      "module_path": [],
+      "name": "region",
+      "resource_type": null,
+      "file_path": "main.tf",
+      "line_start": null,
+      "line_end": null
+    }
+  ],
+  "edges": [
+    {
+      "id": "33333333-3333-4333-8333-333333333333",
+      "source": "11111111-1111-4111-8111-111111111111",
+      "target": "22222222-2222-4222-8222-222222222222",
+      "target_address": "var.region",
+      "type": "READS_VARIABLE",
+      "expression": "var.region",
+      "attribute_name": "value",
+      "metadata": {"resolved": true, "traversal": "var.region", "target_attribute": null}
+    }
+  ]
+}
+```
+
+`GraphNodeResponse`는 전체 graph와 neighborhood 모두에 `module_path: list[str] = []`, `name: str | None = None`, `resource_type: str | None = None`를 포함합니다. 선언 노드는 저장된 metadata/name/resource_type에서 읽고, root의 module_path는 `[]`입니다. 합성 unresolved 노드는 module_path를 추정하지 않고 `[]`를 사용하며 name/resource_type은 null입니다.
+
+`/dependencies.providers`에는 `official: bool = false`, `version_pinned: bool = false`를 추가했습니다. official은 `hashicorp/<name>` 또는 `registry.terraform.io/hashicorp/<name>`이며 TFSC와 같은 공용 판정을 사용합니다. version_pinned는 저장된 `version_type == "EXACT"`인 경우만 true입니다. ModuleDependency 계약은 유지합니다.
 
 ## 실제 fixture 결과 예시
 

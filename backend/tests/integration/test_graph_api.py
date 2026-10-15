@@ -76,6 +76,8 @@ def test_graph_entities_and_dependency_api(sessions, settings, report):
         assert dependencies["modules"][0]["version_type"] == "BOUNDED"
         assert dependencies["providers"][0]["aliases"] == ["west"]
         assert dependencies["providers"][0]["source"] == "hashicorp/aws"
+        assert dependencies["providers"][0]["official"] is True
+        assert dependencies["providers"][0]["version_pinned"] is False
         for suffix in ("entities", "graph", "dependencies"):
             assert client.get(f"/api/scans/{uuid4()}/{suffix}").status_code == 404
     with sessions() as session:
@@ -180,3 +182,21 @@ def test_all_files_unparseable_stage(tmp_path):
     assert result.summary.stages["parse"].status == "FAILED"
     assert result.summary.stages["graph"].status == "SKIPPED"
     assert result.summary.stages["source_trust"].status == "SKIPPED"
+
+
+def test_graph_node_module_paths(sessions, settings, report):
+    service = service_for(sessions, settings, report, "dependency_graph/local_module")
+    accepted = service.create("https://github.com/org/local")
+    service.run(accepted.scan_id)
+    with TestClient(create_app(settings, sessions, service)) as client:
+        base = f"/api/scans/{accepted.scan_id}/graph"
+        graph = client.get(base).json()
+        nodes = {node["address"]: node for node in graph["nodes"]}
+        assert nodes["root"]["module_path"] == []
+        address = "module.network.module.subnet.aws_subnet.private"
+        assert nodes[address]["module_path"] == ["network", "subnet"]
+        assert nodes[address]["name"] == "private"
+        assert nodes[address]["resource_type"] == "aws_subnet"
+        response = client.get(base + "/neighborhood", params={"address": address})
+        assert response.status_code == 200
+        assert response.json()["nodes"][0] == nodes[address]
