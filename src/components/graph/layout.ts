@@ -1,0 +1,88 @@
+import dagre from "@dagrejs/dagre";
+import type { Node } from "@xyflow/react";
+import type { VisualNode, VisualEdge } from "./types";
+export const WIDTH = 260,
+  HEIGHT = 116;
+export function layoutGraph(nodes: VisualNode[], edges: VisualEdge[]): Node[] {
+  const groups = new Map<string, VisualNode[]>();
+  for (const n of nodes) {
+    const key = JSON.stringify(n.module_path ?? []);
+    groups.set(key, [...(groups.get(key) ?? []), n]);
+  }
+  const outer = new dagre.graphlib.Graph()
+    .setGraph({ rankdir: "LR", nodesep: 60, ranksep: 100 })
+    .setDefaultEdgeLabel(() => ({}));
+  const owner = new Map<string, string>();
+  const local = new Map<
+    string,
+    {
+      graph: InstanceType<typeof dagre.graphlib.Graph>;
+      width: number;
+      height: number;
+    }
+  >();
+  for (const [key, members] of groups) {
+    const g = new dagre.graphlib.Graph()
+      .setGraph({
+        rankdir: "LR",
+        nodesep: 40,
+        ranksep: 100,
+        marginx: 24,
+        marginy: 48,
+      })
+      .setDefaultEdgeLabel(() => ({}));
+    const ids = new Set(members.map((n) => n.id));
+    members.forEach((n) => {
+      g.setNode(n.id, { width: WIDTH, height: HEIGHT });
+      owner.set(n.id, key);
+    });
+    edges.forEach((e) => {
+      if (ids.has(e.source) && e.target && ids.has(e.target))
+        g.setEdge(e.source, e.target);
+    });
+    dagre.layout(g);
+    const { width = WIDTH, height = HEIGHT } = g.graph();
+    local.set(key, { graph: g, width, height });
+    outer.setNode(key, { width, height });
+  }
+  edges.forEach((e) => {
+    const a = owner.get(e.source),
+      b = e.target && owner.get(e.target);
+    if (a && b && a !== b) outer.setEdge(a, b);
+  });
+  dagre.layout(outer);
+  const result: Node[] = [];
+  for (const [key, members] of groups) {
+    const { graph, width, height } = local.get(key)!;
+    const p = outer.node(key);
+    const parentId = `group:${key}`;
+    result.push({
+      id: parentId,
+      type: "moduleGroup",
+      position: { x: p.x - width / 2, y: p.y - height / 2 },
+      data: { label: JSON.parse(key).join(" / ") || "root" },
+      style: {
+        width,
+        height,
+        background: "rgba(241,245,249,.5)",
+        border: "1px solid #cbd5e1",
+      },
+      selectable: false,
+      draggable: false,
+    });
+    for (const n of members) {
+      const p = graph.node(n.id) as { x: number; y: number };
+      result.push({
+        id: n.id,
+        type: "entity",
+        parentId,
+        extent: "parent",
+        position: { x: p.x - WIDTH / 2, y: p.y - HEIGHT / 2 },
+        data: { node: n },
+        style: { width: WIDTH, height: HEIGHT },
+        ariaLabel: n.address,
+      });
+    }
+  }
+  return result;
+}

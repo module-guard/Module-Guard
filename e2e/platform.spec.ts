@@ -33,6 +33,22 @@ test("scan form → actual fixture pipeline → results, graph, trace and attack
   await expect(page.getByText("TFSC004", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: /^의존성/ }).click();
   await expect(page.getByRole("img", { name: "의존성 그래프" })).toBeVisible();
+  await expect(page.getByLabel("그래프 깊이")).toHaveValue("1");
+  await page.getByLabel("그래프 깊이").selectOption("2");
+  await page.getByLabel("그래프 방향").selectOption("out");
+  const dependencyGraph = page.getByRole("img", { name: "의존성 그래프" });
+  const firstNode = dependencyGraph.locator(".react-flow__node-entity").first();
+  await firstNode.click();
+  await expect(
+    page.getByRole("complementary", { name: "그래프 상세" }),
+  ).toContainText(
+    (await firstNode.getAttribute("aria-label")) || "ROOT_MODULE",
+  );
+  await firstNode.dblclick();
+  await expect(page.getByLabel("중심 주소", { exact: true })).toHaveValue(
+    (await firstNode.getAttribute("aria-label")) || "root",
+  );
+
   await page.getByRole("button", { name: /^데이터 흐름/ }).click();
   await page
     .getByLabel("Source address", { exact: true })
@@ -42,7 +58,9 @@ test("scan form → actual fixture pipeline → results, graph, trace and attack
     .fill("aws_iam_role_policy.admin.policy");
   await page.getByRole("button", { name: "흐름 추적", exact: true }).click();
   await expect(
-    page.locator("ol").getByText("↓ local.policy", { exact: true }),
+    page
+      .getByRole("img", { name: "흐름 추적 그래프" })
+      .getByText("local.policy", { exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: /^상관 위험/ }).click();
   await expect(page.getByText("TFCR001", { exact: true })).toBeVisible();
@@ -53,6 +71,9 @@ test("scan form → actual fixture pipeline → results, graph, trace and attack
   await expect(
     page.getByRole("region", { name: "상관 분석 근거" }),
   ).toContainText("local.policy");
+  await expect(
+    page.getByRole("img", { name: "상관 공격 경로 그래프" }),
+  ).toBeVisible();
   await page.screenshot({
     path: "test-results/correlation-ui.png",
     fullPage: true,
