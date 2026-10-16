@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
@@ -29,6 +29,9 @@ class GraphNodeResponse(BaseModel):
     address: str
     type: str
     metadata: dict[str, Any]
+    module_path: list[str] = Field(default_factory=list)
+    name: str | None = None
+    resource_type: str | None = None
     file_path: str | None = None
     line_start: int | None = None
     line_end: int | None = None
@@ -48,6 +51,16 @@ class GraphEdgeResponse(BaseModel):
 class GraphResponse(BaseModel):
     schema_version: int = 1
     analysis: AnalysisSummary | None = None
+    nodes: list[GraphNodeResponse]
+    edges: list[GraphEdgeResponse]
+
+
+class GraphNeighborhoodResponse(BaseModel):
+    schema_version: int = 1
+    center: str
+    depth: int
+    direction: Literal["both", "out", "in"]
+    truncated: bool
     nodes: list[GraphNodeResponse]
     edges: list[GraphEdgeResponse]
 
@@ -73,6 +86,8 @@ class ProviderDependency(BaseModel):
     version_type: str
     module_path: list[str]
     aliases: list[str]
+    official: bool = False
+    version_pinned: bool = False
 
 
 class DependencyResponse(BaseModel):

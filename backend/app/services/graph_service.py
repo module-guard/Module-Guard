@@ -1,7 +1,10 @@
+from collections import defaultdict, deque
 from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from app.analyzers.classifiers import VersionType, is_official_provider
+from app.core.exceptions import NotFoundError
 from app.graphs.flow_domain import FLOW_EDGE_TYPES
 from app.parsers.domain import EntityType, scope_address
 from app.repositories.graph_repository import GraphRepository
@@ -9,6 +12,7 @@ from app.repositories.scan_repository import ScanRepository
 from app.schemas.graph import (
     DependencyResponse,
     GraphEdgeResponse,
+    GraphNeighborhoodResponse,
     GraphNodeResponse,
     GraphResponse,
     ModuleDependency,
@@ -30,6 +34,9 @@ class GraphService:
                 id=str(e.id),
                 address=e.address,
                 type=e.entity_type,
+                module_path=e.entity_metadata.get("module_path", []),
+                name=e.name,
+                resource_type=e.resource_type,
                 metadata={**e.entity_metadata, "resolved": True},
                 file_path=e.file_path,
                 line_start=e.line_start,
@@ -63,6 +70,56 @@ class GraphService:
             )
         return GraphResponse(
             analysis=scan.analysis, nodes=nodes + list(placeholders.values()), edges=responses
+        )
+
+    def neighborhood(
+        self,
+        scan_id: UUID,
+        address: str,
+        depth: int = 1,
+        direction: str = "both",
+        edge_type: list[str] | None = None,
+        limit: int = 150,
+    ) -> GraphNeighborhoodResponse:
+        # Share dependency filtering and unresolved-node identity with the full graph.
+        graph = self.graph(scan_id)
+        center = next((node for node in graph.nodes if node.address == address), None)
+        if center is None:
+            raise NotFoundError("Graph node address not found.")
+        nodes = {node.id: node for node in graph.nodes}
+        types = set(edge_type or [])
+        edges = [edge for edge in graph.edges if not types or edge.type in types]
+        neighbors: dict[str, set[str]] = defaultdict(set)
+        for edge in edges:
+            if edge.source not in nodes or edge.target not in nodes:
+                continue
+            if direction in {"both", "out"}:
+                neighbors[edge.source].add(edge.target)
+            if direction in {"both", "in"}:
+                neighbors[edge.target].add(edge.source)
+        selected = {center.id: center}
+        queue = deque([(center.id, 0)])
+        truncated = False
+        while queue and not truncated:
+            current, distance = queue.popleft()
+            if distance == depth:
+                continue
+            # Stable ordering makes limit boundaries independent of database UUIDs.
+            for neighbor in sorted(neighbors[current], key=lambda key: nodes[key].address):
+                if neighbor in selected:
+                    continue
+                if len(selected) == limit:
+                    truncated = True
+                    break
+                selected[neighbor] = nodes[neighbor]
+                queue.append((neighbor, distance + 1))
+        return GraphNeighborhoodResponse(
+            center=center.id,
+            depth=depth,
+            direction=direction,
+            truncated=truncated,
+            nodes=list(selected.values()),
+            edges=[edge for edge in edges if edge.source in selected and edge.target in selected],
         )
 
     def dependencies(self, scan_id: UUID) -> DependencyResponse:
@@ -103,6 +160,8 @@ class GraphService:
                         version_type=metadata.get("version_type", "UNKNOWN"),
                         module_path=scope,
                         aliases=aliases.get((scope_address(scope), entity.name), []),
+                        official=is_official_provider(metadata.get("source")),
+                        version_pinned=metadata.get("version_type") == VersionType.EXACT,
                     )
                 )
         return DependencyResponse(modules=modules, providers=providers, analysis=scan.analysis)

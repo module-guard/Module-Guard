@@ -21,6 +21,7 @@ SourceCollector → workspace → Terraform discovery
 |---|---|
 | 교체 가능한 parser interface / domain | `app/parsers/base.py`, `domain.py` |
 | python-hcl2 syntax tree → 선언 Entity | `app/parsers/hcl.py` |
+| Terraform JSON → 같은 선언·expression 모델 | `app/parsers/json.py` |
 | expression syntax tree → Reference | `app/parsers/references.py` |
 | Node / Edge / Reference 모델 | `app/graphs/domain.py` |
 | 주소 lookup과 dependency edge 구성 | `app/graphs/builder.py` |
@@ -32,17 +33,27 @@ SourceCollector → workspace → Terraform discovery
 
 ## Parser와 semantic identity
 
-파서 범위는 **repository root 디렉터리의 `.tf` 파일과, 이 root에서 실제로 호출하는 로컬 모듈**입니다. `examples/` 등 호출되지 않은 디렉터리를 별도 root처럼 합치지 않습니다. Checkov는 종전과 같이 제외 경로를 뺀 repository 전체를 검사하므로 두 분석의 coverage는 다릅니다.
+파서 범위는 **repository root 디렉터리의 `.tf`·`.tf.json` 파일과, 이 root에서 실제로 호출하는 로컬 모듈**입니다. `examples/` 등 호출되지 않은 디렉터리를 별도 root처럼 합치지 않습니다. Checkov는 종전과 같이 제외 경로를 뺀 repository 전체를 검사하므로 두 분석의 coverage는 다릅니다.
 
 지원 선언은 ROOT_MODULE, MODULE, RESOURCE, DATA, VARIABLE, OUTPUT, LOCAL, PROVIDER, REQUIRED_PROVIDER입니다. `terraform` 블록의 속성과 source range는 소유 root/module의 `metadata.terraform_configurations`에 보존합니다. `required_providers`의 각 항목은 독립 Entity입니다. provider alias는 `provider.aws.west`처럼 별도 주소를 갖습니다.
 
-- `attributes`는 attribute path → **원래 HCL expression 문자열**입니다. 예: `subnet_id: "module.vpc.private_subnets[0]"`, `ingress[0].cidr_blocks: "var.cidrs"`.
-- `file_path`는 repository 상대 경로이며 source range는 Lark의 실제 token 위치에서 얻습니다. 합성 root에는 line을 만들지 않습니다.
+- `.tf`의 `attributes`는 attribute path → **원래 HCL expression 문자열**입니다. 예: `subnet_id: "module.vpc.private_subnets[0]"`, `ingress[0].cidr_blocks: "var.cidrs"`. `.tf.json`의 값은 아래 설명한 정규화된 expression 문자열입니다.
+- `file_path`는 repository 상대 경로이며 `.tf` source range는 Lark의 실제 token 위치에서 얻습니다. `.tf.json`과 합성 root의 `line_start`/`line_end`는 null이며 가짜 줄 번호를 만들지 않습니다.
 - Entity UUID는 scan별 식별자입니다. 같은 scan의 선언 주소는 UNIQUE입니다. 서로 다른 scan을 비교할 때는 address 및 module path/commit을 함께 사용해야 합니다.
 - 예: `module.network.module.subnet.aws_subnet.private`, `metadata.module_path = ["network", "subnet"]`.
 - 같은 real directory를 여러 이름으로 호출하면 syntax는 한 번만 파싱하고 호출별 Entity를 생성합니다. ancestry real path set으로 cycle을 차단하며, 전역 cache를 단순 visited skip으로 사용해 호출 주소를 잃지 않습니다.
 - source가 `./` 또는 `../`인 경우만 로컬 재귀 탐색합니다. root 밖, symlink, excluded directory, cycle, 누락 경로는 진단과 boundary module Entity로 남기며 읽지 않습니다.
-- 파일 단위 파싱 오류·크기 초과는 해당 파일만 제외합니다. syntax가 깨진 파일 내부의 블록 복구는 지원하지 않습니다. `.tf.json`은 기존 Checkov 검사 대상으로 유지하되 새 그래프 파서는 지원하지 않으며 진단으로 알립니다.
+- 파일 단위 파싱 오류·크기 초과는 해당 파일만 제외합니다. syntax가 깨진 파일 내부의 블록 복구는 지원하지 않습니다. `.tf`와 `.tf.json`에 같은 파일 크기·Entity·주소 상한과 로컬 모듈 경로 정책을 적용합니다.
+
+### Terraform JSON 지원 범위
+
+[Terraform JSON 문법](https://developer.hashicorp.com/terraform/language/syntax/json)의 최상위 `resource`, `data`, `module`, `variable`, `output`, `locals`, `provider`, `terraform`를 지원합니다. `required_providers`는 `.tf`와 같은 REQUIRED_PROVIDER Entity로 만들고 terraform 설정은 소유 root/module의 `metadata.terraform_configurations`에 저장합니다. JSON의 label 계층과 block 배열, provider alias, 로컬 모듈 재귀 호출을 지원합니다. `.tf`와 `.tf.json`이 같은 모듈 안에 함께 있거나 서로 다른 형식의 로컬 모듈을 호출할 수 있습니다. 같은 디렉터리의 syntax는 한 번 읽고 호출별 Entity를 생성합니다.
+
+JSON 값은 기존 HCL ReferenceExtractor가 읽을 수 있는 expression으로 정규화합니다. 문자열의 `${...}`와 template directive 안의 참조는 HCL과 같은 lexical scope 규칙으로 추출하며, 문자열 자체가 `var.name`인 경우나 `$${...}`로 escape한 경우는 참조가 아닙니다. 일반 object/array 내부의 expression도 분석합니다. provider schema를 다운로드하지 않으므로 중첩 object가 provider block인지 object argument인지는 구분하지 않고 상위 attribute의 expression으로 보존합니다.
+
+Terraform JSON의 특수 매핑도 적용합니다. resource/data의 `provider`, 선언의 `depends_on`, module의 `providers`는 interpolation 없이 쓴 참조 문자열을 연결합니다. variable의 default/description, output의 description, module의 source/version, provider alias/version, terraform 설정은 literal로 처리하여 그 안의 `${...}`가 가짜 참조를 만들지 않습니다. variable type은 HCL type expression 형태로 보존합니다. 값 평가·instance 확장은 수행하지 않습니다.
+
+JSON decoder가 source range를 주지 않으므로 JSON 선언과 terraform 설정의 줄 정보는 모두 null입니다. 알 수 없는 최상위 block은 `UNSUPPORTED_JSON_BLOCK`, resource/data/provider의 JSON `dynamic` block은 `UNSUPPORTED_JSON_DYNAMIC` 진단을 남기고 해당 부분을 제외합니다. 그 외 지원 선언은 유지하고 분석 단계는 PARTIAL로 표시합니다. 깨진 JSON, block 형태 오류, 중복 object key, NaN/Infinity와 같은 비표준 JSON 상수는 `FILE_PARSE_FAILED`로 해당 파일만 제외합니다. 유효한 다른 파일과 기존 Checkov 결과는 보존합니다.
 
 ## Reference / Edge
 
@@ -121,7 +132,7 @@ Scan의 기존 상태 enum과 응답 필드는 유지합니다. 새 nullable `an
 
 - Checkov 성공 + graph/parser/analyzer 실패: 유효 Checkov Finding을 보존하고 전체 Scan은 COMPLETED, `partial_result=true`입니다.
 - Checkov 실패 + static 분석 성공: **기존 실패 의미를 보존해 전체 Scan은 FAILED**지만, Entity/Graph/Source Trust Finding과 단계별 결과는 저장·조회할 수 있습니다.
-- 일부 파일 실패: 유효 파일을 분석하고 PARTIAL. 모든 `.tf` 파일 파싱 실패: parse FAILED, 후속 단계 SKIPPED.
+- 일부 파일 실패: 유효 파일을 분석하고 PARTIAL. 모든 `.tf`·`.tf.json` 파일 파싱 실패: parse FAILED, 후속 단계 SKIPPED.
 - 그래프 구성 실패 시 파싱된 Entity는 보존합니다. Source Trust 실패 시 Graph는 보존합니다.
 - 안전한 Checkov 실행을 위한 기존 local module path preflight는 유지합니다. preflight 파싱이 실패하거나 source 경계가 불확실하면 Checkov 실행은 차단하지만 독립 static 분석은 계속합니다.
 - DB 저장 실패는 전체 Scan FAILED이며 저장 transaction은 rollback됩니다. 정상 종료/오류 모두 workspace 정리 정책을 유지합니다.
@@ -136,6 +147,7 @@ Scan의 기존 상태 enum과 응답 필드는 유지합니다. 새 nullable `an
 |---|---|
 | `GET /api/scans/{id}/entities` | entity_type, resource_type, limit, offset |
 | `GET /api/scans/{id}/graph` | 전체 저장 graph + unresolved 표시 노드 |
+| `GET /api/scans/{id}/graph/neighborhood` | address, depth, direction, edge_type (반복 가능), limit |
 | `GET /api/scans/{id}/dependencies` | module / required-provider dependency summary |
 | 기존 `GET /api/scans/{id}/findings` | `scanner` filter 추가 |
 | 기존 `GET /api/scans/{id}` | nullable `analysis` summary 추가 |
@@ -151,6 +163,82 @@ curl -sS "http://localhost:8000/api/scans/$SCAN_ID/findings?scanner=source_trust
 ```
 
 프론트엔드의 `src/lib/api.ts`에 `api.entities`, `api.graph`, `api.dependencies`와 응답 타입을 추가했습니다. 기존 화면의 demo mode와 mock data는 유지됩니다.
+
+### 중심 노드의 이웃 그래프
+
+`GET /api/scans/{scan_id}/graph/neighborhood`는 `/graph`와 같은 dependency edge를 사용하며 data flow edge를 제외합니다.
+
+| Query | 계약 |
+|---|---|
+| `address` | 필수. `GraphNodeResponse.address`와 정확히 일치하는 중심 주소 |
+| `depth` | 기본 1, 1~3 |
+| `direction` | `both` (기본), `out`, `in` |
+| `edge_type` | 생략 시 전체. `edge_type=READS_LOCAL&edge_type=READS_VARIABLE`처럼 반복 지정 |
+| `limit` | 중심·합성 노드를 포함한 최대 노드 수. 기본 150, 1~500 |
+
+`out`은 source → target (중심이 의존하는 대상), `in`은 target → source (중심에 의존하는 선언) 방향입니다. edge type 필터는 탐색과 반환 edge 모두에 적용됩니다. 한 검사의 entity·edge를 각각 한 번 조회한 뒤 메모리에서 BFS를 수행하며, 같은 깊이의 이웃은 address 순으로 탐색합니다. 반환 nodes는 중심부터 BFS 발견 순서입니다. depth 안에서 방문할 새 노드가 limit 때문에 제외될 때만 `truncated=true`입니다. depth 자체로 잘린 경우나 정확히 limit개인 경우는 false입니다. 반환 edge는 선택한 노드가 양 끝인 edge 전체이며 방향을 바꾸지 않습니다. 순환·자기 참조·병렬 edge가 노드 수를 중복 증가시키지 않습니다.
+
+미해결 target은 `/graph`와 동일한 `unresolved:<address>` ID의 합성 노드로 반환합니다. 이 노드의 address로도 중심을 지정할 수 있습니다. 검사나 중심 address가 없으면 404, query 범위를 벗어나면 422입니다. 기존 검사 조회 권한도 동일하게 적용됩니다. 기존 `/graph` 경로와 응답은 유지됩니다.
+
+요청 예시:
+
+```text
+GET /api/scans/{scan_id}/graph/neighborhood?address=local.name&depth=1&direction=out&edge_type=READS_VARIABLE&limit=150
+```
+
+응답 예시 (UUID는 예시 값):
+
+```json
+{
+  "schema_version": 1,
+  "center": "11111111-1111-4111-8111-111111111111",
+  "depth": 1,
+  "direction": "out",
+  "truncated": false,
+  "nodes": [
+    {
+      "id": "11111111-1111-4111-8111-111111111111",
+      "address": "local.name",
+      "type": "LOCAL",
+      "metadata": {"module_path": [], "resolved": true},
+      "module_path": [],
+      "name": "name",
+      "resource_type": null,
+      "file_path": "main.tf",
+      "line_start": null,
+      "line_end": null
+    },
+    {
+      "id": "22222222-2222-4222-8222-222222222222",
+      "address": "var.region",
+      "type": "VARIABLE",
+      "metadata": {"module_path": [], "resolved": true},
+      "module_path": [],
+      "name": "region",
+      "resource_type": null,
+      "file_path": "main.tf",
+      "line_start": null,
+      "line_end": null
+    }
+  ],
+  "edges": [
+    {
+      "id": "33333333-3333-4333-8333-333333333333",
+      "source": "11111111-1111-4111-8111-111111111111",
+      "target": "22222222-2222-4222-8222-222222222222",
+      "target_address": "var.region",
+      "type": "READS_VARIABLE",
+      "expression": "var.region",
+      "attribute_name": "value",
+      "metadata": {"resolved": true, "traversal": "var.region", "target_attribute": null}
+    }
+  ]
+}
+```
+
+`GraphNodeResponse`는 전체 graph와 neighborhood 모두에 `module_path: list[str] = []`, `name: str | None = None`, `resource_type: str | None = None`를 포함합니다. 선언 노드는 저장된 metadata/name/resource_type에서 읽고, root의 module_path는 `[]`입니다. 합성 unresolved 노드는 module_path를 추정하지 않고 `[]`를 사용하며 name/resource_type은 null입니다.
+
+`/dependencies.providers`에는 `official: bool = false`, `version_pinned: bool = false`를 추가했습니다. official은 `hashicorp/<name>` 또는 `registry.terraform.io/hashicorp/<name>`이며 TFSC와 같은 공용 판정을 사용합니다. version_pinned는 저장된 `version_type == "EXACT"`인 경우만 true입니다. ModuleDependency 계약은 유지합니다.
 
 ## 실제 fixture 결과 예시
 

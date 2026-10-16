@@ -1,3 +1,5 @@
+import json
+
 import pytest
 from conftest import FIXTURES
 
@@ -115,3 +117,79 @@ def test_edge_limit():
         HCLTerraformParser().parse_directory(FIXTURES / "dependency_graph/basic")
     )
     assert len(graph.edges) == 1 and graph.diagnostics
+
+
+def test_json_dependency_graph_and_local_output_resolution():
+    graph = DependencyGraphBuilder().build(
+        HCLTerraformParser().parse_directory(FIXTURES / "tf_json/basic")
+    )
+    assert not graph.diagnostics
+    assert {
+        ("root", "CALLS_MODULE", "module.network"),
+        ("root", "USES_PROVIDER", "required_provider.aws"),
+        ("local.name", "READS_VARIABLE", "var.region"),
+        ("local.dynamic", "READS_VARIABLE", "var.region"),
+        ("local.nested", "READS_VARIABLE", "var.region"),
+        ("aws_instance.web", "USES_PROVIDER", "provider.aws.west"),
+        ("aws_instance.web", "EXPLICIT_DEPENDS_ON", "module.network"),
+        ("aws_instance.web", "READS_DATA", "data.aws_ami.ubuntu"),
+        ("aws_instance.web", "READS_LOCAL", "local.name"),
+        ("aws_instance.web", "REFERENCES", "module.network.output.subnet_id"),
+        ("module.network", "USES_PROVIDER", "provider.aws.west"),
+        ("output.instance_id", "RESOURCE_DEPENDS_ON", "aws_instance.web"),
+        ("output.external_id", "REFERENCES", "module.external.id"),
+        (
+            "module.network.module.subnet.aws_subnet.private",
+            "READS_VARIABLE",
+            "module.network.module.subnet.var.cidr",
+        ),
+    } <= edge_set(graph)
+    assert not any("not_a_reference" in edge.target_address for edge in graph.edges)
+    output = next(
+        edge for edge in graph.edges if edge.target_address == "module.network.output.subnet_id"
+    )
+    assert output.target_entity_id is not None
+    provider = next(node for node in graph.nodes if node.address == "required_provider.aws")
+    assert provider.metadata["version_type"] == "EXACT"
+    assert all(node.line_start is None and node.line_end is None for node in graph.nodes)
+
+
+@pytest.mark.parametrize(
+    "expression,targets",
+    [
+        ('${format("%s", var.region)}', {"var.region"}),
+        ('${var.items["key"]}', {"var.items"}),
+        ("${[for item in var.items : item.id]}", {"var.items"}),
+        (
+            "%{ for item in var.items }${item.name}-${var.region}%{ endfor }",
+            {"var.items", "var.region"},
+        ),
+        ("line\n${var.region}", {"var.region"}),
+        ("literal $${var.fake} %%{ if var.fake }", set()),
+        ("var.fake", set()),
+    ],
+)
+def test_json_templates_use_the_same_reference_extractor(tmp_path, expression, targets):
+    (tmp_path / "main.tf.json").write_text(json.dumps({"locals": {"value": expression}}))
+    graph = DependencyGraphBuilder().build(HCLTerraformParser().parse_directory(tmp_path))
+    assert not graph.diagnostics
+    assert {ref.target_address for ref in graph.references} == targets
+
+
+def test_json_literal_defaults_and_descriptions_do_not_create_references(tmp_path):
+    (tmp_path / "main.tf.json").write_text(
+        json.dumps(
+            {
+                "variable": {
+                    "input": {
+                        "default": ["${var.fake}", {"nested": "${local.fake}"}],
+                        "description": "${var.fake}",
+                    }
+                },
+                "output": {"result": {"value": "${var.input}", "description": "${var.fake}"}},
+            }
+        )
+    )
+    graph = DependencyGraphBuilder().build(HCLTerraformParser().parse_directory(tmp_path))
+    assert not graph.diagnostics
+    assert {ref.target_address for ref in graph.references} == {"var.input"}

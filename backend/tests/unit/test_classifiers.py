@@ -4,6 +4,7 @@ from app.analyzers.classifiers import (
     GitRefClassifier,
     SourceClassifier,
     VersionConstraintClassifier,
+    is_official_provider,
 )
 
 
@@ -84,3 +85,19 @@ def test_git_query_and_subdirectory():
 )
 def test_version_constraints(version, kind):
     assert VersionConstraintClassifier().classify(version) == kind
+
+
+@pytest.mark.parametrize(
+    "source,expected",
+    [
+        ("hashicorp/aws", True),
+        ("registry.terraform.io/hashicorp/aws", True),
+        ("example.com/hashicorp/aws", False),
+        ("community/aws", False),
+        ("hashicorp/aws/extra", False),
+        (None, False),
+        ("${var.provider}", False),
+    ],
+)
+def test_official_provider(source, expected):
+    assert is_official_provider(source) is expected

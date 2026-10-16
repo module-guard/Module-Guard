@@ -7,6 +7,7 @@ from app.analyzers.classifiers import (
     SourceClassifier,
     VersionConstraintClassifier,
     VersionType,
+    is_official_provider,
 )
 from app.graphs.builder import DependencyGraphBuilder
 from app.graphs.domain import DependencyGraph
@@ -147,11 +148,7 @@ class SourceTrustAnalyzer(ModuleAnalyzer[list[NormalizedFinding]]):
                     if "source" not in entity.attributes:
                         rules.append("TFSC011")
                 elif not source.startswith("${"):
-                    parts = source.split("/")
-                    official = (len(parts) == 2 and parts[0] == "hashicorp") or (
-                        len(parts) == 3 and parts[:2] == ["registry.terraform.io", "hashicorp"]
-                    )
-                    if not official:
+                    if not is_official_provider(source):
                         rules.append("TFSC010")
             for rule in rules:
                 name, severity, title, guideline = RULES[rule]

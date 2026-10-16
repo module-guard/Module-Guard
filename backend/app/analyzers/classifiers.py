@@ -5,6 +5,15 @@ from urllib.parse import parse_qs, urlsplit
 from pydantic import BaseModel
 
 
+def is_official_provider(source: str | None) -> bool:
+    if not source:
+        return False
+    parts = source.split("/")
+    return (len(parts) == 2 and parts[0] == "hashicorp") or (
+        len(parts) == 3 and parts[:2] == ["registry.terraform.io", "hashicorp"]
+    )
+
+
 class ModuleSourceType(StrEnum):
     REGISTRY = "REGISTRY"
     GITHUB = "GITHUB"
