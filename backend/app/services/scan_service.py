@@ -15,13 +15,12 @@ from app.analyzers.module_interface import (
     read_readme,
 )
 from app.collectors.base import CollectedModule, SourceCollector
-from app.collectors.github import GitHubCollector
+from app.collectors.router import default_router
 from app.collectors.source_detector import detect_source
 from app.core.config import Settings
 from app.core.exceptions import (
     DomainError,
     PreparedSourceMissingError,
-    RegistryNotSupportedError,
     SnapshotError,
     TerraformNotFoundError,
 )
@@ -30,7 +29,7 @@ from app.correlation.engine import CorrelationEngine
 from app.graphs.builder import DependencyGraphBuilder
 from app.graphs.flow_builder import DataFlowGraphBuilder
 from app.models.common import utcnow
-from app.models.enums import ScanStatus, SourceType
+from app.models.enums import ScanStatus
 from app.parsers.hcl import HCLTerraformParser
 from app.repositories.finding_repository import FindingRepository
 from app.repositories.graph_repository import GraphRepository
@@ -58,6 +57,17 @@ from app.workspace.manager import WorkspaceManager
 
 logger = logging.getLogger(__name__)
 
+# Pipeline stages in execution order. A FAILED scan reports the furthest one it reached.
+STAGE_ORDER = (
+    "checkov",
+    "parse",
+    "graph",
+    "source_trust",
+    "data_flow",
+    "correlation",
+    "persistence",
+)
+
 
 class ScanService:
     """Durable scan records; collector/scanner/normalizer can be independently replaced."""
@@ -76,7 +86,7 @@ class ScanService:
     ):
         self.session_factory = session_factory
         self.settings = settings
-        self.collector = collector or GitHubCollector(settings)
+        self.collector = collector or default_router(settings)
         self.scanner = scanner or CheckovScanner(settings)
         self.normalizer = normalizer or CheckovNormalizer(SeverityMapper(SEVERITY_OVERRIDES))
         self.correlation_engine = correlation_engine or CorrelationEngine()
@@ -98,10 +108,6 @@ class ScanService:
 
     def create(self, source: str) -> ScanAccepted:
         identity = detect_source(source)
-        if identity.source_type == SourceType.TERRAFORM_REGISTRY:
-            raise RegistryNotSupportedError(
-                "Registry download is not available; submit the GitHub repository URL."
-            )
         with self.session_factory() as session:
             module = ModuleRepository(session).get_or_create(identity)
             scan = ScanRepository(session).create(module.id)
@@ -109,12 +115,29 @@ class ScanService:
             session.commit()
             return ScanAccepted(scan_id=scan.id)
 
-    def mark_failed(self, scan_id: UUID, message: str, started: float | None = None) -> None:
+    @staticmethod
+    def _failed_stage(analysis: dict | None) -> str:
+        """The furthest stage the pipeline had reached, or "collect" before any stage began."""
+        stages = (analysis or {}).get("stages") or {}
+        for name in reversed(STAGE_ORDER):
+            if stages.get(name, {}).get("status") in {StageStatus.RUNNING, StageStatus.FAILED}:
+                return name
+        return "collect"
+
+    def mark_failed(
+        self,
+        scan_id: UUID,
+        message: str,
+        started: float | None = None,
+        code: str | None = None,
+    ) -> None:
         with self.session_factory() as session:
             scan = ScanRepository(session).get(scan_id)
             scan.status = ScanStatus.FAILED
             scan.error_message = message
             scan.finished_at = utcnow()
+            # Resolve the failed stage from the stored stages before they are rewritten below.
+            failure = {"stage": self._failed_stage(scan.analysis), "code": code} if code else None
             if scan.analysis:
                 analysis = dict(scan.analysis)
                 stages = {name: dict(stage) for name, stage in analysis.get("stages", {}).items()}
@@ -142,6 +165,8 @@ class ScanService:
                     analysis["data_flow"] = None
                     analysis["correlation"] = None
                 scan.analysis = {**analysis, "stages": stages}
+            if failure is not None:
+                scan.analysis = {**(scan.analysis or {}), "failure": failure}
             if started is not None:
                 scan.duration_ms = int((time.monotonic() - started) * 1000)
             session.commit()
@@ -380,6 +405,12 @@ class ScanService:
                 for severity in ("critical", "high", "medium", "low", "info", "unknown"):
                     setattr(scan, f"{severity}_count", getattr(summary, severity))
                 scan.status = ScanStatus.FAILED if checkov_error else ScanStatus.COMPLETED
+                if checkov_error:
+                    # The only inline failure: analysis finished but Checkov itself did not.
+                    scan.analysis = {
+                        **scan.analysis,
+                        "failure": {"stage": "checkov", "code": checkov_stage.error_code},
+                    }
                 scan.finished_at = utcnow()
                 scan.duration_ms = int((time.monotonic() - started) * 1000)
                 session.commit()
@@ -392,7 +423,7 @@ class ScanService:
                 else "Internal scan error. See server event logs."
             )
             logger.error("scan_id=%s action=failed error_type=%s", scan_id, type(error).__name__)
-            self.mark_failed(scan_id, message, started)
+            self.mark_failed(scan_id, message, started, code=type(error).__name__)
 
 
 ScanRunner = Callable[[UUID], None]

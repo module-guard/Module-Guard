@@ -47,6 +47,10 @@ class Settings(BaseSettings):
     checkov_timeout_seconds: int = Field(default=300, ge=1)
     secret_scan_timeout_seconds: int = Field(default=60, ge=1)
     git_timeout_seconds: int = Field(default=120, ge=1)
+    # Terraform Registry metadata lookups. The host is fixed by configuration and never by
+    # user input, so a submitted address cannot redirect the request elsewhere (SSRF).
+    registry_base_url: str = "https://registry.terraform.io"
+    registry_timeout_seconds: int = Field(default=10, ge=1)
     max_repository_size_mb: int = Field(default=200, ge=1)
     max_process_output_mb: int = Field(default=50, ge=1)
     scan_workers: int = Field(default=2, ge=1, le=16)
@@ -80,6 +84,14 @@ class Settings(BaseSettings):
     def blank_is_unset(cls, value):
         # Compose passes "${NAME:-}" as an empty string when the variable is not set.
         return value or None
+
+    @field_validator("registry_base_url")
+    @classmethod
+    def registry_https_only(cls, value: str) -> str:
+        # Plaintext or other schemes are refused so the lookup cannot be downgraded.
+        if not value.startswith("https://"):
+            raise ValueError("REGISTRY_BASE_URL must be an https:// URL.")
+        return value.rstrip("/")
 
     @model_validator(mode="after")
     def reject_unsafe_combinations(self):

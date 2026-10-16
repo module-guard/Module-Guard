@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.analyzers.module_interface import detect_license
 from app.auth.visibility import repository_visible_to
 from app.collectors.base import SourceCollector
-from app.collectors.github import GitHubCollector
+from app.collectors.router import default_router
 from app.collectors.source_detector import detect_source, normalize_github_url
 from app.core.config import Settings
 from app.core.exceptions import (
@@ -70,7 +70,7 @@ class PublishService:
     ):
         self.session_factory = session_factory
         self.settings = settings
-        self.collector = collector or GitHubCollector(settings)
+        self.collector = collector or default_router(settings)
         self.inspector = inspector or SecretInspector(settings)
         self.staging = staging or StagingStore(
             settings.upload_root, settings.upload_ttl_minutes * 60
@@ -122,29 +122,51 @@ class PublishService:
                 raise UploadRejectedError(
                     "받아 온 커밋이 고정한 커밋과 다릅니다.", "PinnedCommitMismatch"
                 )
-            shutil.rmtree(slot / TREE / ".git", ignore_errors=True)
-            report = filter_tree(slot / TREE)
-            if report.size_bytes > self.archive_limits.max_uncompressed_bytes:
-                raise UploadTooLargeError("저장소 크기가 제한을 넘습니다.", "UncompressedTooLarge")
-            if len(report.included) > self.archive_limits.max_files:
-                raise UploadTooLargeError(
-                    f"파일은 {self.archive_limits.max_files}개까지 올릴 수 있습니다.",
-                    "TooManyFiles",
-                )
-            return self._finish(
-                slot,
-                token,
-                report,
-                "GITHUB",
-                collected.source_url,
-                collected.commit_hash,
-                suggest_name(collected.repository_name),
-                branch=collected.branch,
-                source_ref=ref,
-            )
+            return self._finish_source(slot, token, collected, "GITHUB", ref)
         except BaseException:
             self.staging.discard(slot)
             raise
+
+    def prepare_registry(
+        self, user_id: UUID, address: str, version: str | None = None
+    ) -> UploadReport:
+        """Resolve a Terraform Registry address to its source, then inspect it like a repository.
+
+        The backing repository is cloned and checked exactly as a GitHub import is; only the
+        way the source was named differs.
+        """
+        token, slot = self.staging.open(user_id)
+        try:
+            collected = self.collector.collect(address, slot / TREE, version)
+            return self._finish_source(slot, token, collected, "GITHUB", version)
+        except BaseException:
+            self.staging.discard(slot)
+            raise
+
+    def _finish_source(
+        self, slot: Path, token: str, collected, origin_type: str, source_ref: str | None
+    ) -> UploadReport:
+        """Filter and size-check a cloned tree, then seal it under a one-time token."""
+        shutil.rmtree(slot / TREE / ".git", ignore_errors=True)
+        report = filter_tree(slot / TREE)
+        if report.size_bytes > self.archive_limits.max_uncompressed_bytes:
+            raise UploadTooLargeError("저장소 크기가 제한을 넘습니다.", "UncompressedTooLarge")
+        if len(report.included) > self.archive_limits.max_files:
+            raise UploadTooLargeError(
+                f"파일은 {self.archive_limits.max_files}개까지 올릴 수 있습니다.",
+                "TooManyFiles",
+            )
+        return self._finish(
+            slot,
+            token,
+            report,
+            origin_type,
+            collected.source_url,
+            collected.commit_hash,
+            suggest_name(collected.repository_name),
+            branch=collected.branch,
+            source_ref=source_ref,
+        )
 
     def _finish(
         self,

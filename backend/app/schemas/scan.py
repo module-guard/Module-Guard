@@ -66,6 +66,9 @@ class ScanResponse(BaseModel):
     # summary counts the module body only; this holds the rest. None for scans made before
     # findings were classified.
     scope_summary: ScopeSummary | None = None
+    # Set only on FAILED scans: which pipeline stage failed and the exception class name.
+    failed_stage: str | None = None
+    error_code: str | None = None
 
     @staticmethod
     def summarize(scan) -> FindingSummary:
@@ -79,9 +82,14 @@ class ScanResponse(BaseModel):
 
     @classmethod
     def from_scan(cls, scan):
+        # "failure" rides alongside the analysis stages in the JSONB column; it is not part of
+        # the AnalysisSummary schema, so it is read from the raw dict here.
+        failure = (scan.analysis or {}).get("failure") or {}
         return cls(
             id=scan.id,
             analysis=scan.analysis,
+            failed_stage=failure.get("stage"),
+            error_code=failure.get("code"),
             module_id=scan.module_id,
             status=scan.status,
             scanner=scan.scanner,

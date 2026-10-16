@@ -14,6 +14,14 @@ class GitHubImportRequest(BaseModel):
     url: str = Field(min_length=1, max_length=2048)
 
 
+class RegistryImportRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    # namespace/name/provider, e.g. "terraform-aws-modules/vpc/aws". The precise format and
+    # the version string are validated by the collector so the error shape stays consistent.
+    address: str = Field(min_length=1, max_length=256)
+    version: str | None = Field(default=None, max_length=64)
+
+
 class ExcludedFile(BaseModel):
     path: str
     reason: str

@@ -1,9 +1,10 @@
 import pytest
 
 from app.collectors.github import GitHubCollector
+from app.collectors.router import default_router
 from app.collectors.source_detector import detect_source, normalize_github_url
 from app.collectors.terraform_registry import TerraformRegistryCollector
-from app.core.exceptions import RegistryNotSupportedError, UnsupportedSourceError
+from app.core.exceptions import UnsupportedSourceError
 from app.models.enums import SourceType
 
 
@@ -49,7 +50,7 @@ def test_invalid_url(source):
         detect_source(source)
 
 
-def test_detect_and_collector_support(settings, tmp_path):
+def test_detect_and_collector_support(settings):
     github = detect_source("https://github.com/Org/Repo.git")
     assert github.source_type == SourceType.GITHUB
     assert github.owner == "org"
@@ -58,8 +59,19 @@ def test_detect_and_collector_support(settings, tmp_path):
     registry = detect_source("terraform-aws-modules/vpc/aws")
     assert registry.source_type == SourceType.TERRAFORM_REGISTRY
     assert registry.provider == "aws"
-    collector = TerraformRegistryCollector()
+    collector = TerraformRegistryCollector(settings)
     assert collector.supports(registry.source_url)
     assert not collector.supports("https://evil.com/a/b")
-    with pytest.raises(RegistryNotSupportedError):
-        collector.collect(registry.source_url, tmp_path / "repo")
+    assert not collector.supports("https://github.com/org/repo")
+
+
+def test_router_picks_the_matching_collector(settings):
+    router = default_router(settings)
+    assert router.supports("https://github.com/org/repo")
+    assert router.supports("terraform-aws-modules/vpc/aws")
+    assert not router.supports("file:///tmp/x")
+    github, registry = router.collectors
+    assert isinstance(github, GitHubCollector)
+    assert isinstance(registry, TerraformRegistryCollector)
+    # The Registry collector reuses the single GitHub clone path, not a second one.
+    assert registry.github is github
