@@ -88,6 +88,28 @@ def test_absolute_path(report, tmp_path):
     assert result.findings[0].file_path == "/main.tf"
 
 
+def test_guideline_from_checkov_is_kept_and_blank_ones_are_filled(report, tmp_path):
+    checks = report["results"]["failed_checks"]
+    checks[1]["check_id"] = "CKV_AWS_24"  # CRITICAL from Checkov, no guideline
+    checks[2]["guideline"] = ""
+    checks[2]["check_id"] = "CKV_AWS_24"
+    normalizer = CheckovNormalizer(remediations={"CKV_AWS_24": "보안 그룹을 제한하세요."})
+    findings = normalizer.normalize(ScanResult(report, 1), tmp_path).findings
+    assert [f.guideline for f in findings] == [
+        "https://example.com/rules/24",
+        "보안 그룹을 제한하세요.",
+        "보안 그룹을 제한하세요.",
+    ]
+    assert [f.raw_data.get("guideline_source") for f in findings] == [
+        None,
+        "moduleguard",
+        "moduleguard",
+    ]
+    # Filling a guideline never changes the severity Checkov supplied.
+    assert findings[1].severity == "CRITICAL"
+    assert "severity_source" not in findings[1].raw_data
+
+
 def test_flat_counters_for_a_module_with_nothing_to_check(tmp_path):
     # Checkov 3 prints this instead of a report when no resource matched any check.
     report = {

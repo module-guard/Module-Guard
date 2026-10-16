@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -8,6 +9,7 @@ from pydantic import ValidationError
 from app.core.exceptions import InvalidCheckovResultError
 from app.models.enums import Severity
 from app.scanners.base import ScanResult
+from app.scanners.remediation import REMEDIATIONS, has_guideline
 from app.scanners.severity_overrides import SOURCE
 from app.schemas.finding import NormalizedFinding
 from app.schemas.scan import FindingSummary
@@ -76,8 +78,25 @@ def normalized_path(value: Any, root: Path) -> str | None:
 
 
 class CheckovNormalizer(FindingNormalizer):
-    def __init__(self, severity_mapper: SeverityMapper | None = None):
+    def __init__(
+        self,
+        severity_mapper: SeverityMapper | None = None,
+        remediations: Mapping[str, str] = REMEDIATIONS,
+    ):
         self.severity_mapper = severity_mapper or SeverityMapper()
+        # Fills guideline only where Checkov left it empty (it does under --skip-download).
+        self.remediations = remediations
+
+    def _raw_data(self, raw: dict[str, Any], rule: str) -> tuple[str | None, dict[str, Any]]:
+        """Checkov's guideline and raw dict, plus provenance marks for anything we filled."""
+        data = raw
+        if self.severity_mapper.is_override(raw.get("severity"), rule):
+            data = {**data, "severity_source": SOURCE}
+        guideline = raw.get("guideline")
+        if not has_guideline(guideline) and rule in self.remediations:
+            guideline = self.remediations[rule]
+            data = {**data, "guideline_source": SOURCE}
+        return guideline, data
 
     def normalize(self, result: ScanResult, root: Path) -> NormalizationResult:
         reports = result.raw_data if isinstance(result.raw_data, list) else [result.raw_data]
@@ -133,6 +152,7 @@ class CheckovNormalizer(FindingNormalizer):
                         type(start) is not int or type(end) is not int or start > end
                     ):
                         raise ValueError
+                    guideline, raw_data = self._raw_data(raw, rule)
                     output.findings.append(
                         NormalizedFinding(
                             rule_id=rule,
@@ -144,12 +164,8 @@ class CheckovNormalizer(FindingNormalizer):
                             line_start=start,
                             line_end=end,
                             description=raw.get("description") or raw.get("check_name"),
-                            guideline=raw.get("guideline"),
-                            raw_data=(
-                                {**raw, "severity_source": SOURCE}
-                                if self.severity_mapper.is_override(raw.get("severity"), rule)
-                                else raw
-                            ),
+                            guideline=guideline,
+                            raw_data=raw_data,
                         )
                     )
                 except (KeyError, ValueError, TypeError, ValidationError):
