@@ -544,6 +544,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/uploads/registry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Prepare Registry */
+        post: operations["prepare_registry_api_uploads_registry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/uploads/zip": {
         parameters: {
             query?: never;
@@ -1428,6 +1445,13 @@ export interface components {
             /** Version Type */
             version_type: string;
         };
+        /** RegistryImportRequest */
+        RegistryImportRequest: {
+            /** Address */
+            address: string;
+            /** Version */
+            version?: string | null;
+        };
         /** RepositoryCard */
         RepositoryCard: {
             badge: components["schemas"]["BadgeInfo"] | null;
@@ -1585,8 +1609,12 @@ export interface components {
             created_at: string;
             /** Duration Ms */
             duration_ms: number | null;
+            /** Error Code */
+            error_code?: string | null;
             /** Error Message */
             error_message: string | null;
+            /** Failed Stage */
+            failed_stage?: string | null;
             /** Finished At */
             finished_at: string | null;
             /**
@@ -2891,6 +2919,39 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["GitHubImportRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadReport"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    prepare_registry_api_uploads_registry_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegistryImportRequest"];
             };
         };
         responses: {

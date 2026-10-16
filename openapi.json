@@ -1927,6 +1927,34 @@
         "title": "ProviderDependency",
         "type": "object"
       },
+      "RegistryImportRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "address": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Address",
+            "type": "string"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          }
+        },
+        "required": [
+          "address"
+        ],
+        "title": "RegistryImportRequest",
+        "type": "object"
+      },
       "RepositoryCard": {
         "properties": {
           "badge": {
@@ -2421,6 +2449,17 @@
             ],
             "title": "Duration Ms"
           },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
           "error_message": {
             "anyOf": [
               {
@@ -2431,6 +2470,17 @@
               }
             ],
             "title": "Error Message"
+          },
+          "failed_stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failed Stage"
           },
           "finished_at": {
             "anyOf": [
@@ -5307,6 +5357,47 @@
           }
         },
         "summary": "Prepare Github",
+        "tags": [
+          "uploads"
+        ]
+      }
+    },
+    "/api/uploads/registry": {
+      "post": {
+        "operationId": "prepare_registry_api_uploads_registry_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistryImportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Prepare Registry",
         "tags": [
           "uploads"
         ]
