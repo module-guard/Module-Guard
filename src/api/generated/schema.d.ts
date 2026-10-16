@@ -510,6 +510,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/scans/{scan_id}/graph/neighborhood": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Graph Neighborhood */
+        get: operations["get_graph_neighborhood_api_scans__scan_id__graph_neighborhood_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/uploads/github": {
         parameters: {
             query?: never;
@@ -836,6 +853,8 @@ export interface components {
             downstream: components["schemas"]["FlowEdgeResponse"][];
             /** Entity */
             entity: string;
+            /** Nodes */
+            nodes?: components["schemas"]["FlowNode"][];
             /**
              * Truncated
              * @default false
@@ -1025,12 +1044,36 @@ export interface components {
              * @default UNRESOLVED
              */
             entity_type: string;
+            /**
+             * External
+             * @default false
+             */
+            external: boolean;
             /** Id */
             id: string;
             /** Metadata */
             metadata?: {
                 [key: string]: unknown;
             };
+            /**
+             * Opaque
+             * @default false
+             */
+            opaque: boolean;
+            /**
+             * Resolved
+             * @default true
+             */
+            resolved: boolean;
+            /**
+             * Sensitive Input
+             * @default false
+             */
+            sensitive_input: boolean;
+            /** Sink Category */
+            sink_category?: string | null;
+            /** Source Category */
+            source_category?: string | null;
         };
         /** FlowResponse */
         FlowResponse: {
@@ -1083,6 +1126,8 @@ export interface components {
             max_depth: number;
             /** Path Edge Ids */
             path_edge_ids: string[][];
+            /** Path Edges */
+            path_edges?: components["schemas"]["FlowEdgeResponse"][][];
             /** Paths */
             paths: components["schemas"]["FlowNode"][][];
             /**
@@ -1136,6 +1181,29 @@ export interface components {
             /** Type */
             type: string;
         };
+        /** GraphNeighborhoodResponse */
+        GraphNeighborhoodResponse: {
+            /** Center */
+            center: string;
+            /** Depth */
+            depth: number;
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "both" | "out" | "in";
+            /** Edges */
+            edges: components["schemas"]["GraphEdgeResponse"][];
+            /** Nodes */
+            nodes: components["schemas"]["GraphNodeResponse"][];
+            /**
+             * Schema Version
+             * @default 1
+             */
+            schema_version: number;
+            /** Truncated */
+            truncated: boolean;
+        };
         /** GraphNodeResponse */
         GraphNodeResponse: {
             /** Address */
@@ -1152,6 +1220,12 @@ export interface components {
             metadata: {
                 [key: string]: unknown;
             };
+            /** Module Path */
+            module_path?: string[];
+            /** Name */
+            name?: string | null;
+            /** Resource Type */
+            resource_type?: string | null;
             /** Type */
             type: string;
         };
@@ -1337,10 +1411,20 @@ export interface components {
             module_path: string[];
             /** Name */
             name: string;
+            /**
+             * Official
+             * @default false
+             */
+            official: boolean;
             /** Source */
             source: string | null;
             /** Version */
             version: string | null;
+            /**
+             * Version Pinned
+             * @default false
+             */
+            version_pinned: boolean;
             /** Version Type */
             version_type: string;
         };
@@ -2747,6 +2831,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GraphResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_graph_neighborhood_api_scans__scan_id__graph_neighborhood_get: {
+        parameters: {
+            query: {
+                address: string;
+                depth?: number;
+                direction?: "both" | "out" | "in";
+                edge_type?: string[] | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                scan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GraphNeighborhoodResponse"];
                 };
             };
             /** @description Validation Error */

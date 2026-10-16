@@ -440,6 +440,13 @@
             "title": "Entity",
             "type": "string"
           },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/FlowNode"
+            },
+            "title": "Nodes",
+            "type": "array"
+          },
           "truncated": {
             "default": false,
             "title": "Truncated",
@@ -863,6 +870,11 @@
             "title": "Entity Type",
             "type": "string"
           },
+          "external": {
+            "default": false,
+            "title": "External",
+            "type": "boolean"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -871,6 +883,43 @@
             "additionalProperties": true,
             "title": "Metadata",
             "type": "object"
+          },
+          "opaque": {
+            "default": false,
+            "title": "Opaque",
+            "type": "boolean"
+          },
+          "resolved": {
+            "default": true,
+            "title": "Resolved",
+            "type": "boolean"
+          },
+          "sensitive_input": {
+            "default": false,
+            "title": "Sensitive Input",
+            "type": "boolean"
+          },
+          "sink_category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sink Category"
+          },
+          "source_category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Category"
           }
         },
         "required": [
@@ -972,6 +1021,16 @@
               "type": "array"
             },
             "title": "Path Edge Ids",
+            "type": "array"
+          },
+          "path_edges": {
+            "items": {
+              "items": {
+                "$ref": "#/components/schemas/FlowEdgeResponse"
+              },
+              "type": "array"
+            },
+            "title": "Path Edges",
             "type": "array"
           },
           "paths": {
@@ -1142,6 +1201,60 @@
         "title": "GraphEdgeResponse",
         "type": "object"
       },
+      "GraphNeighborhoodResponse": {
+        "properties": {
+          "center": {
+            "title": "Center",
+            "type": "string"
+          },
+          "depth": {
+            "title": "Depth",
+            "type": "integer"
+          },
+          "direction": {
+            "enum": [
+              "both",
+              "out",
+              "in"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/GraphEdgeResponse"
+            },
+            "title": "Edges",
+            "type": "array"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/GraphNodeResponse"
+            },
+            "title": "Nodes",
+            "type": "array"
+          },
+          "schema_version": {
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "center",
+          "depth",
+          "direction",
+          "truncated",
+          "nodes",
+          "edges"
+        ],
+        "title": "GraphNeighborhoodResponse",
+        "type": "object"
+      },
       "GraphNodeResponse": {
         "properties": {
           "address": {
@@ -1189,6 +1302,35 @@
             "additionalProperties": true,
             "title": "Metadata",
             "type": "object"
+          },
+          "module_path": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Module Path",
+            "type": "array"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "resource_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resource Type"
           },
           "type": {
             "title": "Type",
@@ -1736,6 +1878,11 @@
             "title": "Name",
             "type": "string"
           },
+          "official": {
+            "default": false,
+            "title": "Official",
+            "type": "boolean"
+          },
           "source": {
             "anyOf": [
               {
@@ -1757,6 +1904,11 @@
               }
             ],
             "title": "Version"
+          },
+          "version_pinned": {
+            "default": false,
+            "title": "Version Pinned",
+            "type": "boolean"
           },
           "version_type": {
             "title": "Version Type",
@@ -5004,6 +5156,116 @@
           }
         },
         "summary": "Get Graph",
+        "tags": [
+          "analysis"
+        ]
+      }
+    },
+    "/api/scans/{scan_id}/graph/neighborhood": {
+      "get": {
+        "operationId": "get_graph_neighborhood_api_scans__scan_id__graph_neighborhood_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "scan_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Scan Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "address",
+            "required": true,
+            "schema": {
+              "title": "Address",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "depth",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "maximum": 3,
+              "minimum": 1,
+              "title": "Depth",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "required": false,
+            "schema": {
+              "default": "both",
+              "enum": [
+                "both",
+                "out",
+                "in"
+              ],
+              "title": "Direction",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "edge_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Edge Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 150,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GraphNeighborhoodResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Graph Neighborhood",
         "tags": [
           "analysis"
         ]
