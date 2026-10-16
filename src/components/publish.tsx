@@ -48,8 +48,10 @@ function Source({
   url?: string;
   onReady: (report: Report) => void;
 }) {
-  const [kind, setKind] = useState<"github" | "zip">("github");
+  const [kind, setKind] = useState<"github" | "zip" | "registry">("github");
   const [url, setUrl] = useState(initialUrl);
+  const [registryAddress, setRegistryAddress] = useState("");
+  const [registryVersion, setRegistryVersion] = useState("");
   const [file, setFile] = useState<File>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ApiError>();
@@ -73,17 +75,28 @@ function Source({
     setError(undefined);
     try {
       onReady(
-        kind === "github"
-          ? await unwrap(slowApi.POST("/api/uploads/github", { body: { url } }))
-          : await unwrap(
-              slowApi.POST("/api/uploads/zip", {
-                params: { query: { filename: file!.name } },
-                // 본문이 zip 그 자체다. 스키마에 본문 정의가 없어 형 변환한다.
-                body: file as never,
-                bodySerializer: (body: unknown) => body as Blob,
-                headers: { "Content-Type": "application/zip" },
-              } as never),
-            ),
+        kind === "registry"
+          ? await unwrap(
+              slowApi.POST("/api/uploads/registry", {
+                body: {
+                  address: registryAddress,
+                  version: registryVersion || null,
+                },
+              }),
+            )
+          : kind === "github"
+            ? await unwrap(
+                slowApi.POST("/api/uploads/github", { body: { url } }),
+              )
+            : await unwrap(
+                slowApi.POST("/api/uploads/zip", {
+                  params: { query: { filename: file!.name } },
+                  // 본문이 zip 그 자체다. 스키마에 본문 정의가 없어 형 변환한다.
+                  body: file as never,
+                  bodySerializer: (body: unknown) => body as Blob,
+                  headers: { "Content-Type": "application/zip" },
+                } as never),
+              ),
       );
     } catch (e) {
       setError(e instanceof ApiError ? e : new ApiError(0, String(e)));
@@ -98,6 +111,7 @@ function Source({
           [
             ["github", "GitHub 주소", Github],
             ["zip", "zip 파일", FileArchive],
+            ["registry", "Terraform Registry", FileArchive],
           ] as const
         ).map(([value, label, Icon]) => (
           <button
@@ -117,7 +131,31 @@ function Source({
         ))}
       </div>
       <div className="mt-5">
-        {kind === "github" ? (
+        {kind === "registry" ? (
+          <>
+            <label className="label" htmlFor="registry-address">
+              Terraform Registry 주소
+            </label>
+            <input
+              id="registry-address"
+              className="input"
+              required
+              placeholder="terraform-aws-modules/vpc/aws"
+              value={registryAddress}
+              onChange={(e) => setRegistryAddress(e.target.value)}
+            />
+            <label className="label mt-3" htmlFor="registry-version">
+              버전 (선택)
+            </label>
+            <input
+              id="registry-version"
+              className="input"
+              placeholder="예: 5.0.0"
+              value={registryVersion}
+              onChange={(e) => setRegistryVersion(e.target.value)}
+            />
+          </>
+        ) : kind === "github" ? (
           <>
             <label className="label" htmlFor="source-url">
               GitHub 저장소 주소

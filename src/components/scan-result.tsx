@@ -162,6 +162,7 @@ const stageNames = [
   ["persistence", "결과 저장"],
 ];
 function stageStatus(s: Scan, key: string) {
+  if (s.failed_stage === key) return "FAILED";
   if (key !== "collect") return s.analysis?.stages?.[key]?.status || "PENDING";
   // 업로드한 모듈은 commit이 없다. 분석이 시작됐으면 수집은 끝난 것이다.
   if (s.commit_hash || s.analysis) return "COMPLETED";
