@@ -4,7 +4,11 @@ import re
 
 import hcl2
 
-from app.analyzers.flow_classifiers import FlowSinkClassifier, FlowSourceClassifier
+from app.analyzers.flow_classifiers import (
+    FlowSinkClassifier,
+    FlowSourceClassifier,
+    is_sensitive_input,
+)
 from app.graphs.domain import DependencyEdge, DependencyGraph, EdgeType
 from app.graphs.flow_domain import DataFlowResult, summarize_flows
 from app.parsers.domain import EntityType, TerraformEntity, scope_address
@@ -104,6 +108,7 @@ class DataFlowGraphBuilder:
                 "line_end": entity.line_end if entity else None,
                 "source_category": str(self.sources.classify(entity)),
                 "sink_category": self.sinks.classify(entity, attribute),
+                "sensitive_input": is_sensitive_input(entity),
             }
 
         def emit(

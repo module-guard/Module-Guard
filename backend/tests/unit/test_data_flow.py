@@ -3,6 +3,7 @@ from conftest import FIXTURES
 
 from app.analyzers.data_flow import DataFlowAnalyzer
 from app.analyzers.flow_classifiers import (
+    DEFAULT_SINK_RULES,
     FlowSinkClassifier,
     FlowSourceClassifier,
     SensitiveSinkRule,
@@ -329,3 +330,91 @@ output "encrypted" { value = aws_instance.web.root_block_device[0].encrypted }
         "PASSES_TO_OUTPUT",
     ) in pairs(result)
     assert result.edges[0].attribute_name == "root_block_device[0].encrypted"
+
+
+SENSITIVE_SINKS = {
+    "aws_launch_configuration.boot.user_data": "CODE_EXECUTION",
+    "aws_instance.encoded.user_data_base64": "CODE_EXECUTION",
+    "google_compute_instance.vm.metadata_startup_script": "CODE_EXECUTION",
+    "azurerm_linux_virtual_machine.vm.custom_data": "CODE_EXECUTION",
+    "aws_security_group.web.ingress.cidr_blocks": "NETWORK",
+    "aws_security_group.web.egress.cidr_blocks": "NETWORK",
+    "aws_security_group_rule.ssh.cidr_blocks": "NETWORK",
+    "aws_vpc_security_group_ingress_rule.https.cidr_ipv4": "NETWORK",
+    "aws_db_instance.db.publicly_accessible": "NETWORK",
+    "aws_instance.encoded.associate_public_ip_address": "NETWORK",
+    "google_compute_firewall.web.source_ranges": "NETWORK",
+    "azurerm_network_security_rule.web.source_address_prefix": "NETWORK",
+    "aws_db_instance.db.password": "CREDENTIAL",
+    "aws_rds_cluster.db.master_password": "CREDENTIAL",
+    "aws_docdb_cluster.db.master_password": "CREDENTIAL",
+    "aws_redshift_cluster.db.master_password": "CREDENTIAL",
+    "aws_elasticache_replication_group.cache.auth_token": "CREDENTIAL",
+    "azurerm_linux_virtual_machine.vm.admin_password": "CREDENTIAL",
+    "google_sql_user.app.password": "CREDENTIAL",
+    "aws_iam_role.app.assume_role_policy": "IAM_POLICY",
+    "aws_iam_user_policy.app.policy": "IAM_POLICY",
+    "aws_iam_group_policy.app.policy": "IAM_POLICY",
+    "aws_s3_bucket_policy.app.policy": "IAM_POLICY",
+    "aws_kms_key.app.policy": "IAM_POLICY",
+    "aws_secretsmanager_secret_version.app.secret_string": "SECRET_STORAGE",
+}
+
+
+def test_sensitive_sink_categories_fixture():
+    result = analyze("sensitive_sinks")
+    categories = {e.target_address: e.metadata["sink_category"] for e in result.edges}
+    for address, expected in SENSITIVE_SINKS.items():
+        assert categories.get(address) == expected, address
+    # Edge-level and endpoint-level categories agree.
+    assert all(
+        e.metadata["sink_category"] == e.metadata["target"]["sink_category"] for e in result.edges
+    )
+    # Non-sink attributes stay UNKNOWN, including references between the listed resources.
+    assert categories["aws_s3_bucket.logs.bucket"] == "UNKNOWN"
+    assert categories["aws_security_group_rule.ssh.security_group_id"] == "UNKNOWN"
+    assert not result.diagnostics
+
+
+def test_sensitive_input_marks_endpoint_and_keeps_user_input():
+    result = analyze("sensitive_sinks")
+    sources = {e.metadata["source_address"]: e.metadata["source"] for e in result.edges}
+    secret = sources["var.db_password"]
+    assert secret["source_category"] == "USER_INPUT"
+    assert secret["sensitive_input"] is True
+    for address in ("var.script", "var.cidr", "var.public", "var.policy"):
+        assert sources[address]["sensitive_input"] is False
+    # Non-variable endpoints never carry the flag.
+    assert sources["aws_security_group.web.id"]["sensitive_input"] is False
+    assert all(e.metadata["target"]["sensitive_input"] is False for e in result.edges)
+
+
+def test_sensitive_input_on_child_module_variable(tmp_path):
+    (tmp_path / "modules" / "db").mkdir(parents=True)
+    (tmp_path / "main.tf").write_text(
+        'variable "pw" {}\nmodule "db" {\n  source = "./modules/db"\n  password = var.pw\n}\n'
+    )
+    (tmp_path / "modules" / "db" / "main.tf").write_text(
+        'variable "password" {\n  sensitive = true\n}\n'
+        'resource "aws_db_instance" "db" {\n  password = var.password\n}\n'
+    )
+    result = DataFlowAnalyzer().analyze(tmp_path)
+    edges = {(e.metadata["source_address"], e.target_address): e for e in result.edges}
+    passed = edges[("var.pw", "module.db.var.password")]
+    assert passed.metadata["source"]["sensitive_input"] is False
+    assert passed.metadata["target"]["sensitive_input"] is True
+    sink = edges[("module.db.var.password", "module.db.aws_db_instance.db.password")]
+    assert sink.metadata["source"]["sensitive_input"] is True
+    assert sink.metadata["sink_category"] == "CREDENTIAL"
+
+
+def test_default_sink_rules_are_unique():
+    keys = [(r.resource_type, r.attribute) for r in DEFAULT_SINK_RULES]
+    assert len(keys) == len(set(keys))
+    assert {r.category for r in DEFAULT_SINK_RULES} >= {
+        "CODE_EXECUTION",
+        "NETWORK",
+        "CREDENTIAL",
+        "IAM_POLICY",
+        "SECRET_STORAGE",
+    }

@@ -55,15 +55,56 @@ class SensitiveSinkRule:
     category: str
 
 
+# Attribute names follow the provider schemas (hashicorp/aws, google, azurerm). Nested blocks
+# such as aws_security_group.ingress are matched by their root attribute name.
 DEFAULT_SINK_RULES = (
+    # CODE_EXECUTION: values executed or interpreted on instance boot.
     SensitiveSinkRule("aws_instance", "user_data", "CODE_EXECUTION"),
+    SensitiveSinkRule("aws_instance", "user_data_base64", "CODE_EXECUTION"),
     SensitiveSinkRule("aws_launch_template", "user_data", "CODE_EXECUTION"),
+    SensitiveSinkRule("aws_launch_configuration", "user_data", "CODE_EXECUTION"),
+    SensitiveSinkRule("google_compute_instance", "metadata_startup_script", "CODE_EXECUTION"),
+    SensitiveSinkRule("azurerm_linux_virtual_machine", "custom_data", "CODE_EXECUTION"),
+    # IAM_POLICY: policy documents that grant or delegate permissions.
     SensitiveSinkRule("aws_iam_policy", "policy", "IAM_POLICY"),
     SensitiveSinkRule("aws_iam_role_policy", "policy", "IAM_POLICY"),
+    SensitiveSinkRule("aws_iam_role", "assume_role_policy", "IAM_POLICY"),
+    SensitiveSinkRule("aws_iam_user_policy", "policy", "IAM_POLICY"),
+    SensitiveSinkRule("aws_iam_group_policy", "policy", "IAM_POLICY"),
+    SensitiveSinkRule("aws_s3_bucket_policy", "policy", "IAM_POLICY"),
+    SensitiveSinkRule("aws_kms_key", "policy", "IAM_POLICY"),
+    # NETWORK: exposure and reachability settings.
+    SensitiveSinkRule("aws_security_group", "ingress", "NETWORK"),
+    SensitiveSinkRule("aws_security_group", "egress", "NETWORK"),
+    SensitiveSinkRule("aws_security_group_rule", "cidr_blocks", "NETWORK"),
+    SensitiveSinkRule("aws_vpc_security_group_ingress_rule", "cidr_ipv4", "NETWORK"),
+    SensitiveSinkRule("aws_db_instance", "publicly_accessible", "NETWORK"),
+    SensitiveSinkRule("aws_instance", "associate_public_ip_address", "NETWORK"),
+    SensitiveSinkRule("google_compute_firewall", "source_ranges", "NETWORK"),
+    SensitiveSinkRule("azurerm_network_security_rule", "source_address_prefix", "NETWORK"),
+    # CREDENTIAL: passwords and tokens configured on managed services.
+    SensitiveSinkRule("aws_db_instance", "password", "CREDENTIAL"),
+    SensitiveSinkRule("aws_rds_cluster", "master_password", "CREDENTIAL"),
+    SensitiveSinkRule("aws_docdb_cluster", "master_password", "CREDENTIAL"),
+    SensitiveSinkRule("aws_redshift_cluster", "master_password", "CREDENTIAL"),
+    SensitiveSinkRule("aws_elasticache_replication_group", "auth_token", "CREDENTIAL"),
+    SensitiveSinkRule("azurerm_linux_virtual_machine", "admin_password", "CREDENTIAL"),
+    SensitiveSinkRule("google_sql_user", "password", "CREDENTIAL"),
+    # ENVIRONMENT / COMMAND / SECRET_STORAGE
     SensitiveSinkRule("aws_lambda_function", "environment", "ENVIRONMENT"),
     SensitiveSinkRule("aws_ecs_task_definition", "container_definitions", "COMMAND"),
     SensitiveSinkRule("aws_ssm_parameter", "value", "SECRET_STORAGE"),
+    SensitiveSinkRule("aws_secretsmanager_secret_version", "secret_string", "SECRET_STORAGE"),
 )
+
+
+def is_sensitive_input(entity: TerraformEntity | None) -> bool:
+    """`sensitive = true` on a variable; the source category itself stays USER_INPUT."""
+    return bool(
+        entity is not None
+        and entity.entity_type == EntityType.VARIABLE
+        and str(entity.attributes.get("sensitive", "")).strip().lower() == "true"
+    )
 
 
 class FlowSinkClassifier:

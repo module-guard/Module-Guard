@@ -5,6 +5,8 @@ from sqlalchemy.orm import Session
 from app.core.config import Settings
 from app.core.exceptions import NotFoundError
 from app.graphs.search import FlowPathSearch
+from app.models.graph_edge import GraphEdge
+from app.repositories.flow_repository import FlowFilter, FlowRepository
 from app.repositories.graph_repository import GraphRepository
 from app.repositories.scan_repository import ScanRepository
 from app.schemas.flow import (
@@ -17,26 +19,29 @@ from app.schemas.flow import (
 
 
 class FlowService:
-    """One graph-edge query per request; bounded adjacency traversal, no per-edge DB queries."""
+    """/flows filters and pages in SQL; entity/trace load one scan's flow edges once and
+    traverse an in-memory adjacency index. No per-edge DB queries."""
 
     def __init__(self, session: Session, settings: Settings | None = None):
         self.repository = GraphRepository(session)
+        self.flow_repository = FlowRepository(session)
         self.scans = ScanRepository(session)
         self.settings = settings or Settings()
 
+    @staticmethod
+    def edge(e: GraphEdge) -> FlowEdgeResponse:
+        return FlowEdgeResponse(
+            id=e.id,
+            source=e.edge_metadata["source_address"],
+            target=e.edge_metadata["target_address"],
+            type=e.edge_type,
+            expression=e.expression,
+            metadata=e.edge_metadata,
+        )
+
     def load(self, scan_id: UUID) -> list[FlowEdgeResponse]:
         self.scans.get(scan_id)
-        return [
-            FlowEdgeResponse(
-                id=e.id,
-                source=e.edge_metadata["source_address"],
-                target=e.edge_metadata["target_address"],
-                type=e.edge_type,
-                expression=e.expression,
-                metadata=e.edge_metadata,
-            )
-            for e in self.repository.edges(scan_id, flow_only=True)
-        ]
+        return [self.edge(e) for e in self.flow_repository.edges(scan_id)]
 
     @staticmethod
     def nodes(edges: list[FlowEdgeResponse]) -> dict[str, FlowNode]:
@@ -53,6 +58,12 @@ class FlowService:
                     entity_type=endpoint.get("entity_type", "UNRESOLVED"),
                     attribute_path=endpoint.get("attribute_path"),
                     metadata=endpoint,
+                    source_category=endpoint.get("source_category"),
+                    sink_category=endpoint.get("sink_category"),
+                    opaque=bool(endpoint.get("opaque", False)),
+                    external=bool(endpoint.get("external", False)),
+                    resolved=bool(endpoint.get("resolved", True)),
+                    sensitive_input=bool(endpoint.get("sensitive_input", False)),
                 )
         return nodes
 
@@ -67,24 +78,15 @@ class FlowService:
         limit: int = 20,
         offset: int = 0,
     ) -> FlowResponse:
-        edges = [
-            e
-            for e in self.load(scan_id)
-            if (source is None or e.source == source)
-            and (target is None or e.target == target)
-            and (edge_type is None or e.type == edge_type)
-            and (
-                entity_type is None
-                or any(e.metadata[s]["entity_type"] == entity_type for s in ("source", "target"))
-            )
+        self.scans.get(scan_id)
+        filters = FlowFilter(
+            source=source, target=target, edge_type=edge_type, entity_type=entity_type
+        )
+        summary = self.flow_repository.summary(scan_id, filters)
+        page = [
+            self.edge(e)
+            for e in self.flow_repository.edges(scan_id, filters, limit=limit, offset=offset)
         ]
-        summary = {
-            "total_flows": len(edges),
-            "cross_module_flows": sum(bool(e.metadata.get("cross_module")) for e in edges),
-            "unresolved_flows": sum(not e.metadata.get("resolved", False) for e in edges),
-            "opaque_external_flows": sum(bool(e.metadata.get("opaque")) for e in edges),
-        }
-        page = edges[offset : offset + limit]
         return FlowResponse(
             nodes=list(self.nodes(page).values()),
             edges=page,
@@ -111,11 +113,13 @@ class FlowService:
         upstream = [e for e in edges if e.target in selected]
         downstream = [e for e in edges if e.source in selected]
         cap = 1000
+        upstream_page, downstream_page = upstream[:cap], downstream[:cap]
         return EntityFlowResponse(
             entity=address,
-            upstream=upstream[:cap],
-            downstream=downstream[:cap],
+            upstream=upstream_page,
+            downstream=downstream_page,
             truncated=len(upstream) > cap or len(downstream) > cap,
+            nodes=list(self.nodes([*upstream_page, *downstream_page]).values()),
         )
 
     def trace(
@@ -138,6 +142,7 @@ class FlowService:
             [nodes[source], *[nodes[e.target] for e in path]] for path in result.paths
         ]
         response.path_edge_ids = [[e.id for e in path] for path in result.paths]
+        response.path_edges = [list(path) for path in result.paths]
         response.explored_steps = result.explored_steps
         response.truncated = result.truncated
         response.found = bool(response.paths)
