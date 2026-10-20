@@ -1,9 +1,11 @@
+import { prepareGraph } from "./normalize";
+import { collectFlowPages } from "./flow-pages";
 import { describe, it, expect } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { neighborhood } from "./neighborhood";
 import { layoutGraph, WIDTH, HEIGHT } from "./layout";
 import { GraphCanvas, edgeStyle } from "./graph-canvas";
-import { flowGraph } from "./flow-graph";
+import { flowGraph, entityFlowGraph } from "./flow-graph";
 import type { GraphNode, GraphEdge } from "./types";
 const node = (id: string, module_path: string[] = []): GraphNode => ({
   id,
@@ -164,4 +166,106 @@ describe("graph states and semantic styles", () => {
       metadata: { opaque: true, sink_category: "IAM_POLICY" },
     });
   });
+});
+
+describe("graph completeness", () => {
+  it("retains isolated nodes, parallel edges and absent endpoints", () => {
+    const r = prepareGraph(
+      [node("a"), node("isolated")],
+      [
+        edge("a", "b"),
+        edge("a", "b", "READS_LOCAL", "parallel"),
+        { ...edge("a", "x"), target: null, target_address: "module.missing" },
+      ],
+    );
+    expect(r.nodes).toHaveLength(4);
+    expect(r.edges).toHaveLength(3);
+    expect(r.missing).toBe(2);
+    expect(r.components.map((c) => c.length)).toEqual([3, 1]);
+    expect(
+      r.nodes.find((n) => n.address === "module.missing")?.metadata?.resolved,
+    ).toBe(false);
+    for (const e of r.edges)
+      for (const id of [e.source, e.target])
+        expect(r.nodes.some((n) => n.id === id)).toBe(true);
+  });
+  it("passes explicit dimensions to React Flow and its minimap", () => {
+    for (const n of layoutGraph(graph.nodes, graph.edges)) {
+      expect(n.width).toBeGreaterThan(0);
+      expect(n.height).toBeGreaterThan(0);
+    }
+  });
+  it("collects all 889 flows across the API's 50-row page limit", async () => {
+    const offsets: number[] = [];
+    const r = await collectFlowPages(async (offset) => {
+      offsets.push(offset);
+      return {
+        nodes: [
+          {
+            id: "a",
+            address: "a",
+            entity_type: "LOCAL",
+            metadata: {},
+            external: false,
+            opaque: false,
+            resolved: true,
+            sensitive_input: false,
+          },
+        ],
+        edges: Array.from({ length: Math.min(50, 889 - offset) }, (_, i) => ({
+          ...edge("a", "a", "FLOW", String(offset + i)),
+          target: "a",
+        })),
+        summary: { total_flows: 889 },
+        limit: 50,
+        offset,
+      };
+    });
+    expect(offsets).toHaveLength(18);
+    expect(r.edges).toHaveLength(889);
+    expect(r.nodes).toHaveLength(1);
+    expect(r.complete).toBe(true);
+  });
+  it("does not claim an unexpectedly empty page is complete", async () => {
+    const r = await collectFlowPages(async (offset) => ({
+      nodes: [],
+      edges: [],
+      summary: { total_flows: 889 },
+      limit: 50,
+      offset,
+    }));
+    expect(r.complete).toBe(false);
+  });
+});
+
+it("renders missing node details instead of hiding an edge-only response", () => {
+  const html = renderToStaticMarkup(
+    <GraphCanvas nodes={[]} edges={[edge("a", "b")]} />,
+  );
+  expect(html).toContain("의존성 그래프");
+  expect(html).toContain("미해결 노드");
+  expect(html).not.toContain("표시할 그래프 노드가 없습니다");
+});
+
+it("groups attributes without losing the individual flow edges", () => {
+  const nodes = ["a.x", "a.y", "b.z"].map((address) => ({
+    id: address,
+    address,
+    entity_address: address.split(".")[0],
+    entity_type: "RESOURCE",
+    metadata: { entity_address: address.split(".")[0] },
+    opaque: false,
+    external: false,
+    resolved: true,
+    sensitive_input: false,
+  }));
+  const edges = [
+    { ...edge("a.x", "b.z", "FLOW", "x"), target: "b.z" },
+    { ...edge("a.y", "b.z", "FLOW", "y"), target: "b.z" },
+  ];
+  const r = entityFlowGraph(nodes, edges);
+  expect(r.nodes).toHaveLength(2);
+  expect(r.edges.map((e) => e.id)).toEqual(["x", "y"]);
+  expect(r.edges.every((e) => e.source === "a" && e.target === "b")).toBe(true);
+  expect(r.nodes[0].metadata.flow_nodes).toHaveLength(2);
 });

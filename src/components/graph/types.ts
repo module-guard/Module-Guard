@@ -18,6 +18,7 @@ export type VisualEdge = {
   id: string;
   source: string;
   target: string | null;
+  target_address?: string | null;
   type: string;
   expression?: string | null;
   metadata?: Record<string, unknown>;

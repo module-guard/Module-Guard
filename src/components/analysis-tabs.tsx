@@ -1,7 +1,8 @@
 "use client";
+import { collectFlowPages } from "./graph/flow-pages";
 import { DependencyGraph } from "./graph/dependency-graph";
 import { FlowGraph, TraceGraph, AttackGraph } from "./graph/flow-graph";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { api, unwrap } from "@/api/client";
 import type { components } from "@/api/generated/schema";
 import { useApi } from "@/api/hooks";
@@ -229,41 +230,47 @@ export function DependenciesTab({ id }: { id: string }) {
         <State {...r} />
       ) : (
         <>
-          <Panel title="Modules">
-            {r.data.modules.map((m) => (
-              <article
-                key={m.address}
-                className="my-3 border-b border-line pb-3"
-              >
-                <code>{m.address}</code>
-                <p className="my-2 break-all">{m.source || "-"}</p>
-                <Badge value={m.source_type} />{" "}
-                <span>
-                  {m.source_type === "LOCAL"
-                    ? "로컬 모듈"
-                    : `${m.version || m.ref || "-"} · ${m.version_type} / ${m.ref_type}`}
-                </span>
-              </article>
-            ))}
-            {!r.data.modules.length && <p>Child module이 없습니다.</p>}
-          </Panel>
-          <Panel title="Providers">
-            {r.data.providers.map((p) => (
-              <p key={p.address} className="my-3 break-all">
-                {p.address} · {p.source || "-"} · {p.version || "-"} ·{" "}
-                {p.version_type}{" "}
-                <Badge value={p.official ? "official" : "community"} />{" "}
-                <Badge
-                  value={
-                    p.version_pinned ? "version_pinned" : "version_unpinned"
-                  }
-                />
-              </p>
-            ))}
-            {!r.data.providers.length && <p>Provider 선언이 없습니다.</p>}
-          </Panel>
           <DependencyGraph id={id} />
-          <Entities id={id} />
+          <details className="my-4 rounded-lg border p-4">
+            <summary>모듈·Provider 목록</summary>
+            <Panel title="Modules">
+              {r.data.modules.map((m) => (
+                <article
+                  key={m.address}
+                  className="my-3 border-b border-line pb-3"
+                >
+                  <code>{m.address}</code>
+                  <p className="my-2 break-all">{m.source || "-"}</p>
+                  <Badge value={m.source_type} />{" "}
+                  <span>
+                    {m.source_type === "LOCAL"
+                      ? "로컬 모듈"
+                      : `${m.version || m.ref || "-"} · ${m.version_type} / ${m.ref_type}`}
+                  </span>
+                </article>
+              ))}
+              {!r.data.modules.length && <p>Child module이 없습니다.</p>}
+            </Panel>
+            <Panel title="Providers">
+              {r.data.providers.map((p) => (
+                <p key={p.address} className="my-3 break-all">
+                  {p.address} · {p.source || "-"} · {p.version || "-"} ·{" "}
+                  {p.version_type}{" "}
+                  <Badge value={p.official ? "official" : "community"} />{" "}
+                  <Badge
+                    value={
+                      p.version_pinned ? "version_pinned" : "version_unpinned"
+                    }
+                  />
+                </p>
+              ))}
+              {!r.data.providers.length && <p>Provider 선언이 없습니다.</p>}
+            </Panel>
+          </details>
+          <details className="my-4 rounded-lg border p-4">
+            <summary>파싱된 선언 목록</summary>
+            <Entities id={id} />
+          </details>
         </>
       )}
     </>
@@ -391,7 +398,15 @@ export function TraceForm({ id }: { id: string }) {
     </Panel>
   );
 }
-export function FlowsTab({ id }: { id: string }) {
+export function FlowsTab({
+  id,
+  partial = false,
+}: {
+  id: string;
+  partial?: boolean;
+}) {
+  const [view, setView] = useState<"browse" | "trace">("browse");
+  const [all, setAll] = useState(false);
   const [list, setList] = useState(false);
   const [source, setSource] = useState("");
   const [target, setTarget] = useState("");
@@ -399,141 +414,225 @@ export function FlowsTab({ id }: { id: string }) {
   const [offset, setOffset] = useState(0);
   const [entity, setEntity] = useState("");
   const r = useApi(
-    (s) =>
-      unwrap(
-        api.GET("/api/scans/{scan_id}/flows", {
-          signal: s,
-          params: {
-            path: path(id),
-            query: {
-              source: source || undefined,
-              target: target || undefined,
-              edge_type: type || undefined,
-              limit: 20,
-              offset,
+    async (s) => {
+      const load = (pageOffset: number, limit: number) =>
+        unwrap(
+          api.GET("/api/scans/{scan_id}/flows", {
+            signal: s,
+            params: {
+              path: path(id),
+              query: {
+                source: source || undefined,
+                target: target || undefined,
+                edge_type: type || undefined,
+                limit,
+                offset: pageOffset,
+              },
             },
-          },
-        }),
-      ),
-    `${id}:${source}:${target}:${type}:${offset}`,
+          }),
+        );
+      return all && !list
+        ? collectFlowPages((o) => load(o, 50))
+        : { ...(await load(offset, 20)), complete: true };
+    },
+    JSON.stringify([id, source, target, type, offset, all, list]),
   );
   return (
     <>
-      <Panel title="Data Flow">
-        <div className="grid gap-3 md:grid-cols-3">
-          <input
-            aria-label="Flow source"
-            placeholder="Source 검색"
-            className="input"
-            value={source}
-            onChange={(e) => {
-              setSource(e.target.value);
-              setOffset(0);
-            }}
-          />
-          <input
-            aria-label="Flow target"
-            placeholder="Target 검색"
-            className="input"
-            value={target}
-            onChange={(e) => {
-              setTarget(e.target.value);
-              setOffset(0);
-            }}
-          />
-          <select
-            aria-label="Flow type"
-            className="input"
-            value={type}
-            onChange={(e) => {
-              setType(e.target.value);
-              setOffset(0);
-            }}
-          >
-            {[
-              "",
-              "PASSES_TO_MODULE_INPUT",
-              "RETURNS_FROM_MODULE_OUTPUT",
-              "PROPAGATES_THROUGH_LOCAL",
-              "SINKS_TO_RESOURCE_ATTRIBUTE",
-              "PASSES_TO_OUTPUT",
-              "FLOWS_TO",
-            ].map((t) => (
-              <option key={t} value={t}>
-                {t || "전체 edge type"}
-              </option>
-            ))}
-          </select>
-        </div>
-        {!r.data ? (
-          <State {...r} />
-        ) : (
-          <>
-            <p className="my-4 text-xs text-slate-500">
-              일치하는 흐름 {r.data.summary.total_flows ?? 0}개
-            </p>
-            <label>
-              <input
-                type="checkbox"
-                checked={list}
-                onChange={(e) => setList(e.target.checked)}
-              />
-              목록 보기
-            </label>
+      {partial && (
+        <p
+          role="status"
+          className="my-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-900"
+        >
+          부분 분석 결과입니다. 그래프는 분석 엔진이 반환한 흐름만 표시하며,
+          분석되지 않은 동적 흐름은 포함하지 않습니다. 요약의 진단에서 분석
+          제한을 확인하세요.
+        </p>
+      )}
+      <div
+        className="my-4 flex gap-2"
+        role="group"
+        aria-label="데이터 흐름 보기"
+      >
+        <button
+          className="rounded-lg border px-4 py-2"
+          aria-pressed={view === "browse"}
+          onClick={() => setView("browse")}
+        >
+          흐름 탐색
+        </button>
+        <button
+          className="rounded-lg border px-4 py-2"
+          aria-pressed={view === "trace"}
+          onClick={() => setView("trace")}
+        >
+          경로 추적
+        </button>
+      </div>
+      {view === "browse" ? (
+        <>
+          <Panel title="Data Flow">
             {!list && (
-              <FlowGraph
-                nodes={r.data.nodes}
-                edges={r.data.edges}
-                onCenter={setEntity}
-              />
-            )}
-            {list &&
-              r.data.edges.map((e) => (
-                <article
-                  key={e.id}
-                  className="my-3 rounded border border-line p-3"
+              <div
+                className="mb-3 flex gap-3"
+                role="group"
+                aria-label="흐름 표시 범위"
+              >
+                <button
+                  className="rounded border px-3 py-2"
+                  aria-pressed={!all}
+                  onClick={() => setAll(false)}
                 >
-                  <button
-                    className="break-all text-left font-mono text-brand"
-                    onClick={() => setEntity(e.source)}
-                  >
-                    {e.source}
-                  </button>
-                  <p className="my-2 text-xs text-slate-400">↓ {e.type}</p>
-                  <button
-                    className="break-all text-left font-mono text-brand"
-                    onClick={() => setEntity(e.target)}
-                  >
-                    {e.target}
-                  </button>
-                  <p className="mt-3 text-xs">
-                    {[
-                      "source_category",
-                      "sink_category",
-                      "resolved",
-                      "opaque",
-                      "external",
-                    ]
-                      .map((k) => `${k}: ${e.metadata?.[k] ?? "-"}`)
-                      .join(" · ")}
+                  페이지별 보기
+                </button>
+                <button
+                  className="rounded border px-3 py-2"
+                  aria-pressed={all}
+                  onClick={() => setAll(true)}
+                >
+                  전체 연결 불러오기
+                </button>
+              </div>
+            )}
+            <div className="grid gap-3 md:grid-cols-3">
+              <input
+                aria-label="Flow source"
+                placeholder="Source 검색"
+                className="input"
+                value={source}
+                onChange={(e) => {
+                  setSource(e.target.value);
+                  setOffset(0);
+                }}
+              />
+              <input
+                aria-label="Flow target"
+                placeholder="Target 검색"
+                className="input"
+                value={target}
+                onChange={(e) => {
+                  setTarget(e.target.value);
+                  setOffset(0);
+                }}
+              />
+              <select
+                aria-label="Flow type"
+                className="input"
+                value={type}
+                onChange={(e) => {
+                  setType(e.target.value);
+                  setOffset(0);
+                }}
+              >
+                {[
+                  "",
+                  "PASSES_TO_MODULE_INPUT",
+                  "RETURNS_FROM_MODULE_OUTPUT",
+                  "PROPAGATES_THROUGH_LOCAL",
+                  "SINKS_TO_RESOURCE_ATTRIBUTE",
+                  "PASSES_TO_OUTPUT",
+                  "FLOWS_TO",
+                ].map((t) => (
+                  <option key={t} value={t}>
+                    {t || "전체 edge type"}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {!r.data ? (
+              <State {...r} />
+            ) : (
+              <>
+                <p className="my-4 text-sm">
+                  전체 일치 흐름 {r.data.summary.total_flows ?? 0}개 ·{" "}
+                  {all && !list
+                    ? `불러온 연결 ${r.data.edges.length}개`
+                    : `현재 페이지 ${r.data.edges.length ? offset + 1 : 0}–${offset + r.data.edges.length}번 표시 (페이지당 20개)`}
+                </p>
+                {!r.data.complete && (
+                  <p role="status">
+                    전체 흐름을 모두 불러오지 못했습니다. 표시 범위는 불러온
+                    연결에 한정됩니다. 필터로 범위를 좁혀 주세요.
                   </p>
-                </article>
-              ))}
-            {!r.data.edges.length && <p>일치하는 흐름이 없습니다.</p>}
-            <Pager
-              offset={offset}
-              count={r.data.edges.length}
-              setOffset={setOffset}
-            />
-          </>
-        )}
-      </Panel>
-      {entity && <EntityFlow id={id} address={entity} />}
-      <TraceForm id={id} />
+                )}
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={list}
+                    onChange={(e) => setList(e.target.checked)}
+                  />
+                  목록 보기
+                </label>
+                {(!all || list) && (
+                  <p className="my-2 text-xs text-slate-500">
+                    다른 페이지의 연결은 이 그래프에 포함되지 않습니다. 노드를
+                    선택하고 인접 흐름을 열면 해당 주소의 연결을 확인할 수
+                    있습니다.
+                  </p>
+                )}
+                {!list && (
+                  <FlowGraph
+                    nodes={r.data.nodes}
+                    edges={r.data.edges}
+                    onCenter={setEntity}
+                  />
+                )}
+                {list &&
+                  r.data.edges.map((e) => (
+                    <article
+                      key={e.id}
+                      className="my-3 rounded border border-line p-3"
+                    >
+                      <button
+                        className="break-all text-left font-mono text-brand"
+                        onClick={() => setEntity(e.source)}
+                      >
+                        {e.source}
+                      </button>
+                      <p className="my-2 text-xs text-slate-400">↓ {e.type}</p>
+                      <button
+                        className="break-all text-left font-mono text-brand"
+                        onClick={() => setEntity(e.target)}
+                      >
+                        {e.target}
+                      </button>
+                      <p className="mt-3 text-xs">
+                        {[
+                          "source_category",
+                          "sink_category",
+                          "resolved",
+                          "opaque",
+                          "external",
+                        ]
+                          .map((k) => `${k}: ${e.metadata?.[k] ?? "-"}`)
+                          .join(" · ")}
+                      </p>
+                    </article>
+                  ))}
+                {!r.data.edges.length && <p>일치하는 흐름이 없습니다.</p>}
+                {(!all || list) && (
+                  <Pager
+                    offset={offset}
+                    count={r.data.edges.length}
+                    setOffset={setOffset}
+                  />
+                )}
+              </>
+            )}
+          </Panel>
+          {entity && <EntityFlow id={id} address={entity} />}
+        </>
+      ) : (
+        <TraceForm id={id} />
+      )}
     </>
   );
 }
 function EntityFlow({ id, address }: { id: string; address: string }) {
+  const region = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    region.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [address]);
   const [list, setList] = useState(false);
   const r = useApi(
     (s) =>
@@ -546,48 +645,50 @@ function EntityFlow({ id, address }: { id: string; address: string }) {
     `${id}:${address}`,
   );
   return (
-    <Panel title={`인접 흐름: ${address}`}>
-      {!r.data ? (
-        <State {...r} />
-      ) : (
-        <>
-          <label>
-            <input
-              type="checkbox"
-              checked={list}
-              onChange={(e) => setList(e.target.checked)}
-            />
-            목록 보기
-          </label>
-          {!list && (
-            <FlowGraph
-              nodes={r.data.nodes ?? []}
-              edges={[
-                ...new Map(
-                  [...r.data.upstream, ...r.data.downstream].map((e) => [
-                    e.id,
-                    e,
-                  ]),
-                ).values(),
-              ]}
-              label="인접 흐름 그래프"
-            />
-          )}
-          {list &&
-            (["upstream", "downstream"] as const).map((k) => (
-              <div key={k}>
-                <h3 className="my-3">{k}</h3>
-                {r.data![k].map((e) => (
-                  <p key={e.id} className="my-2 break-all font-mono text-xs">
-                    {e.source} → {e.target}
-                  </p>
-                ))}
-                {!r.data![k].length && <p>없음</p>}
-              </div>
-            ))}
-          {r.data.truncated && <p>일부 흐름만 표시됩니다.</p>}
-        </>
-      )}
-    </Panel>
+    <div ref={region} className="scroll-mt-20">
+      <Panel title={`인접 흐름: ${address}`}>
+        {!r.data ? (
+          <State {...r} />
+        ) : (
+          <>
+            <label>
+              <input
+                type="checkbox"
+                checked={list}
+                onChange={(e) => setList(e.target.checked)}
+              />
+              목록 보기
+            </label>
+            {!list && (
+              <FlowGraph
+                nodes={r.data.nodes ?? []}
+                edges={[
+                  ...new Map(
+                    [...r.data.upstream, ...r.data.downstream].map((e) => [
+                      e.id,
+                      e,
+                    ]),
+                  ).values(),
+                ]}
+                label="인접 흐름 그래프"
+              />
+            )}
+            {list &&
+              (["upstream", "downstream"] as const).map((k) => (
+                <div key={k}>
+                  <h3 className="my-3">{k}</h3>
+                  {r.data![k].map((e) => (
+                    <p key={e.id} className="my-2 break-all font-mono text-xs">
+                      {e.source} → {e.target}
+                    </p>
+                  ))}
+                  {!r.data![k].length && <p>없음</p>}
+                </div>
+              ))}
+            {r.data.truncated && <p>일부 흐름만 표시됩니다.</p>}
+          </>
+        )}
+      </Panel>
+    </div>
   );
 }
