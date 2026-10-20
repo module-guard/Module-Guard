@@ -144,7 +144,10 @@ export function ScanResult({ id }: { id: string }) {
       ) : tab === 3 ? (
         <DependenciesTab id={id} />
       ) : tab === 4 ? (
-        <FlowsTab id={id} />
+        <FlowsTab
+          id={id}
+          partial={s.analysis?.stages?.data_flow?.status === "PARTIAL"}
+        />
       ) : (
         <FindingsTab key="correlation" id={id} scanner="correlation" />
       )}

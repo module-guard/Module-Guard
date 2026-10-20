@@ -1,8 +1,8 @@
 import dagre from "@dagrejs/dagre";
 import type { Node } from "@xyflow/react";
 import type { VisualNode, VisualEdge } from "./types";
-export const WIDTH = 260,
-  HEIGHT = 116;
+export const WIDTH = 300,
+  HEIGHT = 160;
 export function layoutGraph(nodes: VisualNode[], edges: VisualEdge[]): Node[] {
   const groups = new Map<string, VisualNode[]>();
   for (const n of nodes) {
@@ -59,6 +59,8 @@ export function layoutGraph(nodes: VisualNode[], edges: VisualEdge[]): Node[] {
     result.push({
       id: parentId,
       type: "moduleGroup",
+      width,
+      height,
       position: { x: p.x - width / 2, y: p.y - height / 2 },
       data: { label: JSON.parse(key).join(" / ") || "root" },
       style: {
@@ -75,6 +77,8 @@ export function layoutGraph(nodes: VisualNode[], edges: VisualEdge[]): Node[] {
       result.push({
         id: n.id,
         type: "entity",
+        width: WIDTH,
+        height: HEIGHT,
         parentId,
         extent: "parent",
         position: { x: p.x - WIDTH / 2, y: p.y - HEIGHT / 2 },

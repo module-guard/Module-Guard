@@ -27,6 +27,8 @@ export function flowGraph(
         ...n.metadata,
         ...Object.fromEntries(
           [
+            "entity_address",
+            "attribute_path",
             "source_category",
             "sink_category",
             "opaque",
@@ -42,6 +44,56 @@ export function flowGraph(
     edges,
   };
 }
+/** Group attribute nodes by their declared entity without dropping any edge IDs. */
+export function entityFlowGraph(nodes: FlowNode[], edges: FlowEdge[]) {
+  const raw = flowGraph(nodes, edges);
+  const owner = new Map(
+    raw.nodes.map((n) => [n.id, String(n.metadata?.entity_address || n.id)]),
+  );
+  const groups = new Map<string, VisualNode[]>();
+  for (const n of raw.nodes) {
+    const id = owner.get(n.id)!;
+    groups.set(id, [...(groups.get(id) ?? []), n]);
+  }
+  return {
+    nodes: [...groups].map(([id, members]) => ({
+      ...members[0],
+      id,
+      address: id,
+      metadata: {
+        ...members[0].metadata,
+        attribute_path: undefined,
+        source_category: undefined,
+        sink_category: undefined,
+        source_categories: [
+          ...new Set(
+            members.map((n) => n.metadata?.source_category).filter(Boolean),
+          ),
+        ],
+        sink_categories: [
+          ...new Set(
+            members.map((n) => n.metadata?.sink_category).filter(Boolean),
+          ),
+        ],
+        attribute_count: members.length,
+        flow_nodes: members.map((n) => ({ address: n.address, ...n.metadata })),
+        opaque: members.some((n) => n.metadata?.opaque === true),
+        external: members.some((n) => n.metadata?.external === true),
+        resolved: members.every((n) => n.metadata?.resolved !== false),
+      },
+    })),
+    edges: raw.edges.map((e) => ({
+      ...e,
+      source: owner.get(e.source) ?? e.source,
+      target: e.target ? (owner.get(e.target) ?? e.target) : null,
+      metadata: {
+        ...e.metadata,
+        source_address: e.source,
+        target_address: e.target,
+      },
+    })),
+  };
+}
 export function FlowGraph({
   nodes,
   edges,
@@ -53,12 +105,31 @@ export function FlowGraph({
   label?: string;
   onCenter?: (address: string) => void;
 }) {
+  const [grouped, setGrouped] = useState(label !== "흐름 추적 그래프");
   return (
-    <GraphCanvas
-      {...flowGraph(nodes, edges)}
-      label={label}
-      onCenter={onCenter}
-    />
+    <>
+      <label className="my-3 flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={grouped}
+          onChange={(e) => setGrouped(e.target.checked)}
+        />
+        선언별 묶기 (속성 연결 유지)
+      </label>
+      <p className="text-xs text-slate-500">
+        원본 흐름 노드 {nodes.length}개 · 연결 {edges.length}개 ·{" "}
+        {grouped
+          ? "묶인 속성은 노드 상세에서 확인할 수 있습니다."
+          : "속성별 노드 표시"}
+      </p>
+      <GraphCanvas
+        key={String(grouped)}
+        {...(grouped ? entityFlowGraph(nodes, edges) : flowGraph(nodes, edges))}
+        label={label}
+        onCenter={onCenter}
+        centerLabel="인접 흐름 보기"
+      />
+    </>
   );
 }
 export function TraceGraph({
