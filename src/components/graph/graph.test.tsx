@@ -75,6 +75,24 @@ describe("neighborhood matches server BFS", () => {
   });
 });
 describe("dagre layout", () => {
+  it("lays out 1000 nodes with explicit offscreen dimensions and handles", () => {
+    const nodes = Array.from({ length: 1000 }, (_, i) =>
+      node(String(i), [String(Math.floor(i / 100))]),
+    );
+    const edges = nodes.slice(1).map((n, i) => edge(String(i), n.id));
+    const result = layoutGraph(nodes, edges);
+    expect(result.filter((n) => n.type === "entity").map((n) => n.id)).toEqual(
+      nodes.map((n) => n.id),
+    );
+    for (const n of result) {
+      expect(
+        Number.isFinite(n.position.x) && Number.isFinite(n.position.y),
+      ).toBe(true);
+      expect(n.measured).toEqual({ width: n.width, height: n.height });
+      if (n.type === "entity")
+        expect(n.handles?.map((h) => h.type)).toEqual(["target", "source"]);
+    }
+  });
   it("places a chain left to right without node overlap", () => {
     const result = layoutGraph(
       [node("a"), node("b"), node("c")],
@@ -112,7 +130,7 @@ describe("dagre layout", () => {
   });
 });
 describe("graph states and semantic styles", () => {
-  it("renders loading, empty, error and the size guard", () => {
+  it("renders loading, empty, error and pending large layouts", () => {
     expect(renderToStaticMarkup(<GraphCanvas loading />)).toContain(
       "불러오는 중",
     );
@@ -130,7 +148,7 @@ describe("graph states and semantic styles", () => {
           nodes={Array.from({ length: 301 }, (_, i) => node(String(i)))}
         />,
       ),
-    ).toContain("범위를 좁혀 주세요");
+    ).toContain("배치 계산 중");
   });
   it("keeps dependency and unresolved styles distinct", () => {
     expect(edgeStyle(edge("a", "b", "CALLS_MODULE")).strokeWidth).toBe(3);

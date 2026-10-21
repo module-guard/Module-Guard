@@ -1,5 +1,5 @@
 import dagre from "@dagrejs/dagre";
-import type { Node } from "@xyflow/react";
+import { Position, type Node } from "@xyflow/react";
 import type { VisualNode, VisualEdge } from "./types";
 export const WIDTH = 300,
   HEIGHT = 160;
@@ -7,7 +7,9 @@ export function layoutGraph(nodes: VisualNode[], edges: VisualEdge[]): Node[] {
   const groups = new Map<string, VisualNode[]>();
   for (const n of nodes) {
     const key = JSON.stringify(n.module_path ?? []);
-    groups.set(key, [...(groups.get(key) ?? []), n]);
+    const members = groups.get(key) ?? [];
+    members.push(n);
+    groups.set(key, members);
   }
   const outer = new dagre.graphlib.Graph()
     .setGraph({ rankdir: "LR", nodesep: 60, ranksep: 100 })
@@ -22,9 +24,22 @@ export function layoutGraph(nodes: VisualNode[], edges: VisualEdge[]): Node[] {
     }
   >();
   for (const [key, members] of groups) {
+    for (const n of members) owner.set(n.id, key);
+  }
+  const internalEdges = new Map<string, VisualEdge[]>();
+  for (const e of edges) {
+    const key = owner.get(e.source);
+    if (key && e.target && key === owner.get(e.target)) {
+      const list = internalEdges.get(key) ?? [];
+      list.push(e);
+      internalEdges.set(key, list);
+    }
+  }
+  for (const [key, members] of groups) {
     const g = new dagre.graphlib.Graph()
       .setGraph({
         rankdir: "LR",
+        ranker: nodes.length > 150 ? "longest-path" : "network-simplex",
         nodesep: 40,
         ranksep: 100,
         marginx: 24,
@@ -36,7 +51,7 @@ export function layoutGraph(nodes: VisualNode[], edges: VisualEdge[]): Node[] {
       g.setNode(n.id, { width: WIDTH, height: HEIGHT });
       owner.set(n.id, key);
     });
-    edges.forEach((e) => {
+    (internalEdges.get(key) ?? []).forEach((e) => {
       if (ids.has(e.source) && e.target && ids.has(e.target))
         g.setEdge(e.source, e.target);
     });
@@ -61,6 +76,7 @@ export function layoutGraph(nodes: VisualNode[], edges: VisualEdge[]): Node[] {
       type: "moduleGroup",
       width,
       height,
+      measured: { width, height },
       position: { x: p.x - width / 2, y: p.y - height / 2 },
       data: { label: JSON.parse(key).join(" / ") || "root" },
       style: {
@@ -79,6 +95,25 @@ export function layoutGraph(nodes: VisualNode[], edges: VisualEdge[]): Node[] {
         type: "entity",
         width: WIDTH,
         height: HEIGHT,
+        measured: { width: WIDTH, height: HEIGHT },
+        handles: [
+          {
+            type: "target",
+            position: Position.Left,
+            x: 0,
+            y: HEIGHT / 2,
+            width: 6,
+            height: 6,
+          },
+          {
+            type: "source",
+            position: Position.Right,
+            x: WIDTH,
+            y: HEIGHT / 2,
+            width: 6,
+            height: 6,
+          },
+        ],
         parentId,
         extent: "parent",
         position: { x: p.x - WIDTH / 2, y: p.y - HEIGHT / 2 },
