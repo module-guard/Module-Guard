@@ -376,6 +376,40 @@ test("existing VPC scan: full flow count and grouped attribute edges", async ({
       { exact: true },
     ),
   ).toBeVisible();
+  // Full attribute graph used to disappear above 300 nodes. Verify virtualization
+  // retains every node in the minimap and can navigate to an offscreen node.
+  await page
+    .getByLabel("선언별 묶기 (속성 연결 유지)", { exact: true })
+    .uncheck();
+  const large = page.getByRole("img", {
+    name: "데이터 흐름 그래프",
+    exact: true,
+  });
+  await expect(large).toBeVisible({ timeout: 30000 });
+  const choices = page.getByLabel("데이터 흐름 그래프 노드 찾기");
+  const total = (await choices.locator("option").count()) - 1;
+  expect(total).toBeGreaterThan(300);
+  await expect(large.locator(".react-flow__minimap-node")).toHaveCount(
+    total + 1,
+  );
+  await expect
+    .poll(() => large.locator(".react-flow__node-entity").count())
+    .toBeGreaterThan(0);
+  expect(await large.locator(".react-flow__node-entity").count()).toBeLessThan(
+    total,
+  );
+  const last = await choices.locator("option").last().getAttribute("value");
+  await choices.selectOption(last!);
+  await expect(
+    large
+      .locator(".react-flow__node-entity")
+      .filter({ hasText: last!.split(".").slice(-1)[0] })
+      .first(),
+  ).toBeVisible();
+  await page.getByLabel("그래프 상세 닫기").click();
+  await page
+    .getByLabel("선언별 묶기 (속성 연결 유지)", { exact: true })
+    .check();
   const source = "var.outpost_inbound_acl_rules";
   const expected = await (
     await request.get(
@@ -417,4 +451,74 @@ test("existing VPC scan: full flow count and grouped attribute edges", async ({
   );
   await page.screenshot({ path: "test-results/vpc-flow-readability.png" });
   expect(errors).toEqual([]);
+});
+
+test("large dependency graph remains navigable without dropping nodes or edges", async ({
+  page,
+  request,
+}) => {
+  const id = process.env.GRAPH_AUDIT_SCAN_ID;
+  test.skip(!id, "Requires an existing large scan");
+  const graph = await (
+    await request.get(`${backend}/api/scans/${id}/graph`)
+  ).json();
+  await page.goto(`/scans/${id}`);
+  await page.getByRole("button", { name: /^의존성/ }).click();
+  const start = Date.now();
+  await page
+    .getByRole("button", { name: "전체 그래프 (고립 노드 포함)" })
+    .click();
+  const canvas = page.getByRole("img", { name: "의존성 그래프", exact: true });
+  await expect(canvas).toBeVisible({ timeout: 30000 });
+  await expect
+    .poll(() => canvas.locator(".react-flow__node-entity").count())
+    .toBeGreaterThan(0);
+  console.log(
+    `Large graph ready: ${Date.now() - start}ms, ${graph.nodes.length} nodes, ${graph.edges.length} edges`,
+  );
+  await expect(
+    page.getByText(
+      `노드 ${graph.nodes.length}개 · 연결선 ${graph.edges.length}개`,
+      { exact: true },
+    ),
+  ).toBeVisible();
+  expect(await canvas.locator(".react-flow__node-entity").count()).toBeLessThan(
+    graph.nodes.length,
+  );
+  await page
+    .getByLabel("의존성 그래프 노드 찾기")
+    .selectOption({ label: "aws_vpc.this" });
+  await expect(
+    canvas
+      .locator(".react-flow__node-entity")
+      .filter({ hasText: "aws_vpc.this" }),
+  ).toBeVisible();
+  await expect
+    .poll(() => canvas.locator(".react-flow__edge-path").count())
+    .toBeGreaterThan(0);
+  await page.getByLabel("그래프 상세 닫기").click();
+  await page.getByRole("button", { name: "크게 보기", exact: true }).click();
+  await page.screenshot({ path: "test-results/large-graph-performance.png" });
+  await page.getByRole("button", { name: "전체 맞춤", exact: true }).click();
+  await expect(canvas.locator(".react-flow__node-entity")).toHaveCount(
+    graph.nodes.length,
+  );
+  await expect(canvas.locator(".react-flow__edge-path")).toHaveCount(
+    graph.edges.length,
+  );
+  await page.getByRole("button", { name: "읽기 배율", exact: true }).click();
+  await expect(
+    canvas
+      .locator(".react-flow__node-entity")
+      .filter({ hasText: "aws_vpc.this" }),
+  ).toBeVisible();
+
+  await page
+    .getByText(`연결선 목록 (${graph.edges.length}) · 겹친 연결 확인`, {
+      exact: true,
+    })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "연결선 100개 더 보기" }),
+  ).toBeVisible();
 });

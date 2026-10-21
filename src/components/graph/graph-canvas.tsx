@@ -18,7 +18,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { prepareGraph } from "./normalize";
-import { layoutGraph } from "./layout";
+import { useGraphLayout } from "./use-graph-layout";
 import type { VisualNode, VisualEdge } from "./types";
 export const nodeColors: Record<string, string> = {
   ROOT_MODULE: "#7c3aed",
@@ -191,22 +191,38 @@ export function GraphCanvas({
   const [component, setComponent] = useState("");
   const [expanded, setExpanded] = useState(false);
   const [instance, setInstance] = useState<ReactFlowInstance>();
+  const [edgeListOpen, setEdgeListOpen] = useState(false);
+  const [edgeListLimit, setEdgeListLimit] = useState(100);
   const prepared = useMemo(() => prepareGraph(nodes, edges), [nodes, edges]);
   const { shownNodes, shownEdges } = useMemo(() => {
     const members =
       component && prepared.components.find((c) => c[0] === component);
+    const ids = new Set(members || []);
     return {
       shownNodes: members
-        ? prepared.nodes.filter((n) => members.includes(n.id))
+        ? prepared.nodes.filter((n) => ids.has(n.id))
         : prepared.nodes,
       shownEdges: members
-        ? prepared.edges.filter((e) => members.includes(e.source))
+        ? prepared.edges.filter((e) => ids.has(e.source))
         : prepared.edges,
     };
   }, [prepared, component]);
-  const positioned = useMemo(
-    () => (shownNodes.length <= 300 ? layoutGraph(shownNodes, shownEdges) : []),
-    [shownNodes, shownEdges],
+  const { positioned, pending, layoutError, retryLayout } = useGraphLayout(
+    shownNodes,
+    shownEdges,
+  );
+  const nodeById = useMemo(
+    () => new Map(prepared.nodes.map((n) => [n.id, n])),
+    [prepared.nodes],
+  );
+  const initialFitOptions = useMemo(
+    () => ({
+      includeHiddenNodes: true,
+      nodes: shownNodes.slice(0, 1).map((n) => ({ id: n.id })),
+      minZoom: 0.9,
+      maxZoom: 0.9,
+    }),
+    [shownNodes],
   );
   const [flowNodes, setFlowNodes, onNodesChange] = useNodesState(positioned);
   useEffect(() => {
@@ -240,17 +256,15 @@ export function GraphCanvas({
   }, [shownEdges]);
   const visibleEdges = useMemo<Edge[]>(
     () =>
-      shownNodes.length > 300
-        ? []
-        : shownEdges.map((e) => ({
-            ...e,
-            type: "routed",
-            data: { lane: lanes.get(e.id) ?? 0 },
-            label: hover === e.id || selectedEdge === e.id ? e.type : undefined,
-            style: edgeStyle(e),
-            markerEnd: { type: MarkerType.ArrowClosed },
-            selected: selectedEdge === e.id,
-          })),
+      shownEdges.map((e) => ({
+        ...e,
+        type: "routed",
+        data: { lane: lanes.get(e.id) ?? 0 },
+        label: hover === e.id || selectedEdge === e.id ? e.type : undefined,
+        style: edgeStyle(e),
+        markerEnd: { type: MarkerType.ArrowClosed },
+        selected: selectedEdge === e.id,
+      })),
     [shownNodes.length, shownEdges, lanes, hover, selectedEdge],
   );
   const detail = shownNodes.find((n) => n.id === selected);
@@ -293,8 +307,7 @@ export function GraphCanvas({
             <option value="">전체 ({prepared.components.length}개 그룹)</option>
             {prepared.components.map((c, i) => (
               <option key={c[0]} value={c[0]}>
-                그룹 {i + 1} · {c.length}개 ·{" "}
-                {prepared.nodes.find((n) => n.id === c[0])?.address}
+                그룹 {i + 1} · {c.length}개 · {nodeById.get(c[0])?.address}
               </option>
             ))}
           </select>
@@ -310,6 +323,7 @@ export function GraphCanvas({
               setSelectedEdge("");
               if (e.target.value)
                 void instance?.fitView({
+                  includeHiddenNodes: true,
                   nodes: [{ id: e.target.value }],
                   minZoom: 0.9,
                   maxZoom: 1,
@@ -327,14 +341,26 @@ export function GraphCanvas({
         </label>
         <button
           className="rounded border bg-white px-3 py-1"
-          onClick={() => instance?.setViewport({ x: 24, y: 24, zoom: 0.9 })}
+          onClick={() =>
+            instance?.fitView({
+              includeHiddenNodes: true,
+              nodes: [{ id: selected || shownNodes[0].id }],
+              minZoom: 0.9,
+              maxZoom: 0.9,
+            })
+          }
         >
           읽기 배율
         </button>
         <button
           className="rounded border bg-white px-3 py-1"
           onClick={() =>
-            instance?.fitView({ padding: 0.15, minZoom: 0.1, maxZoom: 1 })
+            instance?.fitView({
+              includeHiddenNodes: true,
+              padding: 0.15,
+              minZoom: 0.001,
+              maxZoom: 1,
+            })
           }
         >
           전체 맞춤
@@ -364,10 +390,18 @@ export function GraphCanvas({
       <p className="mb-2 text-xs text-slate-500">
         드래그로 이동 · 휠로 확대/축소 · 선택하면 상세 표시 · 전체 맞춤은 글자가
         작아질 수 있습니다.
+        {shownNodes.length > 150 &&
+          " 전체 데이터는 유지하며 현재 화면 안의 노드와 연결만 그립니다."}
       </p>
-      {shownNodes.length > 300 ? (
+      {pending ? (
         <p role="status">
-          노드가 300개를 넘습니다. 연결 그룹을 선택하거나 범위를 좁혀 주세요.
+          노드 {shownNodes.length}개 배치 계산 중… 화면 조작은 계속할 수
+          있습니다.
+        </p>
+      ) : layoutError ? (
+        <p role="alert">
+          그래프 배치를 계산하지 못했습니다.{" "}
+          <button onClick={retryLayout}>다시 시도</button>
         </p>
       ) : (
         <div className="relative">
@@ -381,14 +415,17 @@ export function GraphCanvas({
                 shownNodes.map((n) => n.id),
                 shownEdges.map((e) => e.id),
               ])}
+              onlyRenderVisibleElements={shownNodes.length > 150}
               nodes={flowNodes}
               onNodesChange={onNodesChange}
               edges={visibleEdges}
               nodeTypes={nodeTypes}
               edgeTypes={edgeTypes}
+              fitView={shownNodes.length > 150}
+              fitViewOptions={initialFitOptions}
               defaultViewport={{ x: 24, y: 24, zoom: 0.9 }}
               onInit={setInstance}
-              minZoom={0.1}
+              minZoom={0.001}
               nodesDraggable={false}
               nodesConnectable={false}
               onNodeClick={(_, n) => {
@@ -478,15 +515,13 @@ export function GraphCanvas({
                   <p className="my-2 break-all">
                     {String(
                       edgeDetail.metadata?.source_address ||
-                        prepared.nodes.find((n) => n.id === edgeDetail.source)
-                          ?.address ||
+                        nodeById.get(edgeDetail.source)?.address ||
                         edgeDetail.source,
                     )}{" "}
                     →{" "}
                     {String(
                       edgeDetail.metadata?.target_address ||
-                        prepared.nodes.find((n) => n.id === edgeDetail.target)
-                          ?.address ||
+                        nodeById.get(edgeDetail.target!)?.address ||
                         edgeDetail.target,
                     )}
                   </p>
@@ -499,30 +534,41 @@ export function GraphCanvas({
           )}
         </div>
       )}
-      <details className="mt-3 rounded border p-3">
+      <details
+        className="mt-3 rounded border p-3"
+        onToggle={(e) => setEdgeListOpen(e.currentTarget.open)}
+      >
         <summary>연결선 목록 ({shownEdges.length}) · 겹친 연결 확인</summary>
         <div className="max-h-64 overflow-auto">
-          {shownEdges.map((e) => (
+          {edgeListOpen &&
+            shownEdges.slice(0, edgeListLimit).map((e) => (
+              <button
+                key={e.id}
+                className="block w-full break-all border-b py-2 text-left text-xs"
+                onClick={() => {
+                  setSelectedEdge(e.id);
+                  setSelected("");
+                }}
+              >
+                <strong>{e.type}</strong> ·{" "}
+                {String(
+                  e.metadata?.source_address || nodeById.get(e.source)?.address,
+                )}{" "}
+                →{" "}
+                {String(
+                  e.metadata?.target_address ||
+                    nodeById.get(e.target!)?.address,
+                )}
+              </button>
+            ))}
+          {edgeListOpen && shownEdges.length > edgeListLimit && (
             <button
-              key={e.id}
-              className="block w-full break-all border-b py-2 text-left text-xs"
-              onClick={() => {
-                setSelectedEdge(e.id);
-                setSelected("");
-              }}
+              className="p-2 text-brand"
+              onClick={() => setEdgeListLimit((n) => n + 100)}
             >
-              <strong>{e.type}</strong> ·{" "}
-              {String(
-                e.metadata?.source_address ||
-                  prepared.nodes.find((n) => n.id === e.source)?.address,
-              )}{" "}
-              →{" "}
-              {String(
-                e.metadata?.target_address ||
-                  prepared.nodes.find((n) => n.id === e.target)?.address,
-              )}
+              연결선 100개 더 보기
             </button>
-          ))}
+          )}
         </div>
       </details>
     </section>
