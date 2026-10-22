@@ -1,19 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "services": {
-    "app": {
-      "root": ".",
-      "framework": "nextjs"
-    }
-  },
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "https://module-guard-api.onrender.com/api/$1"
-    },
-    {
-      "source": "/(.*)",
-      "destination": { "service": "app" }
+      "source": "/api/:path*",
+      "destination": "https://module-guard-api.onrender.com/api/:path*"
     }
   ]
 }
