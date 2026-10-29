@@ -115,6 +115,12 @@ API/worker 프로세스가 강제 종료되면 DB에 `QUEUED`·`COLLECTING`·`SC
 재시도 소스는 원래 등록한 출처와 같아야 합니다. GitHub는 `origin_url`까지, 업로드는 `origin_url`이
 없으므로 형식(`origin_type`)만 비교하며, 다르면 새 scan을 만들기 전에 `SourceMismatch`(422)로 거부합니다.
 
+재시도는 기존 version을 재사용하므로 등록 당시의 manifest가 그대로 적용됩니다(#15). 그래서 새 scan을
+만들기 전에, 이미 무결성 불일치가 확정된(`integrity_status=MISMATCH`) 버전은 `ConflictError`(409)로,
+새 소스의 `manifest_sha256`이 등록 당시와 다르면 `SourceChanged`(422)로 거부합니다. 이로써 run()에서
+`compare()`가 version을 `MISMATCH`로 바꿔 이후 재시도까지 막는 일을 사전에 차단합니다. 0010 이전에
+만들어져 manifest가 없는 버전은 이 검사를 건너뛰고 기존 run() 단계 검사를 따릅니다.
+
 적용 순서와 오류:
 
 | 상황 | 상태 | code |
@@ -123,6 +129,8 @@ API/worker 프로세스가 강제 종료되면 DB에 `QUEUED`·`COLLECTING`·`SC
 | 다른 사용자/소유자 아님 | 404 | `NotFoundError` (비공개 검사는 가시성 단계에서 숨김) |
 | `Origin` 불일치 | 403 | `ForbiddenOriginError` |
 | 출처 불일치(GitHub↔업로드, 다른 GitHub URL) | 422 | `UploadRejectedError` (code `SourceMismatch`) |
+| 등록 당시와 내용이 달라짐(manifest 해시 불일치) | 422 | `UploadRejectedError` (code `SourceChanged`) |
+| 무결성 불일치가 확정된(MISMATCH) 버전 | 409 | `ConflictError` |
 | 실패 상태가 아님 | 409 | `ConflictError` |
 | 이미 재시도됨(반복·동시) | 409 | `ConflictError` |
 | 준비 소스 만료/소실 | 404 | `StagedUploadNotFoundError` ("다시 올려 주세요") |

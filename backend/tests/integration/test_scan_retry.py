@@ -302,3 +302,82 @@ def test_retry_api_refuses_a_different_github_url(stack, sessions):
     assert response.status_code == 422
     assert response.json()["error"]["code"] == "SourceMismatch"
     assert retry_attempts(sessions, old_id) == []
+
+
+# -------------------------------------------- content must match the registered manifest (#15)
+
+
+def test_retry_with_identical_content_completes_and_verifies(stack, sessions):
+    client = stack(dispatcher=ManualDispatcher())
+    sign_in(client, sessions)
+    old_id = make_failed_github(client, sessions)
+
+    # Same URL and unchanged content: the manifest matches, so the retry runs and verifies.
+    report = client.post("/api/uploads/github", json={"url": "https://github.com/org/demo"}).json()
+    response = retry(client, old_id, report["upload_id"])
+    assert response.status_code == 202, response.text
+    new_id = response.json()["scan_id"]
+
+    client.scans.run(UUID(new_id))
+    scan = client.get(f"/api/scans/{new_id}").json()
+    assert scan["status"] == "COMPLETED"
+    with sessions() as session:
+        version = session.scalar(select(ModuleVersion))
+    assert version.integrity_status == "VERIFIED"
+
+
+def test_retry_with_changed_content_is_refused_as_source_changed(stack, sessions):
+    client = stack(dispatcher=ManualDispatcher())
+    sign_in(client, sessions)
+    old_id = make_failed_github(client, sessions)
+
+    # Same URL, but the repository content changed since it was registered.
+    client.github.files["main.tf"] = 'resource "null_resource" "changed" {}\n'
+    report = client.post("/api/uploads/github", json={"url": "https://github.com/org/demo"}).json()
+    response = retry(client, old_id, report["upload_id"])
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "SourceChanged"
+
+    # Nothing changed: no new scan, the version stays unlinked and keeps its integrity status.
+    with sessions() as session:
+        scans = session.scalar(select(func.count(Scan.id)))
+        version = session.scalar(select(ModuleVersion))
+    assert scans == 1
+    assert version.scan_id is None
+    assert version.integrity_status == "UNVERIFIED"
+    assert retry_attempts(sessions, old_id) == []
+
+
+def test_retry_of_a_mismatched_version_is_refused(stack, sessions):
+    client = stack(dispatcher=ManualDispatcher())
+    sign_in(client, sessions)
+    old_id = make_failed_github(client, sessions)
+    with sessions() as session:
+        version = session.scalar(select(ModuleVersion))
+        version.integrity_status = "MISMATCH"
+        session.commit()
+
+    report = client.post("/api/uploads/github", json={"url": "https://github.com/org/demo"}).json()
+    response = retry(client, old_id, report["upload_id"])
+    assert response.status_code == 409
+    with sessions() as session:
+        assert session.scalar(select(func.count(Scan.id))) == 1
+        assert session.scalar(select(ModuleVersion)).integrity_status == "MISMATCH"
+    assert retry_attempts(sessions, old_id) == []
+
+
+def test_retry_of_a_pre_manifest_version_is_allowed(stack, sessions):
+    client = stack(dispatcher=ManualDispatcher())
+    sign_in(client, sessions)
+    old_id = make_failed_github(client, sessions)
+    # A version registered before 0010 has no stored manifest; the new gate must not block it.
+    with sessions() as session:
+        version = session.scalar(select(ModuleVersion))
+        version.manifest = None
+        version.manifest_sha256 = None
+        session.commit()
+
+    report = client.post("/api/uploads/github", json={"url": "https://github.com/org/demo"}).json()
+    response = retry(client, old_id, report["upload_id"])
+    assert response.status_code == 202, response.text
+    assert retry_attempts(sessions, old_id) == [UUID(response.json()["scan_id"])]

@@ -661,6 +661,19 @@ class ScanService:
                 raise UploadRejectedError(
                     "원래 등록한 출처와 같은 소스로만 다시 시도할 수 있습니다.", "SourceMismatch"
                 )
+            # The retry reuses the version, so its stored manifest still governs it. A version
+            # already proven to differ cannot be retried, and a source whose content changed
+            # since registration is refused here, before a scan is created, so run() never marks
+            # the version MISMATCH. A version from before 0010 has no stored manifest hash, so
+            # nothing is compared here and the existing run()-time check continues to govern it.
+            if version.integrity_status == "MISMATCH":
+                raise ConflictError(
+                    "무결성 불일치가 확인된 버전은 다시 시도할 수 없습니다. 새 버전으로 올려 주세요."
+                )
+            if version.manifest_sha256 and report.get("manifest_sha256") != version.manifest_sha256:
+                raise UploadRejectedError(
+                    "등록 당시와 내용이 달라졌습니다. 새 버전으로 올려 주세요.", "SourceChanged"
+                )
             if report.get("warnings") and not acknowledge_warnings:
                 raise UploadRejectedError(
                     "확인이 필요한 항목이 있습니다. 비밀값이 아님을 확인한 뒤 올려 주세요.",
