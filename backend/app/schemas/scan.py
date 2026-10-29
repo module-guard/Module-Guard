@@ -20,6 +20,14 @@ class ScanAccepted(BaseModel):
     status: ScanStatus = ScanStatus.QUEUED
 
 
+class ScanRetryRequest(BaseModel):
+    """Retry a failed scan with a freshly prepared source (the original one is consumed)."""
+
+    model_config = ConfigDict(extra="forbid")
+    upload_id: str = Field(min_length=16, max_length=128)
+    acknowledge_warnings: bool = False
+
+
 class FindingSummary(BaseModel):
     total: int = 0
     critical: int = 0
@@ -74,6 +82,10 @@ class ScanResponse(BaseModel):
     # Set only on FAILED scans: which pipeline stage failed and the exception class name.
     failed_stage: str | None = None
     error_code: str | None = None
+    # Retry linkage, stored alongside the analysis stages in the JSONB column: the earlier
+    # failed scan this attempt retries, and the newer attempt that superseded this one.
+    retry_of: UUID | None = None
+    retried_by: UUID | None = None
 
     @staticmethod
     def summarize(scan) -> FindingSummary:
@@ -89,7 +101,8 @@ class ScanResponse(BaseModel):
     def from_scan(cls, scan):
         # "failure" rides alongside the analysis stages in the JSONB column; it is not part of
         # the AnalysisSummary schema, so it is read from the raw dict here.
-        failure = (scan.analysis or {}).get("failure") or {}
+        analysis = scan.analysis or {}
+        failure = analysis.get("failure") or {}
         return cls(
             id=scan.id,
             integrity=IntegrityInfo.of(scan.module_version),
@@ -98,6 +111,8 @@ class ScanResponse(BaseModel):
             postprocessing=(scan.analysis or {}).get("postprocessing"),
             failed_stage=failure.get("stage"),
             error_code=failure.get("code"),
+            retry_of=analysis.get("retry_of"),
+            retried_by=analysis.get("retried_by"),
             module_id=scan.module_id,
             status=scan.status,
             scanner=scan.scanner,

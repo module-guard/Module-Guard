@@ -595,6 +595,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/scans/{scan_id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retry Scan
+         * @description Retry the caller's failed scan from a freshly prepared source. The owner only.
+         */
+        post: operations["retry_scan_api_scans__scan_id__retry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/uploads/github": {
         parameters: {
             query?: never;
@@ -1812,6 +1832,10 @@ export interface components {
                 [key: string]: unknown;
             } | null;
             repository?: components["schemas"]["app__schemas__scan__RepositoryRef"] | null;
+            /** Retried By */
+            retried_by?: string | null;
+            /** Retry Of */
+            retry_of?: string | null;
             /** Scanner */
             scanner: string;
             scope_summary?: components["schemas"]["ScopeSummary"] | null;
@@ -1821,6 +1845,19 @@ export interface components {
             summary: components["schemas"]["FindingSummary"];
             /** Warnings */
             warnings: string[];
+        };
+        /**
+         * ScanRetryRequest
+         * @description Retry a failed scan with a freshly prepared source (the original one is consumed).
+         */
+        ScanRetryRequest: {
+            /**
+             * Acknowledge Warnings
+             * @default false
+             */
+            acknowledge_warnings: boolean;
+            /** Upload Id */
+            upload_id: string;
         };
         /**
          * ScanStatus
@@ -3270,6 +3307,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GraphNeighborhoodResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    retry_scan_api_scans__scan_id__retry_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScanRetryRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScanAccepted"];
                 };
             };
             /** @description Validation Error */
