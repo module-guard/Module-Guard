@@ -45,6 +45,7 @@ from app.scanners.normalizer import (
     SeverityMapper,
     summarize,
 )
+from app.scanners.provenance import capture_provenance
 from app.scanners.scope import MODULE, finding_scope, scope_summary
 from app.scanners.severity_overrides import SEVERITY_OVERRIDES
 from app.schemas.analysis import AnalysisStage, AnalysisSummary, StageStatus
@@ -316,11 +317,17 @@ class ScanService:
                         self.snapshot_store.max_bytes,
                         artifacts["manifest_sha256"],
                     )
+                    provenance = capture_provenance(
+                        self.settings, self.scanner, collected.local_path
+                    )
                     scan.status = ScanStatus.SCANNING
                     checkov_stage = AnalysisStage(status=StageStatus.RUNNING)
-                    scan.analysis = AnalysisSummary(stages={"checkov": checkov_stage}).model_dump(
-                        mode="json"
-                    )
+                    scan.analysis = {
+                        **AnalysisSummary(stages={"checkov": checkov_stage}).model_dump(
+                            mode="json"
+                        ),
+                        "provenance": provenance,
+                    }
                     session.commit()
                     checkov_findings = []
                     checkov_warnings = []
@@ -366,6 +373,7 @@ class ScanService:
                     def publish(analysis: AnalysisSummary) -> None:
                         payload = analysis.model_dump(mode="json")
                         payload["stages"]["checkov"] = checkov_stage.model_dump(mode="json")
+                        payload["provenance"] = provenance
                         scan.analysis = payload
                         session.commit()
 
