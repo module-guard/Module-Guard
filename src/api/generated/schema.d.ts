@@ -245,6 +245,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/repositories/{owner}/{name}/download/prepare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Prepare Download */
+        post: operations["prepare_download_api_repositories__owner___name__download_prepare_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/repositories/{owner}/{name}/fork": {
         parameters: {
             query?: never;
@@ -259,6 +276,57 @@ export interface paths {
          * @description Create the caller's own copy. No files are copied and nothing is rescanned.
          */
         post: operations["fork_api_repositories__owner___name__fork_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/repositories/{owner}/{name}/integrity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Integrity */
+        get: operations["integrity_api_repositories__owner___name__integrity_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/repositories/{owner}/{name}/integrity/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Files */
+        get: operations["files_api_repositories__owner___name__integrity_files_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/repositories/{owner}/{name}/integrity/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify */
+        post: operations["verify_api_repositories__owner___name__integrity_verify_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -743,6 +811,30 @@ export interface components {
              * @default 0
              */
             unresolved_references: number;
+        };
+        /** ArtifactInfo */
+        ArtifactInfo: {
+            /**
+             * Artifact Id
+             * Format: uuid
+             */
+            artifact_id: string;
+            /** Artifact Size */
+            artifact_size: number;
+            /** Filename */
+            filename: string;
+            /**
+             * Integrity Status
+             * @default VERIFIED
+             */
+            integrity_status: string;
+            /**
+             * Version Id
+             * Format: uuid
+             */
+            version_id: string;
+            /** Zip Sha256 */
+            zip_sha256: string;
         };
         /** Attention */
         Attention: {
@@ -1300,6 +1392,85 @@ export interface components {
             /** Stale After Days */
             stale_after_days: number;
         };
+        /** IntegrityErrorBody */
+        IntegrityErrorBody: {
+            /**
+             * Code
+             * @enum {string}
+             */
+            code: "IntegrityMismatch" | "IntegrityUnverified" | "IntegrityError";
+            /** Details */
+            details?: components["schemas"]["IntegrityErrorDetail"][];
+            /** Message */
+            message: string;
+        };
+        /** IntegrityErrorDetail */
+        IntegrityErrorDetail: {
+            /** Path */
+            path: string;
+        };
+        /** IntegrityErrorResponse */
+        IntegrityErrorResponse: {
+            error: components["schemas"]["IntegrityErrorBody"];
+        };
+        /** IntegrityFile */
+        IntegrityFile: {
+            /** Mode */
+            mode: number;
+            /** Path */
+            path: string;
+            /** Sha256 */
+            sha256: string;
+            /** Size */
+            size: number;
+        };
+        /** IntegrityInfo */
+        IntegrityInfo: {
+            /**
+             * Artifact Integrity Status
+             * @default UNVERIFIED
+             * @enum {string}
+             */
+            artifact_integrity_status: "VERIFIED" | "MISMATCH" | "UNVERIFIED" | "ERROR";
+            /** Collected At */
+            collected_at?: string | null;
+            /**
+             * Download Allowed
+             * @default false
+             */
+            download_allowed: boolean;
+            /**
+             * Integrity Status
+             * @default UNVERIFIED
+             * @enum {string}
+             */
+            integrity_status: "VERIFIED" | "MISMATCH" | "UNVERIFIED" | "ERROR";
+            /** Manifest Sha256 */
+            manifest_sha256?: string | null;
+            /** Mismatched Files */
+            mismatched_files?: string[];
+            /**
+             * Module Path
+             * @default .
+             */
+            module_path: string;
+            /** Scan Id */
+            scan_id?: string | null;
+            /** Snapshot Sha256 */
+            snapshot_sha256?: string | null;
+            /** Source Commit Sha */
+            source_commit_sha?: string | null;
+            /** Source Url */
+            source_url?: string | null;
+            /** Source Version */
+            source_version?: string | null;
+            /** Verified At */
+            verified_at?: string | null;
+            /** Version Id */
+            version_id?: string | null;
+            /** Zip Sha256 */
+            zip_sha256?: string | null;
+        };
         /**
          * LatestScanSummary
          * @description Compact latest-scan view for module lists; omits analysis and module payloads.
@@ -1317,6 +1488,7 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            integrity?: components["schemas"]["IntegrityInfo"];
             /** Partial Result */
             partial_result: boolean;
             scope_summary?: components["schemas"]["ScopeSummary"] | null;
@@ -1622,6 +1794,7 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            integrity?: components["schemas"]["IntegrityInfo"];
             module: components["schemas"]["ModuleResponse"];
             /**
              * Module Id
@@ -1749,11 +1922,10 @@ export interface components {
             /** Version */
             version: string;
         };
-        /**
-         * UsageRequest
-         * @description Form values for one module version. Values are data; see app.usage.hcl.
-         */
+        /** UsageRequest */
         UsageRequest: {
+            /** Artifact Id */
+            artifact_id?: string | null;
             /** Pass Sensitive */
             pass_sensitive?: string[];
             /** Values */
@@ -1834,6 +2006,7 @@ export interface components {
             file_count: number | null;
             /** High Rules */
             high_rules: number;
+            integrity?: components["schemas"]["IntegrityInfo"];
             /** License */
             license: string | null;
             /** Outputs */
@@ -1878,6 +2051,7 @@ export interface components {
             failure: string | null;
             /** High Rules */
             high_rules: number;
+            integrity?: components["schemas"]["IntegrityInfo"];
             scan: components["schemas"]["LatestScanSummary"] | null;
             /** Scanner Breakdown */
             scanner_breakdown: {
@@ -2328,6 +2502,60 @@ export interface operations {
                     "application/zip": unknown;
                 };
             };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntegrityErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    prepare_download_api_repositories__owner___name__download_prepare_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                owner: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UsageRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArtifactInfo"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntegrityErrorResponse"];
+                };
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -2362,6 +2590,135 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ForkCreated"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    integrity_api_repositories__owner___name__integrity_get: {
+        parameters: {
+            query?: {
+                version?: string | null;
+            };
+            header?: never;
+            path: {
+                owner: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntegrityInfo"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntegrityErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    files_api_repositories__owner___name__integrity_files_get: {
+        parameters: {
+            query?: {
+                version?: string | null;
+            };
+            header?: never;
+            path: {
+                owner: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntegrityFile"][];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntegrityErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_api_repositories__owner___name__integrity_verify_post: {
+        parameters: {
+            query?: {
+                version?: string | null;
+            };
+            header?: never;
+            path: {
+                owner: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntegrityInfo"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntegrityErrorResponse"];
                 };
             };
             /** @description Validation Error */
@@ -2462,6 +2819,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UsagePreview"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntegrityErrorResponse"];
                 };
             };
             /** @description Validation Error */

@@ -1,5 +1,6 @@
 """Builds the download: the stored snapshot under modules/<label>/ plus generated root files."""
 
+import io
 import tarfile
 import tempfile
 import zipfile
@@ -28,7 +29,7 @@ def _entry(name: str, mode: int = 0o644) -> zipfile.ZipInfo:
     return info
 
 
-def build_download(snapshot: Path, label: str, root_files: dict[str, str]) -> IO[bytes]:
+def build_download(snapshot: Path | bytes, label: str, root_files: dict[str, str]) -> IO[bytes]:
     """A zip in an anonymous temporary file, positioned at the start.
 
     Only regular files are copied out of the snapshot; links and odd paths are skipped even
@@ -39,7 +40,11 @@ def build_download(snapshot: Path, label: str, root_files: dict[str, str]) -> IO
         with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as archive:
             for name, text in root_files.items():
                 archive.writestr(_entry(name), text.encode("utf-8"))
-            with tarfile.open(snapshot, mode="r:gz") as source:
+            with (
+                tarfile.open(fileobj=io.BytesIO(snapshot), mode="r:gz")
+                if isinstance(snapshot, bytes)
+                else tarfile.open(snapshot, mode="r:gz")
+            ) as source:
                 for member in source:
                     if not member.isfile() or not _safe_member(member.name):
                         continue

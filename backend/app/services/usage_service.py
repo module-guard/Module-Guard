@@ -1,3 +1,4 @@
+import io
 import logging
 import re
 from collections.abc import Iterator
@@ -6,14 +7,18 @@ from typing import IO
 from uuid import UUID
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.exc import IntegrityError as DatabaseIntegrityError
+from sqlalchemy.orm import Session, sessionmaker, undefer
 
 from app.core.config import Settings
 from app.core.exceptions import NotFoundError, UploadRejectedError
-from app.models import ModuleVersion, Repository
-from app.models.enums import OriginType
+from app.models import DownloadArtifact, ModuleVersion, Repository
+from app.models.enums import OriginType, ScanStatus
+from app.schemas.integrity import ArtifactInfo
 from app.schemas.usage import UsagePreview, UsageRequest
+from app.services.integrity_service import verify_version
 from app.services.social_service import find_visible_repository
+from app.storage.integrity import IntegrityError, digest, manifest_bytes
 from app.storage.snapshots import SnapshotStore
 from app.uploads.limits import HourlyLimiter
 from app.usage.archive import CHUNK, build_download
@@ -29,6 +34,8 @@ SAFE = re.compile(r"[^A-Za-z0-9_-]")
 class Download:
     filename: str
     body: Iterator[bytes]
+    sha256: str = ""
+    artifact_id: UUID | None = None
 
 
 def _stream(handle: IO[bytes]) -> Iterator[bytes]:
@@ -42,7 +49,7 @@ def _stream(handle: IO[bytes]) -> Iterator[bytes]:
 class UsageService:
     """Usage code and downloads for a module version the caller is allowed to see.
 
-    Form values are never stored and never logged: log lines carry who, which module and
+    Generated non-sensitive form files are stored only in the immutable ZIP. Logs carry who, which module and
     sizes only, and errors name the variable without repeating what was sent.
     """
 
@@ -129,27 +136,93 @@ class UsageService:
             git_source=git_source,
         )
 
+    def _artifact(self, viewer_id, owner, name, request):
+        with self.session_factory() as session:
+            repository = find_visible_repository(session, owner, name, viewer_id)
+            version = self._version(session, repository, request.version)
+            usage = self._render(repository, version, request)
+            from app.models import Scan
+
+            scan = session.get(Scan, version.scan_id) if version.scan_id else None
+            if scan is None or scan.status != ScanStatus.COMPLETED:
+                raise IntegrityError("UNVERIFIED")
+            snapshot = verify_version(session, version, self.snapshot_store)
+            files = {"main.tf": usage.main_tf}
+            if usage.variables_tf:
+                files["variables.tf"] = usage.variables_tf
+            key = digest(
+                manifest_bytes(
+                    {"format": 1, "label": module_label(repository.name), "files": files}
+                )
+            )
+            query = (
+                select(DownloadArtifact)
+                .options(undefer(DownloadArtifact.content))
+                .where(
+                    DownloadArtifact.version_id == version.id,
+                    DownloadArtifact.request_sha256 == key,
+                )
+            )
+            artifact = session.scalar(query)
+            if request.artifact_id is not None and (
+                artifact is None or artifact.id != request.artifact_id
+            ):
+                raise IntegrityError()
+            if artifact is None:
+                with build_download(snapshot, module_label(repository.name), files) as built:
+                    content = built.read()
+                artifact = DownloadArtifact(
+                    version_id=version.id,
+                    request_sha256=key,
+                    zip_sha256=digest(content),
+                    artifact_size=len(content),
+                    content=content,
+                )
+                try:
+                    with session.begin_nested():
+                        session.add(artifact)
+                        session.flush()
+                    session.commit()
+                except DatabaseIntegrityError:
+                    # A concurrent identical request published first; use its immutable bytes.
+                    artifact = session.scalar(query)
+                    if artifact is None:
+                        raise
+            content = artifact.content
+            if (
+                artifact.integrity_status == "MISMATCH"
+                or digest(content) != artifact.zip_sha256
+                or len(content) != artifact.artifact_size
+            ):
+                artifact.integrity_status = "MISMATCH"
+                session.commit()
+                raise IntegrityError()
+            info = ArtifactInfo(
+                artifact_id=artifact.id,
+                version_id=version.id,
+                zip_sha256=artifact.zip_sha256,
+                artifact_size=artifact.artifact_size,
+                filename=self._filename(repository, version),
+            )
+            return info, content
+
+    def prepare_download(self, viewer_id, caller, owner, name, request) -> ArtifactInfo:
+        self.preview_limiter.check(caller, "요청이 너무 많습니다. 잠시 뒤 다시 시도해 주세요.")
+        return self._artifact(viewer_id, owner, name, request)[0]
+
     def download(
         self, viewer_id: UUID | None, caller: str, owner: str, name: str, request: UsageRequest
     ) -> Download:
-        # Check access and values first, so a refused request does not use up the allowance.
-        usage, repository_id, label, version, sha256, filename, _ = self._load(
-            viewer_id, owner, name, request
-        )
+        # Access checks happen before consuming the allowance, as in the original API.
+        self._load(viewer_id, owner, name, request)
         self.download_limiter.check(caller, "다운로드가 너무 많습니다. 잠시 뒤 다시 시도해 주세요.")
-        files = {"main.tf": usage.main_tf}
-        if usage.variables_tf:
-            files["variables.tf"] = usage.variables_tf
-        snapshot = self.snapshot_store.path(sha256)
-        if not snapshot.is_file():
-            logger.error("action=download_snapshot_missing repository_id=%s", repository_id)
-            raise NotFoundError("Version not found.")
-        handle = build_download(snapshot, label, files)
+        info, content = self._artifact(viewer_id, owner, name, request)
         logger.info(
-            "action=module_downloaded repository_id=%s version=%s by=%s inputs=%d",
-            repository_id,
-            version,
+            "action=module_downloaded version_id=%s by=%s inputs=%d",
+            info.version_id,
             viewer_id or "anonymous",
             len(request.values),
         )
-        return Download(filename, _stream(handle))
+        return Download(
+            info.filename, _stream(io.BytesIO(content)), info.zip_sha256, info.artifact_id
+        )

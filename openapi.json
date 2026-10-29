@@ -195,6 +195,46 @@
         "title": "AnalysisSummary",
         "type": "object"
       },
+      "ArtifactInfo": {
+        "properties": {
+          "artifact_id": {
+            "format": "uuid",
+            "title": "Artifact Id",
+            "type": "string"
+          },
+          "artifact_size": {
+            "title": "Artifact Size",
+            "type": "integer"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "integrity_status": {
+            "default": "VERIFIED",
+            "title": "Integrity Status",
+            "type": "string"
+          },
+          "version_id": {
+            "format": "uuid",
+            "title": "Version Id",
+            "type": "string"
+          },
+          "zip_sha256": {
+            "title": "Zip Sha256",
+            "type": "string"
+          }
+        },
+        "required": [
+          "artifact_id",
+          "version_id",
+          "zip_sha256",
+          "artifact_size",
+          "filename"
+        ],
+        "title": "ArtifactInfo",
+        "type": "object"
+      },
       "Attention": {
         "properties": {
           "name": {
@@ -1480,6 +1520,248 @@
         "title": "HomeResponse",
         "type": "object"
       },
+      "IntegrityErrorBody": {
+        "properties": {
+          "code": {
+            "enum": [
+              "IntegrityMismatch",
+              "IntegrityUnverified",
+              "IntegrityError"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "details": {
+            "items": {
+              "$ref": "#/components/schemas/IntegrityErrorDetail"
+            },
+            "title": "Details",
+            "type": "array"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "IntegrityErrorBody",
+        "type": "object"
+      },
+      "IntegrityErrorDetail": {
+        "properties": {
+          "path": {
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "title": "IntegrityErrorDetail",
+        "type": "object"
+      },
+      "IntegrityErrorResponse": {
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/IntegrityErrorBody"
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "title": "IntegrityErrorResponse",
+        "type": "object"
+      },
+      "IntegrityFile": {
+        "properties": {
+          "mode": {
+            "title": "Mode",
+            "type": "integer"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "path",
+          "sha256",
+          "size",
+          "mode"
+        ],
+        "title": "IntegrityFile",
+        "type": "object"
+      },
+      "IntegrityInfo": {
+        "properties": {
+          "artifact_integrity_status": {
+            "default": "UNVERIFIED",
+            "enum": [
+              "VERIFIED",
+              "MISMATCH",
+              "UNVERIFIED",
+              "ERROR"
+            ],
+            "title": "Artifact Integrity Status",
+            "type": "string"
+          },
+          "collected_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Collected At"
+          },
+          "download_allowed": {
+            "default": false,
+            "title": "Download Allowed",
+            "type": "boolean"
+          },
+          "integrity_status": {
+            "default": "UNVERIFIED",
+            "enum": [
+              "VERIFIED",
+              "MISMATCH",
+              "UNVERIFIED",
+              "ERROR"
+            ],
+            "title": "Integrity Status",
+            "type": "string"
+          },
+          "manifest_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manifest Sha256"
+          },
+          "mismatched_files": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Mismatched Files",
+            "type": "array"
+          },
+          "module_path": {
+            "default": ".",
+            "title": "Module Path",
+            "type": "string"
+          },
+          "scan_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan Id"
+          },
+          "snapshot_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Sha256"
+          },
+          "source_commit_sha": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Commit Sha"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
+          "source_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Version"
+          },
+          "verified_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified At"
+          },
+          "version_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version Id"
+          },
+          "zip_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zip Sha256"
+          }
+        },
+        "title": "IntegrityInfo",
+        "type": "object"
+      },
       "LatestScanSummary": {
         "description": "Compact latest-scan view for module lists; omits analysis and module payloads.",
         "properties": {
@@ -1504,6 +1786,9 @@
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "integrity": {
+            "$ref": "#/components/schemas/IntegrityInfo"
           },
           "partial_result": {
             "title": "Partial Result",
@@ -2499,6 +2784,9 @@
             "title": "Id",
             "type": "string"
           },
+          "integrity": {
+            "$ref": "#/components/schemas/IntegrityInfo"
+          },
           "module": {
             "$ref": "#/components/schemas/ModuleResponse"
           },
@@ -2873,8 +3161,19 @@
       },
       "UsageRequest": {
         "additionalProperties": false,
-        "description": "Form values for one module version. Values are data; see app.usage.hcl.",
         "properties": {
+          "artifact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifact Id"
+          },
           "pass_sensitive": {
             "items": {
               "type": "string"
@@ -3113,6 +3412,9 @@
             "title": "High Rules",
             "type": "integer"
           },
+          "integrity": {
+            "$ref": "#/components/schemas/IntegrityInfo"
+          },
           "license": {
             "anyOf": [
               {
@@ -3288,6 +3590,9 @@
           "high_rules": {
             "title": "High Rules",
             "type": "integer"
+          },
+          "integrity": {
+            "$ref": "#/components/schemas/IntegrityInfo"
           },
           "scan": {
             "anyOf": [
@@ -4046,6 +4351,16 @@
             },
             "description": "Successful Response"
           },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntegrityErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
           "422": {
             "content": {
               "application/json": {
@@ -4058,6 +4373,77 @@
           }
         },
         "summary": "Download",
+        "tags": [
+          "usage"
+        ]
+      }
+    },
+    "/api/repositories/{owner}/{name}/download/prepare": {
+      "post": {
+        "operationId": "prepare_download_api_repositories__owner___name__download_prepare_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "owner",
+            "required": true,
+            "schema": {
+              "title": "Owner",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArtifactInfo"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntegrityErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Prepare Download",
         "tags": [
           "usage"
         ]
@@ -4122,6 +4508,244 @@
         "summary": "Fork",
         "tags": [
           "explore"
+        ]
+      }
+    },
+    "/api/repositories/{owner}/{name}/integrity": {
+      "get": {
+        "operationId": "integrity_api_repositories__owner___name__integrity_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "owner",
+            "required": true,
+            "schema": {
+              "title": "Owner",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "version",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntegrityInfo"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntegrityErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Integrity",
+        "tags": [
+          "integrity"
+        ]
+      }
+    },
+    "/api/repositories/{owner}/{name}/integrity/files": {
+      "get": {
+        "operationId": "files_api_repositories__owner___name__integrity_files_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "owner",
+            "required": true,
+            "schema": {
+              "title": "Owner",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "version",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/IntegrityFile"
+                  },
+                  "title": "Response Files Api Repositories  Owner   Name  Integrity Files Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntegrityErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Files",
+        "tags": [
+          "integrity"
+        ]
+      }
+    },
+    "/api/repositories/{owner}/{name}/integrity/verify": {
+      "post": {
+        "operationId": "verify_api_repositories__owner___name__integrity_verify_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "owner",
+            "required": true,
+            "schema": {
+              "title": "Owner",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "version",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntegrityInfo"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntegrityErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verify",
+        "tags": [
+          "integrity"
         ]
       }
     },
@@ -4269,6 +4893,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntegrityErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
           },
           "422": {
             "content": {
