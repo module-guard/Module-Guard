@@ -1,11 +1,16 @@
 """Scan provenance is durable and never inferred for legacy scans."""
 
+from importlib.metadata import PackageNotFoundError
+from unittest.mock import Mock
+
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from test_graph_api import service_for
 
 from app.main import create_app
 from app.models import Scan
+from app.models.enums import ScanStatus
+from app.scanners import provenance
 from app.scanners.reapply import reapply
 from app.schemas.scan import ScanResponse
 
@@ -35,7 +40,12 @@ def test_missing_rule_file_yields_unknown_not_fake_version(tmp_path, monkeypatch
     assert all(value is None for value in provenance.rule_versions().values())
 
 
-def test_fixture_scan_records_and_exposes_nonsecret_provenance(sessions, settings, report):
+def test_fixture_scan_records_and_exposes_nonsecret_provenance(
+    sessions, settings, report, monkeypatch
+):
+    package_version = Mock(return_value="1.2.3+test.build")
+    monkeypatch.setattr(provenance, "version", package_version)
+    monkeypatch.delenv("MODULEGUARD_BUILD_SHA", raising=False)
     service = service_for(sessions, settings, report)
     accepted = service.create("https://github.com/org/repo")
     service.run(accepted.scan_id)
@@ -43,7 +53,8 @@ def test_fixture_scan_records_and_exposes_nonsecret_provenance(sessions, setting
         scan = session.get(Scan, accepted.scan_id)
         stored = scan.analysis["provenance"]
         assert stored["checkov_version"] is None  # A fixture is not real Checkov.
-        assert stored["moduleguard_version"]
+        assert stored["moduleguard_version"] == "1.2.3+test.build"
+        assert stored["build_commit"] is None
         assert stored["severity_rules_version"]
         assert stored["remediation_rules_version"]
         assert stored["rules_version"]
@@ -52,10 +63,45 @@ def test_fixture_scan_records_and_exposes_nonsecret_provenance(sessions, setting
             r"(^|/)(\.git|\.terraform|node_modules|vendor|\.external_modules)(/|$)"
         )
         assert "session_secret" not in str(stored).lower()
+    package_version.assert_called_once_with("terraform-module-intelligence")
+    package_version.reset_mock()
+    package_version.return_value = "2.0.0"
     with TestClient(create_app(settings, sessions, service)) as client:
         detail = client.get(f"/api/scans/{accepted.scan_id}")
         assert detail.status_code == 200
         assert detail.json()["provenance"] == stored
+        assert detail.json()["provenance"]["moduleguard_version"] == "1.2.3+test.build"
+    package_version.assert_not_called()
+
+
+def test_missing_package_metadata_records_null_and_completes_scan(
+    sessions, settings, report, monkeypatch
+):
+    package_version = Mock(side_effect=PackageNotFoundError("terraform-module-intelligence"))
+    monkeypatch.setattr(provenance, "version", package_version)
+    monkeypatch.delenv("MODULEGUARD_BUILD_SHA", raising=False)
+    service = service_for(sessions, settings, report)
+    accepted = service.create("https://github.com/org/repo")
+    service.run(accepted.scan_id)
+    with sessions() as session:
+        scan = session.get(Scan, accepted.scan_id)
+        assert scan.status == ScanStatus.COMPLETED
+        assert scan.total_findings > 0
+        stored = scan.analysis["provenance"]
+        assert stored["moduleguard_version"] is None
+        assert stored["build_commit"] is None
+        assert stored["rules_version"]
+    package_version.assert_called_once_with("terraform-module-intelligence")
+    package_version.reset_mock()
+    package_version.side_effect = None
+    package_version.return_value = "2.0.0"
+    with TestClient(create_app(settings, sessions, service)) as client:
+        detail = client.get(f"/api/scans/{accepted.scan_id}")
+        assert detail.status_code == 200
+        assert detail.json()["status"] == "COMPLETED"
+        assert detail.json()["provenance"] == stored
+        assert detail.json()["provenance"]["moduleguard_version"] is None
+    package_version.assert_not_called()
 
 
 def test_legacy_scan_has_unknown_provenance(sessions, settings, report):
