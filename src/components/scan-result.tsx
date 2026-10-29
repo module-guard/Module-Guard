@@ -1,4 +1,5 @@
 "use client";
+import { ScanRetry } from "./scan-retry";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Check, ChevronDown, Copy } from "lucide-react";
@@ -103,6 +104,7 @@ export function ScanResult({ id }: { id: string }) {
       </div>
       {r.error && <State error={r.error} retry={r.retry} />}
       <Progress scan={s} />
+      <ScanRetry key={s.id} scan={s} />
       <IntegritySummary info={s.integrity} />
       {s.error_message && (
         <Panel>

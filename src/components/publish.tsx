@@ -42,7 +42,7 @@ function Rejection({ error }: { error: ApiError }) {
   );
 }
 
-function Source({
+export function Source({
   url: initialUrl = "",
   onReady,
 }: {
