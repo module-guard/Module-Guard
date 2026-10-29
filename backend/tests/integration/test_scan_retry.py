@@ -8,10 +8,11 @@ until the test runs it, and so a full queue can be simulated deterministically.
 import threading
 from uuid import UUID
 
+import pytest
 from conftest import prepare, register, sign_in
 from sqlalchemy import func, select
 
-from app.core.exceptions import DomainError, ScanQueueFullError
+from app.core.exceptions import DomainError, ScanQueueFullError, UploadRejectedError
 from app.models import Finding, ModuleVersion, Scan, User
 from app.models.enums import ScanStatus, Severity
 
@@ -49,6 +50,18 @@ def make_failed(client, sessions, name="demo", upload_id=None):
         scan = session.get(Scan, UUID(scan_id))
         scan.status = ScanStatus.FAILED
         scan.error_message = "이전 시도 실패"
+        session.commit()
+    return scan_id
+
+
+def make_failed_github(client, sessions, name="ghrepo", url="https://github.com/org/demo"):
+    """Register a GitHub-sourced repository and leave its first scan FAILED."""
+    report = client.post("/api/uploads/github", json={"url": url}).json()
+    response = register(client, report["upload_id"], name)
+    assert response.status_code == 201, response.text
+    scan_id = response.json()["scan_id"]
+    with sessions() as session:
+        session.get(Scan, UUID(scan_id)).status = ScanStatus.FAILED
         session.commit()
     return scan_id
 
@@ -239,3 +252,53 @@ def test_recovery_restores_the_running_limit(stack, sessions):
 
     # With the stuck scan resolved, publishing is allowed again.
     assert register(client, prepare(client)["upload_id"], "other").status_code == 201
+
+
+# ---------------------------------------------------------------- source must match the version
+
+
+def test_retry_rejects_a_mismatched_source_type(stack, sessions):
+    client = stack(dispatcher=ManualDispatcher())
+    alice_id = sign_in(client, sessions)
+    old_id = make_failed_github(client, sessions)
+    zip_upload = prepare(client)["upload_id"]  # an UPLOAD source for a GitHub version
+    with sessions() as session:
+        alice = session.get(User, alice_id)
+
+    with pytest.raises(UploadRejectedError) as raised:
+        client.scans.retry(alice, UUID(old_id), zip_upload, False)
+    assert raised.value.code == "SourceMismatch"
+    assert retry_attempts(sessions, old_id) == []
+
+
+def test_retry_api_refuses_a_different_source_type_and_changes_nothing(stack, sessions):
+    client = stack(dispatcher=ManualDispatcher())
+    alice_id = sign_in(client, sessions)
+    old_id = make_failed_github(client, sessions)
+    zip_upload = prepare(client)["upload_id"]
+
+    response = retry(client, old_id, zip_upload)
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "SourceMismatch"
+
+    # No new scan, the version is still unlinked, and the prepared upload is untouched.
+    with sessions() as session:
+        scans = session.scalar(select(func.count(Scan.id)))
+        version = session.scalar(select(ModuleVersion))
+        old = session.get(Scan, UUID(old_id))
+    assert scans == 1
+    assert version.scan_id is None
+    assert (old.analysis or {}).get("retried_by") is None
+    assert client.publish.staging.peek(alice_id, zip_upload)["origin_type"] == "UPLOAD"
+
+
+def test_retry_api_refuses_a_different_github_url(stack, sessions):
+    client = stack(dispatcher=ManualDispatcher())
+    sign_in(client, sessions)
+    old_id = make_failed_github(client, sessions, url="https://github.com/org/demo")
+
+    other = client.post("/api/uploads/github", json={"url": "https://github.com/org/other"}).json()
+    response = retry(client, old_id, other["upload_id"])
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "SourceMismatch"
+    assert retry_attempts(sessions, old_id) == []

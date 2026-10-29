@@ -36,7 +36,7 @@ from app.graphs.builder import DependencyGraphBuilder
 from app.graphs.flow_builder import DataFlowGraphBuilder
 from app.models import DownloadArtifact, ModuleVersion, Repository, User
 from app.models.common import utcnow
-from app.models.enums import ScanStatus
+from app.models.enums import OriginType, ScanStatus
 from app.parsers.hcl import HCLTerraformParser
 from app.repositories.finding_repository import FindingRepository
 from app.repositories.graph_repository import GraphRepository
@@ -649,6 +649,18 @@ class ScanService:
             # A missing or expired prepared source answers "upload again" (StagedUploadNotFound),
             # before anything is created, so a gone source leaves no trace.
             report = self.staging.peek(user.id, upload_id)
+            # The retry must come from the same source the version was registered from; an
+            # UPLOAD origin carries no url, so only the origin type is compared there.
+            report_origin = (
+                OriginType.GITHUB if report["origin_type"] == "GITHUB" else OriginType.UPLOAD
+            )
+            same_source = report_origin == repository.origin_type and (
+                report_origin == OriginType.UPLOAD or report["origin_url"] == repository.origin_url
+            )
+            if not same_source:
+                raise UploadRejectedError(
+                    "원래 등록한 출처와 같은 소스로만 다시 시도할 수 있습니다.", "SourceMismatch"
+                )
             if report.get("warnings") and not acknowledge_warnings:
                 raise UploadRejectedError(
                     "확인이 필요한 항목이 있습니다. 비밀값이 아님을 확인한 뒤 올려 주세요.",

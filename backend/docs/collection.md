@@ -112,6 +112,9 @@ API/worker 프로세스가 강제 종료되면 DB에 `QUEUED`·`COLLECTING`·`SC
 (`module_versions.scan_id`를 `NULL` 또는 이전 scan일 때만 새 scan으로 전환)로 보장하여, 같은 실패 검사에
 대한 반복·동시 재시도가 새 시도를 하나만 만듭니다.
 
+재시도 소스는 원래 등록한 출처와 같아야 합니다. GitHub는 `origin_url`까지, 업로드는 `origin_url`이
+없으므로 형식(`origin_type`)만 비교하며, 다르면 새 scan을 만들기 전에 `SourceMismatch`(422)로 거부합니다.
+
 적용 순서와 오류:
 
 | 상황 | 상태 | code |
@@ -119,6 +122,7 @@ API/worker 프로세스가 강제 종료되면 DB에 `QUEUED`·`COLLECTING`·`SC
 | 성공(수락) | 202 | 응답 `{"scan_id","status":"QUEUED"}`, `Location` 헤더 |
 | 다른 사용자/소유자 아님 | 404 | `NotFoundError` (비공개 검사는 가시성 단계에서 숨김) |
 | `Origin` 불일치 | 403 | `ForbiddenOriginError` |
+| 출처 불일치(GitHub↔업로드, 다른 GitHub URL) | 422 | `UploadRejectedError` (code `SourceMismatch`) |
 | 실패 상태가 아님 | 409 | `ConflictError` |
 | 이미 재시도됨(반복·동시) | 409 | `ConflictError` |
 | 준비 소스 만료/소실 | 404 | `StagedUploadNotFoundError` ("다시 올려 주세요") |
