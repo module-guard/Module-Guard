@@ -18,6 +18,7 @@ from app.api.routes import (
     findings,
     flows,
     graphs,
+    integrity,
     repositories,
     scans,
     social,
@@ -108,7 +109,7 @@ def create_app(
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
         allow_headers=["Content-Type"],
-        expose_headers=["Location", "Content-Disposition"],
+        expose_headers=["Location", "Content-Disposition", "X-Content-SHA256", "X-Artifact-ID"],
     )
 
     @app.exception_handler(DomainError)
@@ -133,6 +134,7 @@ def create_app(
         )
 
     for router in (
+        integrity.router,
         auth.router,
         uploads.router,
         social.router,

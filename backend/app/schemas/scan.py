@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.enums import ScanStatus, Visibility
 from app.schemas.analysis import AnalysisSummary
+from app.schemas.integrity import IntegrityInfo
 from app.schemas.module import ModuleResponse
 
 
@@ -46,6 +47,7 @@ class RepositoryRef(BaseModel):
 
 
 class ScanResponse(BaseModel):
+    integrity: IntegrityInfo = Field(default_factory=IntegrityInfo)
     id: UUID
     module_id: UUID
     status: ScanStatus
@@ -87,6 +89,7 @@ class ScanResponse(BaseModel):
         failure = (scan.analysis or {}).get("failure") or {}
         return cls(
             id=scan.id,
+            integrity=IntegrityInfo.of(scan.module_version),
             analysis=scan.analysis,
             failed_stage=failure.get("stage"),
             error_code=failure.get("code"),
@@ -131,12 +134,14 @@ class LatestScanSummary(BaseModel):
     created_at: datetime
     finished_at: datetime | None
     scope_summary: ScopeSummary | None = None
+    integrity: IntegrityInfo = Field(default_factory=IntegrityInfo)
 
     @classmethod
     def from_scan(cls, scan):
         return cls(
             id=scan.id,
             status=scan.status,
+            integrity=IntegrityInfo.of(scan.module_version),
             scope_summary=scan.scope_summary,
             summary=ScanResponse.summarize(scan),
             partial_result=scan.partial_result,

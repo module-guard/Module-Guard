@@ -23,6 +23,8 @@ class CollectedModule:
     owner: str
     branch: str
     commit_hash: str
+    repository_url: str | None = None
+    source_version: str | None = None
 
 
 class SourceCollector(ABC):

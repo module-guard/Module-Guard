@@ -45,4 +45,14 @@ class ModuleVersion(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, index=True
     )
+    manifest: Mapped[dict | None] = mapped_column(JSON_DATA)
+    manifest_sha256: Mapped[str | None] = mapped_column(String(64))
+    integrity_status: Mapped[str] = mapped_column(
+        String(16), default="UNVERIFIED", server_default="UNVERIFIED"
+    )
+    verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    collected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    source_url: Mapped[str | None] = mapped_column(String(2048))
+    module_path: Mapped[str] = mapped_column(String(2048), default=".", server_default=".")
+    mismatched_files: Mapped[list | None] = mapped_column(JSON_DATA)
     repository: Mapped["Repository | None"] = relationship()

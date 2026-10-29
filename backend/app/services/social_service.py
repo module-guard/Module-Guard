@@ -299,6 +299,14 @@ class SocialService:
                     # Same digest as the origin: storage/retention.py keeps the file alive
                     # for as long as any version, the origin's or a fork's, references it.
                     snapshot_sha256=source.snapshot_sha256,
+                    manifest=source.manifest,
+                    manifest_sha256=source.manifest_sha256,
+                    integrity_status=source.integrity_status,
+                    verified_at=source.verified_at,
+                    collected_at=source.collected_at,
+                    source_url=source.source_url,
+                    module_path=source.module_path,
+                    mismatched_files=source.mismatched_files,
                     size_bytes=source.size_bytes,
                     file_count=source.file_count,
                     commit_hash=source.commit_hash,

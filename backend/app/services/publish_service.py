@@ -26,6 +26,7 @@ from app.models import Module, ModuleVersion, Repository, Scan, Star, User
 from app.models.common import utcnow
 from app.models.enums import OriginType, ScanStatus, SourceType, Visibility
 from app.repositories.module_repository import ModuleRepository
+from app.schemas.integrity import IntegrityInfo
 from app.schemas.publish import (
     MyRepository,
     RepositoryCreate,
@@ -39,6 +40,7 @@ from app.schemas.publish import (
 )
 from app.schemas.scan import LatestScanSummary
 from app.schemas.social import RepositoryRef
+from app.storage.integrity import digest, manifest_bytes, manifest_for, read_tree, verify_tree
 from app.uploads.archive import ArchiveLimits, extract_zip
 from app.uploads.limits import PreflightLimiter
 from app.uploads.policy import REPORT_LIMIT, SourceReport, filter_tree
@@ -161,11 +163,11 @@ class PublishService:
             token,
             report,
             origin_type,
-            collected.source_url,
+            collected.repository_url or collected.source_url,
             collected.commit_hash,
             suggest_name(collected.repository_name),
             branch=collected.branch,
-            source_ref=source_ref,
+            source_ref=collected.source_version or source_ref,
         )
 
     def _finish(
@@ -182,10 +184,15 @@ class PublishService:
     ) -> UploadReport:
         # Definite secrets refuse the upload here: nothing has been stored outside this slot,
         # and the caller discards the slot.
+        manifest = manifest_for(read_tree(slot / TREE, self.archive_limits.max_uncompressed_bytes))
         warnings = refuse_confirmed(self.inspector.inspect(slot / TREE, report.included))
+        verify_tree(slot / TREE, manifest, self.archive_limits.max_uncompressed_bytes)
         expires_at = self.staging.seal(
             slot,
             {
+                "manifest": manifest,
+                "manifest_sha256": digest(manifest_bytes(manifest)),
+                "collected_at": utcnow().isoformat(),
                 "origin_type": origin_type,
                 "origin_url": origin_url,
                 "commit_hash": commit_hash,
@@ -348,6 +355,12 @@ class PublishService:
             version=label,
             commit_hash=report["commit_hash"],
             source_ref=report.get("source_ref"),
+            manifest=report.get("manifest"),
+            manifest_sha256=report.get("manifest_sha256"),
+            collected_at=datetime.fromisoformat(report["collected_at"])
+            if report.get("collected_at")
+            else None,
+            source_url=report.get("origin_url"),
         )
         session.add(version)
         if report["origin_type"] == "GITHUB":
@@ -646,6 +659,7 @@ class PublishService:
         stored = version.snapshot_sha256 is not None
         failed = not stored and scan is not None and scan.status == ScanStatus.FAILED
         return VersionSummary(
+            integrity=IntegrityInfo.of(version),
             version=version.version,
             created_at=version.created_at,
             commit_hash=version.commit_hash,

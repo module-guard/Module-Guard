@@ -65,6 +65,8 @@ class TerraformRegistryCollector(SourceCollector):
             collected.owner,
             collected.branch,
             collected.commit_hash,
+            repository_url=github_url,
+            source_version=metadata["version"],
         )
 
     def _lookup(self, namespace: str, name: str, provider: str, version: str | None) -> dict:

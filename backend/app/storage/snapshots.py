@@ -2,6 +2,7 @@
 
 import gzip
 import hashlib
+import io
 import os
 import tarfile
 import tempfile
@@ -9,6 +10,14 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app.core.exceptions import RepositoryTooLargeError, UnsafeRepositoryError
+from app.storage.integrity import (
+    IntegrityError,
+    compare,
+    digest,
+    manifest_bytes,
+    manifest_for,
+    read_tree,
+)
 
 EXCLUDED_DIRECTORIES = {".git", ".terraform"}
 # Files that commonly hold real credentials are never stored; *.tfvars.example is kept.
@@ -38,6 +47,8 @@ class SnapshotInfo:
     sha256: str
     size_bytes: int
     file_count: int
+    manifest: dict
+    manifest_sha256: str
 
 
 def snapshot_files(root: Path) -> list[Path]:
@@ -81,6 +92,9 @@ class SnapshotStore:
         files = snapshot_files(source)
         if sum(path.stat().st_size for path in files) > self.max_bytes:
             raise RepositoryTooLargeError("Repository exceeds the snapshot size limit.")
+        frozen = read_tree(source, self.max_bytes)
+        manifest = manifest_for(frozen)
+        compare(manifest, manifest_for(read_tree(source, self.max_bytes)))
         self.root.mkdir(parents=True, exist_ok=True, mode=0o700)
         handle, temporary = tempfile.mkstemp(dir=self.root, prefix=".incoming-", suffix=".tmp")
         try:
@@ -89,12 +103,11 @@ class SnapshotStore:
                     with tarfile.open(
                         fileobj=compressed, mode="w", format=tarfile.GNU_FORMAT
                     ) as archive:
-                        for path in files:
-                            info = tarfile.TarInfo(path.relative_to(source).as_posix())
-                            info.size = path.stat().st_size
-                            info.mode = 0o755 if os.access(path, os.X_OK) else 0o644
-                            with path.open("rb") as content:
-                                archive.addfile(info, content)
+                        for name, (data, mode) in sorted(frozen.items()):
+                            info = tarfile.TarInfo(name)
+                            info.size = len(data)
+                            info.mode = mode
+                            archive.addfile(info, io.BytesIO(data))
             digest = hashlib.sha256()
             with open(temporary, "rb") as written:
                 for chunk in iter(lambda: written.read(1024 * 1024), b""):
@@ -103,14 +116,50 @@ class SnapshotStore:
             target = self.path(sha256)
             size = os.path.getsize(temporary)
             if target.exists():
+                if hashlib.sha256(target.read_bytes()).hexdigest() != sha256:
+                    raise IntegrityError()
                 os.unlink(temporary)
             else:
                 os.replace(temporary, target)
-            return SnapshotInfo(sha256, size, len(files))
+            return SnapshotInfo(
+                sha256,
+                size,
+                len(files),
+                manifest,
+                hashlib.sha256(manifest_bytes(manifest)).hexdigest(),
+            )
         except BaseException:
             if os.path.exists(temporary):
                 os.unlink(temporary)
             raise
+
+    def verified_bytes(self, sha256: str, manifest: dict, manifest_sha256: str) -> bytes:
+        if not manifest or not manifest_sha256:
+            raise IntegrityError("UNVERIFIED")
+        try:
+            with self.path(sha256).open("rb") as source:
+                data = source.read(self.max_bytes * 2 + 1024 * 1024 + 1)
+            if digest(data) != sha256:
+                raise IntegrityError()
+            files = {}
+            total = 0
+            from app.usage.archive import _safe_member
+
+            with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as archive:
+                for member in archive:
+                    if not member.isfile() or not _safe_member(member.name) or member.name in files:
+                        raise IntegrityError()
+                    total += member.size
+                    if total > self.max_bytes or len(files) >= 100000:
+                        raise IntegrityError("ERROR")
+                    content = archive.extractfile(member)
+                    files[member.name] = (content.read(), 0o755 if member.mode & 0o111 else 0o644)
+            compare(manifest, manifest_for(files), manifest_sha256)
+            return data
+        except IntegrityError:
+            raise
+        except (OSError, ValueError, tarfile.TarError, EOFError):
+            raise IntegrityError("ERROR") from None
 
     def stored(self) -> dict[str, float]:
         """Digest -> modification time of every snapshot on disk."""

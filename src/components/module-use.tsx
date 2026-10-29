@@ -1,4 +1,5 @@
 "use client";
+import { saveVerifiedDownload } from "@/lib/integrity";
 import { useEffect, useMemo, useState } from "react";
 import { Check, Copy, Download } from "lucide-react";
 import { api, ApiError, unwrap } from "@/api/client";
@@ -200,6 +201,8 @@ export function ModuleUse({
   const [preview, setPreview] = useState<Preview>();
   const [problem, setProblem] = useState<Problem>();
   const [busy, setBusy] = useState(false);
+  const [downloadState, setDownloadState] = useState("");
+  const [zipHash, setZipHash] = useState("");
   const path = { owner: detail.owner, name: detail.name };
   // 빈 칸은 보내지 않는다(기본값 사용).
   const body = useMemo(
@@ -280,27 +283,46 @@ export function ModuleUse({
 
   async function download() {
     setBusy(true);
+    setDownloadState("다운로드 파일 검증 중");
+    setZipHash("");
     try {
+      const integrity = await unwrap(
+        api.GET("/api/repositories/{owner}/{name}/integrity", {
+          params: { path, query: { version: body.version } },
+        }),
+      );
+      if (!integrity.download_allowed)
+        throw new Error("무결성 검증 실패 — 다운로드 차단");
+      const prepared = await unwrap(
+        api.POST("/api/repositories/{owner}/{name}/download/prepare", {
+          params: { path },
+          body,
+        }),
+      );
       const { data, response } = await api.POST(
         "/api/repositories/{owner}/{name}/download",
-        { params: { path }, body, parseAs: "blob" },
+        {
+          params: { path },
+          body: { ...body, artifact_id: prepared.artifact_id },
+          parseAs: "blob",
+        },
       );
       if (!data) throw new ApiError(0, "내려받지 못했습니다.");
       // 파일 이름은 서버가 안전한 글자로만 만들어 준 것을 쓴다.
       const named = /filename="([A-Za-z0-9_.-]+)"/.exec(
         response.headers.get("content-disposition") || "",
       );
-      const url = URL.createObjectURL(data as Blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = named?.[1] || preview?.filename || "module.zip";
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      await saveVerifiedDownload(
+        data as Blob,
+        prepared.zip_sha256,
+        named?.[1] || preview?.filename || "module.zip",
+      );
+      setZipHash(prepared.zip_sha256);
+      setDownloadState("무결성 검증 완료");
       setProblem(undefined);
     } catch (e) {
-      setProblem(explain(e, "내려받지 못했습니다."));
+      setDownloadState(e instanceof Error ? e.message : "무결성 검증 실패");
+      setProblem(explain(e, "무결성 검증 실패"));
     } finally {
       setBusy(false);
     }
@@ -378,6 +400,30 @@ export function ModuleUse({
               </>
             )}
             <div className="flex flex-wrap items-center gap-3">
+              <p className="text-xs text-slate-500">
+                일반 변수로 생성한 파일은 검증용 ZIP에 보관됩니다. 비밀값은
+                입력하지 마세요.
+              </p>
+              {downloadState && (
+                <p role="status" className="text-sm">
+                  {downloadState}
+                </p>
+              )}
+              {zipHash && (
+                <p className="break-all text-xs">
+                  최종 ZIP SHA-256: <code>{zipHash}</code>{" "}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      navigator.clipboard
+                        .writeText(zipHash)
+                        .catch(() => setDownloadState("복사 실패"))
+                    }
+                  >
+                    복사
+                  </button>
+                </p>
+              )}
               <Button type="button" disabled={busy} onClick={download}>
                 <Download size={15} />
                 {busy ? "만드는 중…" : "zip 내려받기"}
@@ -389,7 +435,7 @@ export function ModuleUse({
             </div>
             <p className="text-xs text-slate-500">
               압축을 풀고 그 폴더에서 <code>terraform init</code>을 실행하면
-              됩니다. 입력한 값은 서버에 저장되지 않습니다.
+              됩니다. 생성된 파일은 무결성 검증용 ZIP에 보관됩니다.
             </p>
             {preview.git_source && (
               <div className="rounded-lg border border-line bg-[#fafbfe] px-4 py-3 text-xs text-slate-600">

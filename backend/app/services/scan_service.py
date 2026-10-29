@@ -28,6 +28,7 @@ from app.correlation.context import CorrelationContext
 from app.correlation.engine import CorrelationEngine
 from app.graphs.builder import DependencyGraphBuilder
 from app.graphs.flow_builder import DataFlowGraphBuilder
+from app.models import DownloadArtifact
 from app.models.common import utcnow
 from app.models.enums import ScanStatus
 from app.parsers.hcl import HCLTerraformParser
@@ -49,8 +50,12 @@ from app.scanners.severity_overrides import SEVERITY_OVERRIDES
 from app.schemas.analysis import AnalysisStage, AnalysisSummary, StageStatus
 from app.schemas.scan import ScanAccepted
 from app.services.analysis_service import StaticAnalysisResult, StaticAnalysisService
+from app.storage.artifacts import wrapper
+from app.storage.integrity import IntegrityError, compare, digest, verify_tree
 from app.storage.snapshots import SnapshotStore
 from app.uploads.staging import StagingStore
+from app.usage.archive import build_download
+from app.usage.hcl import module_label
 from app.utils.filesystem import check_repository_size, terraform_files
 from app.utils.terraform import validate_local_module_paths
 from app.workspace.manager import WorkspaceManager
@@ -133,6 +138,8 @@ class ScanService:
     ) -> None:
         with self.session_factory() as session:
             scan = ScanRepository(session).get(scan_id)
+            if scan.module_version is not None and code == "SnapshotError":
+                scan.module_version.integrity_status = "ERROR"
             scan.status = ScanStatus.FAILED
             scan.error_message = message
             scan.finished_at = utcnow()
@@ -180,6 +187,18 @@ class ScanService:
                 raise PreparedSourceMissingError("Prepared source is no longer available.")
             return self.collector.collect(scan.module.source_url, destination)
         tree, report = staged
+        if (
+            scan.module_version is None
+            or scan.module_version.manifest is None
+            or not scan.module_version.manifest_sha256
+        ):
+            raise IntegrityError("UNVERIFIED")
+        verify_tree(
+            tree,
+            scan.module_version.manifest,
+            self.snapshot_store.max_bytes,
+            scan.module_version.manifest_sha256,
+        )
         shutil.move(str(tree), str(destination))
         self.staging.release(scan.id)
         return CollectedModule(
@@ -201,6 +220,8 @@ class ScanService:
         except Exception as error:
             raise SnapshotError("Source snapshot could not be stored.") from error
         return {
+            "manifest": info.manifest,
+            "manifest_sha256": info.manifest_sha256,
             "snapshot_sha256": info.sha256,
             "size_bytes": info.size_bytes,
             "file_count": info.file_count,
@@ -262,6 +283,39 @@ class ScanService:
                         raise TerraformNotFoundError("No Terraform files found in the repository.")
                     # Stored before analysis: without a snapshot there is nothing to publish.
                     artifacts = self._snapshot(collected.local_path)
+                    if scan.module_version is not None:
+                        compare(
+                            scan.module_version.manifest,
+                            artifacts["manifest"],
+                            scan.module_version.manifest_sha256,
+                        )
+                        if scan.module_version.integrity_status == "MISMATCH":
+                            raise IntegrityError()
+                    artifacts.update(integrity_status="VERIFIED", verified_at=utcnow())
+                    version = VersionRepository(session).record(
+                        scan,
+                        {
+                            key: artifacts[key]
+                            for key in (
+                                "manifest",
+                                "manifest_sha256",
+                                "integrity_status",
+                                "verified_at",
+                            )
+                        },
+                    )
+                    version.source_url = (
+                        version.source_url or collected.repository_url or collected.source_url
+                    )
+                    version.source_ref = version.source_ref or collected.source_version
+                    version.collected_at = version.collected_at or utcnow()
+                    session.commit()
+                    verify_tree(
+                        collected.local_path,
+                        artifacts["manifest"],
+                        self.snapshot_store.max_bytes,
+                        artifacts["manifest_sha256"],
+                    )
                     scan.status = ScanStatus.SCANNING
                     checkov_stage = AnalysisStage(status=StageStatus.RUNNING)
                     scan.analysis = AnalysisSummary(stages={"checkov": checkov_stage}).model_dump(
@@ -315,7 +369,19 @@ class ScanService:
                         scan.analysis = payload
                         session.commit()
 
+                    verify_tree(
+                        collected.local_path,
+                        artifacts["manifest"],
+                        self.snapshot_store.max_bytes,
+                        artifacts["manifest_sha256"],
+                    )
                     static = self.analysis_service.run(collected.local_path, scan_id, publish)
+                    verify_tree(
+                        collected.local_path,
+                        artifacts["manifest"],
+                        self.snapshot_store.max_bytes,
+                        artifacts["manifest_sha256"],
+                    )
                     findings = checkov_findings + static.findings
                     if static.summary.stages["graph"].status in {
                         StageStatus.FAILED,
@@ -375,6 +441,12 @@ class ScanService:
                     scan.partial_result = bool(scan.warnings) or checkov_error is not None
                     scan.error_message = checkov_error
                     artifacts.update(self._describe(scan_id, collected.local_path, static))
+                    verify_tree(
+                        collected.local_path,
+                        artifacts["manifest"],
+                        self.snapshot_store.max_bytes,
+                        artifacts["manifest_sha256"],
+                    )
                 # Cleanup, graph, findings and final summary are one published outcome.
                 scan.analysis = {
                     **scan.analysis,
@@ -400,6 +472,8 @@ class ScanService:
                         ),
                     },
                 }
+                artifacts.pop("integrity_status", None)
+                artifacts.pop("verified_at", None)
                 VersionRepository(session).record(scan, artifacts)
                 scan.total_findings = summary.total
                 for severity in ("critical", "high", "medium", "low", "info", "unknown"):
@@ -411,6 +485,25 @@ class ScanService:
                         **scan.analysis,
                         "failure": {"stage": "checkov", "code": checkov_stage.error_code},
                     }
+                if not checkov_error and version.repository is not None:
+                    # Persist the default ZIP once. Custom wrappers receive their own artifact.
+                    files, key = wrapper(version.repository.name, version.variables)
+                    snapshot = self.snapshot_store.verified_bytes(
+                        version.snapshot_sha256, version.manifest, version.manifest_sha256
+                    )
+                    with build_download(
+                        snapshot, module_label(version.repository.name), files
+                    ) as built:
+                        content = built.read()
+                    session.add(
+                        DownloadArtifact(
+                            version_id=version.id,
+                            request_sha256=key,
+                            zip_sha256=digest(content),
+                            artifact_size=len(content),
+                            content=content,
+                        )
+                    )
                 scan.finished_at = utcnow()
                 scan.duration_ms = int((time.monotonic() - started) * 1000)
                 session.commit()
@@ -424,6 +517,13 @@ class ScanService:
             )
             logger.error("scan_id=%s action=failed error_type=%s", scan_id, type(error).__name__)
             self.mark_failed(scan_id, message, started, code=type(error).__name__)
+            if isinstance(error, IntegrityError):
+                with self.session_factory() as session:
+                    version = ScanRepository(session).get(scan_id).module_version
+                    if version is not None:
+                        version.integrity_status = error.status
+                        version.mismatched_files = [d["path"] for d in error.details]
+                        session.commit()
 
 
 ScanRunner = Callable[[UUID], None]
