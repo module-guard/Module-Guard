@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Check, ChevronDown, Copy } from "lucide-react";
 import { explainScanError } from "@/api/errors";
@@ -17,6 +17,11 @@ import {
   type Scan,
 } from "./live-shared";
 import { FindingsTab, DependenciesTab, FlowsTab } from "./analysis-tabs";
+import {
+  AnalysisCoverage,
+  analysisIncomplete,
+  coverageNotice,
+} from "./analysis-coverage";
 const tabs = [
   { name: "요약" },
   { name: "보안 설정", scanner: "checkov" },
@@ -46,6 +51,14 @@ function CopyId({ id }: { id: string }) {
 }
 export function ScanResult({ id }: { id: string }) {
   const [tab, setTab] = useState(0);
+  const [coverageOpen, setCoverageOpen] = useState(false);
+  const coverageSummary = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (tab === 0 && coverageOpen) {
+      coverageSummary.current?.focus();
+      coverageSummary.current?.scrollIntoView({ block: "nearest" });
+    }
+  }, [tab, coverageOpen]);
   const r = useApi(
     (s) =>
       unwrap(
@@ -125,8 +138,35 @@ export function ScanResult({ id }: { id: string }) {
           );
         })}
       </nav>
+      {tab > 0 && ["COMPLETED", "FAILED"].includes(s.status) && (
+        <aside
+          aria-label="분석 범위 안내"
+          className={`my-4 rounded-lg border border-line p-4 ${analysisIncomplete(s) ? "text-amber-800" : "text-slate-600"}`}
+        >
+          <p>{coverageNotice(s)}</p>
+          <button
+            type="button"
+            className="mt-1 min-h-11 text-brand underline"
+            onClick={() => {
+              setTab(0);
+              setCoverageOpen(true);
+            }}
+          >
+            분석 범위·누락 원인 보기
+          </button>
+        </aside>
+      )}
       {tab === 0 ? (
-        <Summary scan={s} />
+        <>
+          <AnalysisCoverage
+            key={s.id}
+            scan={s}
+            open={coverageOpen}
+            onOpenChange={setCoverageOpen}
+            summaryRef={coverageSummary}
+          />
+          <Summary scan={s} />
+        </>
       ) : !["COMPLETED", "FAILED"].includes(s.status) ? (
         <Panel>분석 중입니다. 결과 저장이 완료되면 조회할 수 있습니다.</Panel>
       ) : tab === 1 ? (
