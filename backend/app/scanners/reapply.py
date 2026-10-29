@@ -22,7 +22,9 @@ from sqlalchemy.orm import Session
 
 from app.analyzers.module_interface import UTILITY_PROVIDERS
 from app.models import Finding, Module, ModuleVersion, ParsedEntity, Repository, Scan
+from app.models.common import utcnow
 from app.models.enums import Severity
+from app.scanners.provenance import rule_versions
 from app.scanners.remediation import GUIDELINE_SOURCE, REMEDIATIONS, has_guideline
 from app.scanners.scope import EXAMPLE, EXAMPLE_DIRECTORIES, MODULE, finding_scope, scope_summary
 from app.scanners.severity_overrides import SEVERITY_OVERRIDES, SOURCE
@@ -135,13 +137,44 @@ def reapply(session: Session, dry_run: bool = True) -> list[ScanChange]:
         if values and not dry_run:
             session.execute(update(Finding).where(Finding.id == row.id).values(**values))
     if not dry_run:
+        versions = rule_versions()
         for scan_id, change in changes.items():
+            stored = session.execute(
+                select(
+                    Scan.analysis,
+                    Scan.scope_summary,
+                    Scan.total_findings,
+                    *(getattr(Scan, f"{level}_count") for level in LEVELS),
+                ).where(Scan.id == scan_id)
+            ).one()
+            analysis = stored.analysis
+            next_scope = scope_summary(classified[scan_id])
+            changed_scan = (
+                stored.scope_summary != next_scope
+                or stored.total_findings != sum(change.body.values())
+                or any(stored[i + 3] != change.body[level] for i, level in enumerate(LEVELS))
+            )
+            if change.changed or changed_scan:
+                previous = (analysis or {}).get("postprocessing")
+                processing = {
+                    "applied_at": utcnow().isoformat(),
+                    "severity_rules_version": versions["severity_rules_version"],
+                    "remediation_rules_version": versions["remediation_rules_version"],
+                    "rules_version": versions["rules_version"],
+                }
+                if previous:
+                    processing["history"] = [
+                        *previous.get("history", []),
+                        {key: value for key, value in previous.items() if key != "history"},
+                    ]
+                analysis = {**(analysis or {}), "postprocessing": processing}
             session.execute(
                 update(Scan)
                 .where(Scan.id == scan_id)
                 .values(
+                    analysis=analysis,
                     total_findings=sum(change.body.values()),
-                    scope_summary=scope_summary(classified[scan_id]),
+                    scope_summary=next_scope,
                     **{f"{level}_count": change.body[level] for level in LEVELS},
                 )
             )

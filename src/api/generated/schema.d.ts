@@ -1803,6 +1803,14 @@ export interface components {
             module_id: string;
             /** Partial Result */
             partial_result: boolean;
+            /** Postprocessing */
+            postprocessing?: {
+                [key: string]: unknown;
+            } | null;
+            /** Provenance */
+            provenance?: {
+                [key: string]: unknown;
+            } | null;
             repository?: components["schemas"]["app__schemas__scan__RepositoryRef"] | null;
             /** Scanner */
             scanner: string;
