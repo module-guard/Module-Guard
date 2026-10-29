@@ -1,0 +1,108 @@
+# Network-dependent browser scenarios, run by hand from the Actions tab (issue #12).
+#
+# Run it when you need to know the real path still works: before a demo, after changing
+# collectors, upload or Checkov handling. It is not part of CI because it depends on
+# github.com and the Terraform Registry being reachable and takes much longer.
+#
+#   live:  RUN_LIVE_SCAN=true  real public modules from GitHub, mirrors through the normal path
+#   demo:  RUN_DEMO=true       PRODUCT_PLAN.md scenario 1-7 in one flow
+#
+# Terraform is still removed (AGENTS.md rule 7), so the steps that would run
+# terraform init/validate skip themselves; everything before them runs.
+# No production data or personal OAuth secret is used: the stack is docker-compose.e2e.yml
+# with its development login, thrown away at the end.
+name: Live smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      live:
+        description: Run the live scan specs (RUN_LIVE_SCAN)
+        type: boolean
+        default: true
+      demo:
+        description: Run the demo scenario (RUN_DEMO)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live-smoke
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    name: Live scenarios
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      COMPOSE: docker compose -p module-guard-e2e -f docker-compose.e2e.yml
+      PLAYWRIGHT_BASE_URL: http://localhost:3100
+      PLAYWRIGHT_API_URL: http://localhost:8001
+      RUN_LIVE_SCAN: ${{ inputs.live && 'true' || 'false' }}
+      RUN_DEMO: ${{ inputs.demo && 'true' || 'false' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/no-terraform
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Start API and PostgreSQL (docker-compose.e2e.yml)
+        run: $COMPOSE up -d --build --wait
+
+      - name: Build and start the frontend
+        env:
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:8001
+          NEXT_PUBLIC_ENABLE_TEST_UI: "true"
+          NEXT_DIST_DIR: .next-e2e
+          NEXT_OUTPUT: server
+        run: |
+          npx next build
+          mkdir -p e2e-logs
+          nohup npx next start -p 3100 > e2e-logs/frontend.log 2>&1 &
+          for _ in $(seq 1 60); do
+            curl -sf http://localhost:3100 >/dev/null && exit 0
+            sleep 2
+          done
+          echo "::error::frontend did not start"
+          exit 1
+
+      - name: Playwright (live and demo specs)
+        run: |
+          specs=""
+          [ "$RUN_LIVE_SCAN" = true ] && specs="$specs e2e/mirror.spec.ts e2e/platform.spec.ts e2e/use.spec.ts"
+          [ "$RUN_DEMO" = true ] && specs="$specs e2e/demo.spec.ts"
+          if [ -z "$specs" ]; then
+            echo "::error::Choose live, demo or both."
+            exit 1
+          fi
+          npx playwright test $specs --retries=0 --reporter=list,html
+
+      - name: Collect stack logs
+        if: always()
+        run: |
+          mkdir -p e2e-logs
+          $COMPOSE ps > e2e-logs/compose-ps.txt 2>&1 || true
+          $COMPOSE logs --no-color api > e2e-logs/api.log 2>&1 || true
+
+      - name: Upload report and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-smoke
+          path: |
+            test-results/
+            playwright-report/
+            e2e-logs/
+          retention-days: 14
+
+      - name: Tear down the stack
+        if: always()
+        run: $COMPOSE down -v --remove-orphans

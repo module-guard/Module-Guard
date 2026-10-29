@@ -1,0 +1,47 @@
+name: Set up backend
+description: >
+  Python 3.12 with backend/requirements.txt and the [test] extra from backend/pyproject.toml
+  (pytest, httpx, ruff). Optionally Checkov in its own venv, as backend/Dockerfile does.
+inputs:
+  checkov:
+    description: Also install backend/requirements-scanner.txt into a separate venv
+    required: false
+    default: "false"
+outputs:
+  checkov-binary:
+    description: Path of the Checkov executable (empty unless checkov is true)
+    value: ${{ steps.checkov.outputs.binary }}
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        # Same version as backend/Dockerfile (python:3.12-slim).
+        python-version: "3.12"
+        cache: pip
+        cache-dependency-path: backend/requirements*.txt
+
+    - name: Install backend and test dependencies
+      shell: bash
+      run: |
+        python -m pip install -r backend/requirements.txt
+        # The test tools come from pyproject.toml so CI and local runs use the same ranges.
+        python - <<'PY' > "$RUNNER_TEMP/test-requirements.txt"
+        import tomllib
+        with open("backend/pyproject.toml", "rb") as f:
+            print("\n".join(tomllib.load(f)["project"]["optional-dependencies"]["test"]))
+        PY
+        python -m pip install -r "$RUNNER_TEMP/test-requirements.txt"
+
+    - name: Install Checkov in its own venv
+      id: checkov
+      if: inputs.checkov == 'true'
+      shell: bash
+      run: |
+        # Checkov ships a fork that also owns the hcl2 package, so it stays out of the app env.
+        python -m venv "$RUNNER_TEMP/checkov"
+        "$RUNNER_TEMP/checkov/bin/pip" install -r backend/requirements-scanner.txt
+        echo "binary=$RUNNER_TEMP/checkov/bin/checkov" >> "$GITHUB_OUTPUT"
+
+    - name: Keep Terraform off PATH
+      uses: ./.github/actions/no-terraform
