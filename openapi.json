@@ -2833,6 +2833,30 @@
               }
             ]
           },
+          "retried_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retried By"
+          },
+          "retry_of": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retry Of"
+          },
           "scanner": {
             "title": "Scanner",
             "type": "string"
@@ -2891,6 +2915,28 @@
           "created_at"
         ],
         "title": "ScanResponse",
+        "type": "object"
+      },
+      "ScanRetryRequest": {
+        "additionalProperties": false,
+        "description": "Retry a failed scan with a freshly prepared source (the original one is consumed).",
+        "properties": {
+          "acknowledge_warnings": {
+            "default": false,
+            "title": "Acknowledge Warnings",
+            "type": "boolean"
+          },
+          "upload_id": {
+            "maxLength": 128,
+            "minLength": 16,
+            "title": "Upload Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "upload_id"
+        ],
+        "title": "ScanRetryRequest",
         "type": "object"
       },
       "ScanStatus": {
@@ -5976,6 +6022,60 @@
         "summary": "Get Graph Neighborhood",
         "tags": [
           "analysis"
+        ]
+      }
+    },
+    "/api/scans/{scan_id}/retry": {
+      "post": {
+        "description": "Retry the caller's failed scan from a freshly prepared source. The owner only.",
+        "operationId": "retry_scan_api_scans__scan_id__retry_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "scan_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Scan Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScanRetryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScanAccepted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Retry Scan",
+        "tags": [
+          "scans"
         ]
       }
     },
