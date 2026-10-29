@@ -152,6 +152,35 @@ for (const viewport of [
   });
 }
 
+test("opening coverage does not reclaim focus after the user moves into search", async ({
+  page,
+}) => {
+  await openScan(page, scanFixture({ analysis: partialAnalysis }));
+  await coverageSummary(page).evaluate(async (summary) => {
+    const details = summary.parentElement as HTMLDetailsElement;
+    const search = details.querySelector<HTMLInputElement>(
+      'input[type="search"]',
+    )!;
+    // Opening is immediate, but the native toggle event is queued. Reproduce a
+    // user entering search before React handles that event, then let it render.
+    await new Promise<void>((resolve) => {
+      details.addEventListener(
+        "toggle",
+        () => {
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+        },
+        { once: true },
+      );
+      details.open = true;
+      search.focus();
+    });
+  });
+  const search = page.getByRole("searchbox", { name: "진단 검색" });
+  await expect(search).toBeFocused();
+  await page.keyboard.type("network");
+  await expect(search).toHaveValue("network");
+});
+
 test("every analysis tab can open summary diagnostics and move keyboard focus there", async ({
   page,
 }) => {

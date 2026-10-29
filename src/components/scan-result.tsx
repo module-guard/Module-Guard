@@ -53,8 +53,11 @@ export function ScanResult({ id }: { id: string }) {
   const [tab, setTab] = useState(0);
   const [coverageOpen, setCoverageOpen] = useState(false);
   const coverageSummary = useRef<HTMLElement>(null);
+  const coverageFocusRequested = useRef(false);
   useEffect(() => {
-    if (tab === 0 && coverageOpen) {
+    // Native toggling must not reclaim focus after the user has moved on.
+    if (tab === 0 && coverageOpen && coverageFocusRequested.current) {
+      coverageFocusRequested.current = false;
       coverageSummary.current?.focus();
       coverageSummary.current?.scrollIntoView({ block: "nearest" });
     }
@@ -148,6 +151,7 @@ export function ScanResult({ id }: { id: string }) {
             type="button"
             className="mt-1 min-h-11 text-brand underline"
             onClick={() => {
+              coverageFocusRequested.current = true;
               setTab(0);
               setCoverageOpen(true);
             }}
