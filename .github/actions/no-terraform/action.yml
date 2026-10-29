@@ -1,0 +1,22 @@
+name: Keep Terraform off PATH
+description: >
+  AGENTS.md rule 7: terraform init/plan/apply never runs in this project's automation.
+  Some backend and browser tests run Terraform whenever it is installed, so CI removes it
+  from the runner image and checks that it is gone.
+runs:
+  using: composite
+  steps:
+    - name: Remove terraform from PATH
+      shell: bash
+      run: |
+        for _ in 1 2 3; do
+          path="$(command -v terraform || true)"
+          [ -z "$path" ] && break
+          echo "Removing $path"
+          sudo rm -f "$path"
+        done
+        if command -v terraform >/dev/null; then
+          echo "::error::terraform is still on PATH"
+          exit 1
+        fi
+        echo "terraform is not available, as intended."

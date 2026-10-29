@@ -1,0 +1,197 @@
+# Regression checks for every pull request and every push to main (issue #12).
+# Nothing here reaches the internet beyond package registries and image pulls, uses
+# production data or needs a real OAuth secret. Network-dependent scenarios live in
+# live-smoke.yml and run only on demand.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend lint and tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-backend
+
+      - name: Ruff lint
+        run: ruff check .
+      - name: Ruff format
+        run: ruff format --check .
+      # AGENTS.md rule 8. The PostgreSQL and Checkov marks run in their own jobs below.
+      - name: Tests (SQLite, no external tools)
+        run: pytest -q -m 'not checkov and not postgres'
+
+  postgres:
+    name: PostgreSQL and migrations
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        # Same image as docker-compose.yml. Thrown away when the job ends.
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ci"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 30
+    env:
+      TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/ci
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-backend
+
+      - name: Alembic upgrade, downgrade and upgrade again on PostgreSQL
+        env:
+          DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
+        run: |
+          alembic upgrade head
+          alembic downgrade base
+          alembic upgrade head
+          alembic current | tee "$RUNNER_TEMP/alembic-current.txt"
+          grep -q "(head)" "$RUNNER_TEMP/alembic-current.txt"
+          # The tests below create their own schemas; start them from an empty database.
+          alembic downgrade base
+
+      - name: PostgreSQL tests
+        run: pytest -m postgres -rA --junitxml="$RUNNER_TEMP/postgres.xml"
+      # These tests skip themselves without TEST_DATABASE_URL. Fail if that happened here.
+      - name: Require that the PostgreSQL tests ran
+        run: python ../.github/scripts/require-tests-ran.py "$RUNNER_TEMP/postgres.xml" 2
+
+  checkov:
+    name: Real Checkov scanner
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - id: setup
+        uses: ./.github/actions/setup-backend
+        with:
+          checkov: "true"
+
+      # Checkov runs with --skip-download, so these tests stay offline.
+      - name: Checkov tests
+        env:
+          CHECKOV_BINARY: ${{ steps.setup.outputs.checkov-binary }}
+        run: pytest -m checkov -rA --junitxml="$RUNNER_TEMP/checkov.xml"
+      - name: Require that the Checkov tests ran
+        run: python ../.github/scripts/require-tests-ran.py "$RUNNER_TEMP/checkov.xml" 5
+
+  api-contract:
+    name: API contract, typecheck and unit tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-backend
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      # Regenerates openapi.json and src/api/generated from the backend and fails if the
+      # committed files differ, then runs tsc --noEmit and Vitest.
+      - name: npm run api:check
+        run: |
+          export BACKEND_PYTHON="$(command -v python)"
+          npm run api:check
+
+  e2e:
+    name: Browser tests (isolated stack)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      # Same names and ports as docker-compose.e2e.yml and playwright.config.ts. The specs
+      # address the stack by this project name.
+      COMPOSE: docker compose -p module-guard-e2e -f docker-compose.e2e.yml
+      PLAYWRIGHT_BASE_URL: http://localhost:3100
+      PLAYWRIGHT_API_URL: http://localhost:8001
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/no-terraform
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+
+      # playwright.config.ts starts this stack itself when PLAYWRIGHT_BASE_URL is unset.
+      # CI starts it here instead so the API logs can be kept when a test fails.
+      - name: Start API and PostgreSQL (docker-compose.e2e.yml)
+        run: $COMPOSE up -d --build --wait
+
+      - name: Build and start the frontend
+        env:
+          # The webServer settings from playwright.config.ts.
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:8001
+          NEXT_PUBLIC_ENABLE_TEST_UI: "true"
+          NEXT_DIST_DIR: .next-e2e
+          NEXT_OUTPUT: server
+        run: |
+          npx next build
+          mkdir -p e2e-logs
+          nohup npx next start -p 3100 > e2e-logs/frontend.log 2>&1 &
+          for _ in $(seq 1 60); do
+            curl -sf http://localhost:3100 >/dev/null && exit 0
+            sleep 2
+          done
+          echo "::error::frontend did not start"
+          exit 1
+
+      # Opt-in specs (RUN_LIVE_SCAN, RUN_DEMO, GRAPH_AUDIT_SCAN_ID) skip themselves here.
+      - name: Playwright
+        run: npx playwright test --reporter=list,html
+
+      - name: Collect stack logs
+        if: failure()
+        run: |
+          mkdir -p e2e-logs
+          $COMPOSE ps > e2e-logs/compose-ps.txt 2>&1 || true
+          $COMPOSE logs --no-color api > e2e-logs/api.log 2>&1 || true
+          $COMPOSE logs --no-color postgres > e2e-logs/postgres.log 2>&1 || true
+
+      - name: Upload traces, screenshots and logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-failure
+          path: |
+            test-results/
+            playwright-report/
+            e2e-logs/
+          retention-days: 14
+
+      - name: Tear down the stack
+        if: always()
+        run: $COMPOSE down -v --remove-orphans
