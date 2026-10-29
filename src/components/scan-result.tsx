@@ -5,6 +5,7 @@ import { Check, ChevronDown, Copy } from "lucide-react";
 import { explainScanError } from "@/api/errors";
 import { api, unwrap } from "@/api/client";
 import { useApi } from "@/api/hooks";
+import { IntegritySummary } from "./module-integrity";
 import {
   ExampleNote,
   Panel,
@@ -86,6 +87,7 @@ export function ScanResult({ id }: { id: string }) {
       </div>
       {r.error && <State error={r.error} retry={r.retry} />}
       <Progress scan={s} />
+      <IntegritySummary info={s.integrity} />
       {s.error_message && (
         <Panel>
           <p role="alert" className="text-red-700">

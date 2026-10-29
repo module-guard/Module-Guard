@@ -1,9 +1,11 @@
 from typing import Any
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
 class UsageRequest(BaseModel):
+    artifact_id: UUID | None = None
     """Form values for one module version. Values are data; see app.usage.hcl."""
 
     model_config = ConfigDict(extra="forbid")

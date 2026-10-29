@@ -5,6 +5,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.enums import OriginType, Visibility
+from app.schemas.integrity import IntegrityInfo
 from app.schemas.scan import LatestScanSummary
 from app.schemas.social import RepositoryRef
 
@@ -95,6 +96,7 @@ class VersionCreate(BaseModel):
 
 
 class VersionSummary(BaseModel):
+    integrity: IntegrityInfo = Field(default_factory=IntegrityInfo)
     version: str | None
     created_at: datetime
     commit_hash: str | None

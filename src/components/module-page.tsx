@@ -17,6 +17,7 @@ import {
 import { Markdown } from "./markdown";
 import { ForkButton, StarButton } from "./module-actions";
 import { ModuleSettings } from "./module-settings";
+import { IntegrityBadge, ModuleIntegrity } from "./module-integrity";
 import { ModuleUse } from "./module-use";
 import { SecurityBadge } from "./security-badge";
 type Detail = components["schemas"]["RepositoryDetail"];
@@ -217,6 +218,7 @@ function Versions({ base, detail }: { base: string; detail: Detail }) {
             {v.state === "FAILED" &&
               ` · ${v.failure ? explainScanError(v.failure) : "검사 실패"}`}
           </span>
+          <IntegrityBadge info={v.integrity} />
           {v.state === "STORED" && v.scan ? (
             <>
               <span className="text-xs text-slate-500">
@@ -414,6 +416,14 @@ export function ModulePage({ owner, name }: { owner: string; name: string }) {
           </Link>
         ))}
       </nav>
+      {v && active !== "settings" && (
+        <ModuleIntegrity
+          key={`${d.owner}/${d.name}:${v.version}`}
+          owner={d.owner}
+          name={d.name}
+          version={v.version}
+        />
+      )}
       {active === "settings" ? (
         <ModuleSettings detail={d} reload={r.retry} />
       ) : active === "versions" ? (

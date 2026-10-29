@@ -1,4 +1,5 @@
 "use client";
+import { IntegrityBadge } from "./module-integrity";
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -496,7 +497,12 @@ function MyModules({ owner }: { owner: string }) {
                 <span className="text-xs text-slate-500">
                   {m.visibility === "PRIVATE" ? "비공개" : "공개"}
                 </span>
-                {m.latest_scan && <Badge value={m.latest_scan.status} />}
+                {m.latest_scan && (
+                  <>
+                    <Badge value={m.latest_scan.status} />
+                    <IntegrityBadge info={m.latest_scan.integrity} />
+                  </>
+                )}
                 <span className="text-xs text-slate-500">
                   <Time value={m.created_at} />
                 </span>

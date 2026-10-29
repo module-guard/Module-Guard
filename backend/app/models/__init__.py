@@ -1,3 +1,4 @@
+from app.models.artifact import DownloadArtifact
 from app.models.finding import Finding
 from app.models.graph_edge import GraphEdge
 from app.models.module import Module
@@ -10,6 +11,7 @@ from app.models.star import Star
 from app.models.user import User
 
 __all__ = [
+    "DownloadArtifact",
     "Finding",
     "Module",
     "Scan",
