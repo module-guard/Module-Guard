@@ -55,6 +55,13 @@ class Settings(BaseSettings):
     max_process_output_mb: int = Field(default=50, ge=1)
     scan_workers: int = Field(default=2, ge=1, le=16)
     scan_queue_size: int = Field(default=20, ge=0, le=1000)
+    # Single uvicorn worker (see Dockerfile): on startup no scan can still be running, so
+    # every non-terminal scan is orphaned and recovered. Set False only for a multi-process
+    # deployment, where a scan whose runtime heartbeat is still fresh is left to its worker.
+    scan_recovery_assume_single_worker: bool = True
+    # Multi-process only: a running scan older than this (no heartbeat refresh) is treated as
+    # abandoned. Kept above the longest single step (checkov_timeout + git_timeout + margin).
+    scan_recovery_stale_seconds: int = Field(default=900, ge=1)
     max_analysis_entities: int = Field(default=20000, ge=1, le=100000)
     max_analysis_edges: int = Field(default=100000, ge=1, le=500000)
     max_local_module_depth: int = Field(default=32, ge=1, le=100)

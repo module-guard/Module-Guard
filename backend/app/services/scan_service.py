@@ -1,4 +1,5 @@
 import logging
+import secrets
 import shutil
 import time
 from collections import Counter
@@ -19,18 +20,23 @@ from app.collectors.router import default_router
 from app.collectors.source_detector import detect_source
 from app.core.config import Settings
 from app.core.exceptions import (
+    ConflictError,
     DomainError,
+    NotFoundError,
     PreparedSourceMissingError,
+    RateLimitedError,
+    ScanQueueFullError,
     SnapshotError,
     TerraformNotFoundError,
+    UploadRejectedError,
 )
 from app.correlation.context import CorrelationContext
 from app.correlation.engine import CorrelationEngine
 from app.graphs.builder import DependencyGraphBuilder
 from app.graphs.flow_builder import DataFlowGraphBuilder
-from app.models import DownloadArtifact
+from app.models import DownloadArtifact, ModuleVersion, Repository, User
 from app.models.common import utcnow
-from app.models.enums import ScanStatus
+from app.models.enums import OriginType, ScanStatus
 from app.parsers.hcl import HCLTerraformParser
 from app.repositories.finding_repository import FindingRepository
 from app.repositories.graph_repository import GraphRepository
@@ -92,6 +98,9 @@ class ScanService:
     ):
         self.session_factory = session_factory
         self.settings = settings
+        # Identifies this process as the owner of the scans it runs; a new value per start, so
+        # recovery can tell this worker's own runs from those left by a process that died.
+        self.worker_id = secrets.token_hex(8)
         self.collector = collector or default_router(settings)
         self.scanner = scanner or CheckovScanner(settings)
         self.normalizer = normalizer or CheckovNormalizer(SeverityMapper(SEVERITY_OVERRIDES))
@@ -266,6 +275,22 @@ class ScanService:
                 if not scans.claim(scan_id):
                     return
                 scan = scans.get(scan_id)
+                # Liveness/ownership ride in the analysis JSONB (no new column): run() refreshes
+                # them so recovery can tell a live run from one a dead process abandoned. The
+                # retry link is carried through every analysis rewrite below so it is preserved.
+                prior = scan.analysis or {}
+                carry = {key: prior[key] for key in ("retry_of",) if key in prior}
+                runtime = {
+                    "owner": self.worker_id,
+                    "attempt": (prior.get("runtime") or {}).get("attempt", 1),
+                }
+
+                def stamp(payload: dict) -> dict:
+                    payload = dict(payload)
+                    payload.update(carry)
+                    payload["runtime"] = {**runtime, "heartbeat": time.time()}
+                    return payload
+
                 manager = WorkspaceManager(
                     self.settings.workspace_root, self.settings.keep_scan_workspace
                 )
@@ -322,12 +347,14 @@ class ScanService:
                     )
                     scan.status = ScanStatus.SCANNING
                     checkov_stage = AnalysisStage(status=StageStatus.RUNNING)
-                    scan.analysis = {
-                        **AnalysisSummary(stages={"checkov": checkov_stage}).model_dump(
-                            mode="json"
-                        ),
-                        "provenance": provenance,
-                    }
+                    scan.analysis = stamp(
+                        {
+                            **AnalysisSummary(stages={"checkov": checkov_stage}).model_dump(
+                                mode="json"
+                            ),
+                            "provenance": provenance,
+                        }
+                    )
                     session.commit()
                     checkov_findings = []
                     checkov_warnings = []
@@ -374,7 +401,7 @@ class ScanService:
                         payload = analysis.model_dump(mode="json")
                         payload["stages"]["checkov"] = checkov_stage.model_dump(mode="json")
                         payload["provenance"] = provenance
-                        scan.analysis = payload
+                        scan.analysis = stamp(payload)
                         session.commit()
 
                     verify_tree(
@@ -532,6 +559,144 @@ class ScanService:
                         version.integrity_status = error.status
                         version.mismatched_files = [d["path"] for d in error.details]
                         session.commit()
+
+    # ---------------------------------------------------------------- interrupted-scan recovery
+
+    def recover_interrupted(self, submit: Callable[[UUID], None]) -> None:
+        """Resolve scans a killed process left non-terminal. Safe at startup and concurrently.
+
+        Queued scans are handed back to the dispatcher; running-stage scans are failed with a
+        stable code. Each transition is an atomic conditional UPDATE (and the dispatcher's own
+        claim), so concurrent recovery passes each take effect at most once.
+        """
+        try:
+            with self.session_factory() as session:
+                candidates = [
+                    (scan.id, scan.status, scan.analysis)
+                    for scan in ScanRepository(session).active()
+                ]
+        except Exception:
+            logger.error("action=recovery_scan_failed")
+            return
+        stale_before = time.time() - self.settings.scan_recovery_stale_seconds
+        for scan_id, status, analysis in candidates:
+            if not self._recoverable(analysis, stale_before):
+                continue
+            try:
+                if status == ScanStatus.QUEUED:
+                    self._requeue(scan_id, submit)
+                else:
+                    self._fail_interrupted(scan_id)
+            except Exception:
+                logger.error("scan_id=%s action=recovery_failed", scan_id)
+
+    def _recoverable(self, analysis: dict | None, stale_before: float) -> bool:
+        """A single-worker deployment recovers every non-terminal scan; a multi-process one
+        leaves scans whose heartbeat is still fresh to the worker that owns them."""
+        if self.settings.scan_recovery_assume_single_worker:
+            return True
+        heartbeat = ((analysis or {}).get("runtime") or {}).get("heartbeat")
+        return heartbeat is None or heartbeat < stale_before
+
+    def _requeue(self, scan_id: UUID, submit: Callable[[UUID], None]) -> None:
+        try:
+            submit(scan_id)
+            logger.info("scan_id=%s action=recovery_requeued", scan_id)
+        except ScanQueueFullError:
+            self.mark_failed(
+                scan_id, "검사 대기열이 가득 찼습니다. 다시 시도해 주세요.", code="QueueUnavailable"
+            )
+            logger.info("scan_id=%s action=recovery_queue_full", scan_id)
+
+    def _fail_interrupted(self, scan_id: UUID) -> None:
+        with self.session_factory() as session:
+            won = ScanRepository(session).fail_if_running(scan_id)
+        if won:
+            self.mark_failed(
+                scan_id,
+                "검사가 중단되어 실패로 처리했습니다. 다시 시도해 주세요.",
+                code="Interrupted",
+            )
+            logger.info("scan_id=%s action=recovery_interrupted", scan_id)
+
+    # ---------------------------------------------------------------- owner-initiated retry
+
+    def retry(
+        self, user: User, scan_id: UUID, upload_id: str, acknowledge_warnings: bool
+    ) -> ScanAccepted:
+        """Start a new attempt of the caller's failed scan from a freshly prepared source.
+
+        The existing module version is reused (no duplicate repository, version or findings),
+        the previous failed scan is kept and linked, and a conditional UPDATE guards against a
+        repeated or concurrent retry producing more than one new attempt.
+        """
+        with self.session_factory() as session:
+            scans = ScanRepository(session)
+            old = scans.get(scan_id)
+            version = (
+                session.get(ModuleVersion, old.module_version_id) if old.module_version_id else None
+            )
+            repository = (
+                session.get(Repository, version.repository_id)
+                if version and version.repository_id
+                else None
+            )
+            # Only the owner retries; others (even of a public scan) are told it does not exist.
+            if repository is None or repository.owner_id != user.id:
+                raise NotFoundError("Scan not found.")
+            if old.status != ScanStatus.FAILED:
+                raise ConflictError("실패한 검사만 다시 시도할 수 있습니다.")
+            # A missing or expired prepared source answers "upload again" (StagedUploadNotFound),
+            # before anything is created, so a gone source leaves no trace.
+            report = self.staging.peek(user.id, upload_id)
+            # The retry must come from the same source the version was registered from; an
+            # UPLOAD origin carries no url, so only the origin type is compared there.
+            report_origin = (
+                OriginType.GITHUB if report["origin_type"] == "GITHUB" else OriginType.UPLOAD
+            )
+            same_source = report_origin == repository.origin_type and (
+                report_origin == OriginType.UPLOAD or report["origin_url"] == repository.origin_url
+            )
+            if not same_source:
+                raise UploadRejectedError(
+                    "원래 등록한 출처와 같은 소스로만 다시 시도할 수 있습니다.", "SourceMismatch"
+                )
+            # The retry reuses the version, so its stored manifest still governs it. A version
+            # already proven to differ cannot be retried, and a source whose content changed
+            # since registration is refused here, before a scan is created, so run() never marks
+            # the version MISMATCH. A version from before 0010 has no stored manifest hash, so
+            # nothing is compared here and the existing run()-time check continues to govern it.
+            if version.integrity_status == "MISMATCH":
+                raise ConflictError(
+                    "무결성 불일치가 확인된 버전은 다시 시도할 수 없습니다. 새 버전으로 올려 주세요."
+                )
+            if version.manifest_sha256 and report.get("manifest_sha256") != version.manifest_sha256:
+                raise UploadRejectedError(
+                    "등록 당시와 내용이 달라졌습니다. 새 버전으로 올려 주세요.", "SourceChanged"
+                )
+            if report.get("warnings") and not acknowledge_warnings:
+                raise UploadRejectedError(
+                    "확인이 필요한 항목이 있습니다. 비밀값이 아님을 확인한 뒤 올려 주세요.",
+                    "WarningsNotAcknowledged",
+                )
+            if scans.running_publishes_for(user.id) >= self.settings.max_running_publishes:
+                raise RateLimitedError("진행 중인 올리기가 많습니다. 끝난 뒤 다시 시도해 주세요.")
+            attempt = ((old.analysis or {}).get("runtime") or {}).get("attempt", 1) + 1
+            new = scans.create_retry(old, attempt)
+            # Claim the retry atomically: a second concurrent or repeated attempt finds the
+            # version already pointed elsewhere and is refused, so only one new scan is created.
+            if not scans.claim_retry(version.id, scan_id, new.id):
+                session.rollback()
+                raise ConflictError("이미 다시 시도된 검사입니다.")
+            old.analysis = {**(old.analysis or {}), "retried_by": str(new.id)}
+            self.staging.claim(user.id, upload_id, new.id)
+            try:
+                session.commit()
+            except BaseException:
+                self.staging.release(new.id)
+                raise
+            logger.info("scan_id=%s action=retry_created retry_of=%s", new.id, scan_id)
+            return ScanAccepted(scan_id=new.id)
 
 
 ScanRunner = Callable[[UUID], None]
