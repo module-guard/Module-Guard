@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -64,6 +65,8 @@ class ScanResponse(BaseModel):
     duration_ms: int | None
     created_at: datetime
     analysis: AnalysisSummary | None = None
+    provenance: dict[str, Any] | None = None
+    postprocessing: dict[str, Any] | None = None
     repository: RepositoryRef | None = None
     # summary counts the module body only; this holds the rest. None for scans made before
     # findings were classified.
@@ -91,6 +94,8 @@ class ScanResponse(BaseModel):
             id=scan.id,
             integrity=IntegrityInfo.of(scan.module_version),
             analysis=scan.analysis,
+            provenance=(scan.analysis or {}).get("provenance"),
+            postprocessing=(scan.analysis or {}).get("postprocessing"),
             failed_stage=failure.get("stage"),
             error_code=failure.get("code"),
             module_id=scan.module_id,

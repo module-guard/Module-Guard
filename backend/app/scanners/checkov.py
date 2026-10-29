@@ -1,4 +1,5 @@
 import json
+import re
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
@@ -12,6 +13,8 @@ from app.core.exceptions import (
 )
 from app.scanners.base import ScanResult, SecurityScanner
 from app.utils.subprocess import ProcessRunner, isolated_environment
+
+SKIP_PATH_PATTERN = r"(^|/)(\.git|\.terraform|node_modules|vendor|\.external_modules)(/|$)"
 
 
 @contextmanager
@@ -40,6 +43,27 @@ class CheckovScanner(SecurityScanner):
         self.settings = settings
         self.runner = runner or ProcessRunner()
 
+    def version(self, target_path: Path) -> str | None:
+        """Query the actual scanner executable, with bounded, isolated execution."""
+        executable = self.settings.checkov_binary
+        if "/" in executable:
+            executable = str(Path(executable).resolve())
+        try:
+            result = self.runner.run(
+                [executable, "--version"],
+                cwd=target_path.parent,
+                timeout=min(self.settings.checkov_timeout_seconds, 10),
+                env=isolated_environment(target_path.parent),
+                output_limit=4096,
+            )
+        except Exception:
+            # A metadata lookup must never fail the scan or expose tool output.
+            return None
+        if result.returncode != 0:
+            return None
+        text = result.stdout.strip()
+        return text if re.fullmatch(r"\d+(?:\.\d+){1,3}(?:[a-zA-Z0-9.+-]{0,24})?", text) else None
+
     def scan(self, target_path: Path) -> ScanResult:
         # Config isolation, controlled cwd and environment prevent custom code/policy injection.
         config = target_path.parent / "checkov-config.yml"
@@ -65,7 +89,7 @@ class CheckovScanner(SecurityScanner):
             "--config-file",
             str(config),
             "--skip-path",
-            r"(^|/)(\.git|\.terraform|node_modules|vendor|\.external_modules)(/|$)",
+            SKIP_PATH_PATTERN,
         ]
         try:
             with isolate_repository_config(target_path):
