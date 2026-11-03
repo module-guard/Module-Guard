@@ -7,7 +7,11 @@ import { api, unwrap } from "@/api/client";
 import { explainScanError } from "@/api/errors";
 import { useApi } from "@/api/hooks";
 import { Pager, State } from "./live-shared";
-import { RepositoryCard, type Card } from "./repository-card";
+import {
+  RepositoryCard,
+  RepositorySecurityBadge,
+  type Card,
+} from "./repository-card";
 const tabs = [
   ["owned", "모듈", "repository_count"],
   ["forked", "가져온 모듈", "fork_count"],
@@ -16,11 +20,18 @@ const tabs = [
 type Kind = (typeof tabs)[number][0];
 
 /** 실패한 올리기는 주인에게만 보인다: 다시 올리거나 지울 수 있다. */
-export function FailedCard({ card, onChange }: { card: Card; onChange: () => void }) {
+export function FailedCard({
+  card,
+  onChange,
+}: {
+  card: Card;
+  onChange: () => void;
+}) {
   const [error, setError] = useState("");
   return (
     <div className="panel flex flex-col gap-2 p-5">
       <h2 className="truncate">{card.name}</h2>
+      <RepositorySecurityBadge card={card} />
       <p className="text-xs text-slate-500">
         {card.failure
           ? explainScanError(card.failure)

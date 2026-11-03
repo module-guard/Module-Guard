@@ -130,6 +130,9 @@ export function ForkButton({ detail }: { detail: Detail }) {
                 criticalRules={version.critical_rules}
                 highRules={version.high_rules}
                 unknown={scan.summary.unknown}
+                scanStatus={scan.status}
+                partialResult={scan.partial_result}
+                scanHref={`/@${detail.owner}/${detail.name}/scans/${scan.id}`}
                 version={version.version}
                 scannedAt={scan.finished_at || scan.created_at}
               />
