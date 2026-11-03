@@ -6,6 +6,7 @@ import { explainScanError } from "@/api/errors";
 import { api, unwrap } from "@/api/client";
 import { useApi } from "@/api/hooks";
 import { IntegritySummary } from "./module-integrity";
+import { AttemptLinks, ScanRetry } from "./scan-retry";
 import {
   ExampleNote,
   Panel,
@@ -100,6 +101,7 @@ export function ScanResult({ id }: { id: string }) {
         <Badge value={s.status} />
         {s.partial_result && <Badge value="PARTIAL" />}
         <CopyId id={s.id} />
+        <AttemptLinks scan={s} />
       </div>
       {r.error && <State error={r.error} retry={r.retry} />}
       <Progress scan={s} />
@@ -114,6 +116,7 @@ export function ScanResult({ id }: { id: string }) {
           </p>
         </Panel>
       )}
+      <ScanRetry scan={s} />
       <nav
         className="my-5 flex gap-5 overflow-x-auto border-b border-line"
         aria-label="검사 결과 탭"
