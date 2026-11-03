@@ -11,11 +11,12 @@ import { useApi } from "@/api/hooks";
 import { loginUrl, useAuth } from "./auth";
 import { Badge, Time, shortUrl } from "./live-shared";
 import { Button } from "./ui/button";
-type Report = components["schemas"]["UploadReport"];
+export type Report = components["schemas"]["UploadReport"];
+export type SourceKind = "github" | "zip" | "registry";
 const MAX_ZIP_MB = 10;
 const NAME = /^[a-z0-9][a-z0-9_-]{0,99}$/;
 
-function Rejection({ error }: { error: ApiError }) {
+export function Rejection({ error }: { error: ApiError }) {
   return (
     <div role="alert" className="mt-4 rounded bg-red-50 px-4 py-3 text-red-800">
       <p className="font-semibold">{error.message}</p>
@@ -42,14 +43,28 @@ function Rejection({ error }: { error: ApiError }) {
   );
 }
 
-function Source({
+const sourceTabs = [
+  ["github", "GitHub 주소", Github],
+  ["zip", "zip 파일", FileArchive],
+  ["registry", "Terraform Registry", FileArchive],
+] as const;
+
+export function Source({
   url: initialUrl = "",
   onReady,
+  kinds = ["github", "zip", "registry"],
+  lockUrl = false,
+  submitLabel = "확인",
 }: {
   url?: string;
   onReady: (report: Report) => void;
+  /** 고를 수 있는 소스 종류. 재시도는 원래 출처와 같은 종류만 허용한다. */
+  kinds?: readonly SourceKind[];
+  /** 주소를 바꿀 수 없게 한다(재시도는 원래 GitHub 주소로만 준비한다). */
+  lockUrl?: boolean;
+  submitLabel?: string;
 }) {
-  const [kind, setKind] = useState<"github" | "zip" | "registry">("github");
+  const [kind, setKind] = useState<SourceKind>(kinds[0]);
   const [url, setUrl] = useState(initialUrl);
   const [registryAddress, setRegistryAddress] = useState("");
   const [registryVersion, setRegistryVersion] = useState("");
@@ -108,28 +123,24 @@ function Source({
   return (
     <form onSubmit={submit} className="mt-6">
       <div className="flex gap-5 border-b border-line" role="tablist">
-        {(
-          [
-            ["github", "GitHub 주소", Github],
-            ["zip", "zip 파일", FileArchive],
-            ["registry", "Terraform Registry", FileArchive],
-          ] as const
-        ).map(([value, label, Icon]) => (
-          <button
-            key={value}
-            type="button"
-            role="tab"
-            aria-selected={kind === value}
-            className={`flex items-center gap-1.5 border-b-2 px-1 py-3 ${kind === value ? "border-brand font-semibold text-brand" : "border-transparent text-slate-500"}`}
-            onClick={() => {
-              setKind(value);
-              setError(undefined);
-            }}
-          >
-            <Icon size={15} />
-            {label}
-          </button>
-        ))}
+        {sourceTabs
+          .filter(([value]) => kinds.includes(value))
+          .map(([value, label, Icon]) => (
+            <button
+              key={value}
+              type="button"
+              role="tab"
+              aria-selected={kind === value}
+              className={`flex items-center gap-1.5 border-b-2 px-1 py-3 ${kind === value ? "border-brand font-semibold text-brand" : "border-transparent text-slate-500"}`}
+              onClick={() => {
+                setKind(value);
+                setError(undefined);
+              }}
+            >
+              <Icon size={15} />
+              {label}
+            </button>
+          ))}
       </div>
       <div className="mt-5">
         {kind === "registry" ? (
@@ -166,6 +177,7 @@ function Source({
               className="input"
               type="url"
               required
+              readOnly={lockUrl}
               placeholder="https://github.com/소유자/저장소 (공개 저장소)"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
@@ -222,13 +234,84 @@ function Source({
           ? kind === "github"
             ? "가져와서 확인하는 중…"
             : "확인하는 중…"
-          : "확인"}
+          : submitLabel}
       </Button>
       <p className="mt-3 text-xs text-slate-500">
         올리기 전에 파일 구성과 비밀값을 먼저 확인합니다. 이 단계에서는 아무것도
         공개되지 않습니다.
       </p>
     </form>
+  );
+}
+
+/** 준비한 소스의 파일 구성과 확인이 필요한 값을 보여 준다(올리기·재시도 공통). */
+export function ReportCheck({
+  report,
+  acknowledged,
+  onAcknowledge,
+}: {
+  report: Report;
+  acknowledged: boolean;
+  onAcknowledge: (value: boolean) => void;
+}) {
+  return (
+    <section aria-label="확인 결과" className="panel p-5">
+      <p>
+        <strong className="tabular-nums">{report.file_count}</strong>개 파일을
+        올립니다{" "}
+        <span className="text-xs text-slate-500">
+          ({(report.size_bytes / 1024).toFixed(1)}KB
+          {report.origin_url && ` · ${shortUrl(report.origin_url)}`}
+          {report.commit_hash && ` · ${report.commit_hash.slice(0, 7)}`})
+        </span>
+      </p>
+      {report.excluded_count > 0 && (
+        <details className="mt-3">
+          <summary className="cursor-pointer text-slate-600">
+            제외된 파일 {report.excluded_count}개
+          </summary>
+          <ul className="mt-2 max-h-48 space-y-1 overflow-y-auto text-xs text-slate-500">
+            {report.excluded.map((f) => (
+              <li key={f.path} className="break-all">
+                <code>{f.path}</code> — {f.reason}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+      {report.warnings.length > 0 && (
+        <div className="mt-4 rounded bg-amber-50 px-4 py-3 text-amber-900">
+          <p className="font-semibold">확인 필요 {report.warnings.length}건</p>
+          <p className="mt-1 text-xs">
+            무작위 문자열처럼 보이는 값입니다. 해시나 예제 값이면 괜찮지만, 실제
+            키나 토큰이라면 올리지 마세요.
+          </p>
+          <ul className="mt-2 space-y-1 text-xs">
+            {report.warnings.map((w) => (
+              <li key={`${w.file}:${w.line}`} className="break-all">
+                <code>
+                  {w.file}:{w.line}
+                </code>
+                {w.preview && (
+                  <>
+                    {" "}
+                    <code className="rounded bg-white px-1">{w.preview}</code>
+                  </>
+                )}
+              </li>
+            ))}
+          </ul>
+          <label className="mt-3 flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={acknowledged}
+              onChange={(e) => onAcknowledge(e.target.checked)}
+            />
+            비밀값이 아님을 확인했습니다
+          </label>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -289,65 +372,11 @@ function Review({
         }
       }}
     >
-      <section aria-label="확인 결과" className="panel p-5">
-        <p>
-          <strong className="tabular-nums">{report.file_count}</strong>개 파일을
-          올립니다{" "}
-          <span className="text-xs text-slate-500">
-            ({(report.size_bytes / 1024).toFixed(1)}KB
-            {report.origin_url && ` · ${shortUrl(report.origin_url)}`}
-            {report.commit_hash && ` · ${report.commit_hash.slice(0, 7)}`})
-          </span>
-        </p>
-        {report.excluded_count > 0 && (
-          <details className="mt-3">
-            <summary className="cursor-pointer text-slate-600">
-              제외된 파일 {report.excluded_count}개
-            </summary>
-            <ul className="mt-2 max-h-48 space-y-1 overflow-y-auto text-xs text-slate-500">
-              {report.excluded.map((f) => (
-                <li key={f.path} className="break-all">
-                  <code>{f.path}</code> — {f.reason}
-                </li>
-              ))}
-            </ul>
-          </details>
-        )}
-        {needsAck && (
-          <div className="mt-4 rounded bg-amber-50 px-4 py-3 text-amber-900">
-            <p className="font-semibold">
-              확인 필요 {report.warnings.length}건
-            </p>
-            <p className="mt-1 text-xs">
-              무작위 문자열처럼 보이는 값입니다. 해시나 예제 값이면 괜찮지만,
-              실제 키나 토큰이라면 올리지 마세요.
-            </p>
-            <ul className="mt-2 space-y-1 text-xs">
-              {report.warnings.map((w) => (
-                <li key={`${w.file}:${w.line}`} className="break-all">
-                  <code>
-                    {w.file}:{w.line}
-                  </code>
-                  {w.preview && (
-                    <>
-                      {" "}
-                      <code className="rounded bg-white px-1">{w.preview}</code>
-                    </>
-                  )}
-                </li>
-              ))}
-            </ul>
-            <label className="mt-3 flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={acknowledged}
-                onChange={(e) => setAcknowledged(e.target.checked)}
-              />
-              비밀값이 아님을 확인했습니다
-            </label>
-          </div>
-        )}
-      </section>
+      <ReportCheck
+        report={report}
+        acknowledged={acknowledged}
+        onAcknowledge={setAcknowledged}
+      />
       {!repository && (
         <div className="mt-5 space-y-4">
           <div>
@@ -458,7 +487,12 @@ function MyModules({ owner }: { owner: string }) {
               <Badge value="FAILED" />
               <Link
                 className="text-brand"
-                href={`/new?name=${encodeURIComponent(m.name)}${m.origin_url ? `&url=${encodeURIComponent(m.origin_url)}` : ""}`}
+                href={
+                  // 실패한 검사가 있으면 그 화면에서 같은 버전으로 다시 시도한다.
+                  m.latest_scan
+                    ? `/@${owner}/${m.name}/scans/${m.latest_scan.id}`
+                    : `/new?name=${encodeURIComponent(m.name)}${m.origin_url ? `&url=${encodeURIComponent(m.origin_url)}` : ""}`
+                }
               >
                 다시 시도
               </Link>
