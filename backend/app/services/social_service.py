@@ -7,7 +7,7 @@ from sqlalchemy import func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, aliased, sessionmaker
 
-from app.auth.visibility import repository_visible_to
+from app.auth.visibility import repository_visible_to, scan_visible_to
 from app.core.config import Settings
 from app.core.exceptions import ConflictError, NotFoundError, RateLimitedError
 from app.models import ModuleVersion, Repository, Scan, Star, User
@@ -84,16 +84,23 @@ class SocialService:
             i: next((v for v in rows if v.snapshot_sha256), None) for i, rows in versions.items()
         }
         attempts = {i: rows[0] if rows else None for i, rows in versions.items()}
-        scan_ids = {v.scan_id for v in newest.values() if v and v.scan_id}
+        scan_ids = {v.scan_id for v in [*newest.values(), *attempts.values()] if v and v.scan_id}
         scans = {
-            scan.id: scan for scan in session.scalars(select(Scan).where(Scan.id.in_(scan_ids)))
+            scan.id: scan
+            for scan in session.scalars(
+                select(Scan).where(Scan.id.in_(scan_ids), scan_visible_to(viewer_id))
+            )
         }
-        # State of an unpublished repository comes from its latest attempt's scan.
-        pending = [v.id for i, v in attempts.items() if v and newest[i] is None]
-        attempt_scans = {
-            scan.module_version_id: scan
-            for scan in session.scalars(select(Scan).where(Scan.module_version_id.in_(pending)))
-        }
+        # Legacy stored versions and unpublished attempts may only have the reverse link.
+        # Never fall back to a different version's scan, including on a shared fork.
+        fallback_ids = {v.id for v in [*newest.values(), *attempts.values()] if v is not None}
+        attempt_scans = {}
+        for candidate in session.scalars(
+            select(Scan)
+            .where(Scan.module_version_id.in_(fallback_ids), scan_visible_to(viewer_id))
+            .order_by(Scan.created_at.desc(), Scan.id.desc())
+        ):
+            attempt_scans.setdefault(candidate.module_version_id, candidate)
         origin_ids = {r.forked_from_id for r in repositories if r.forked_from_id}
         origins = {
             origin.id: origin
@@ -107,13 +114,24 @@ class SocialService:
         for repository in repositories:
             version = newest[repository.id]
             scan = scans.get(version.scan_id) if version else None
+            if version and not version.scan_id:
+                scan = attempt_scans.get(version.id)
             attempt = attempts[repository.id]
-            attempt_scan = attempt_scans.get(attempt.id) if attempt else None
+            attempt_scan = (
+                scans.get(attempt.scan_id)
+                if attempt and attempt.scan_id
+                else attempt_scans.get(attempt.id)
+                if attempt
+                else None
+            )
             failed = (
                 version is None
                 and attempt_scan is not None
                 and attempt_scan.status == ScanStatus.FAILED
             )
+            badge_version = version or attempt
+            if version is None:
+                scan = attempt_scan
             origin = origins.get(repository.forked_from_id)
             cards.append(
                 RepositoryCard(
@@ -137,14 +155,17 @@ class SocialService:
                     failure=attempt_scan.error_message if failed else None,
                     badge=(
                         BadgeInfo(
-                            version=version.version,
-                            critical_rules=version.critical_rules,
-                            high_rules=version.high_rules,
+                            scan_status=scan.status if scan else None,
+                            partial_result=scan.partial_result if scan else False,
+                            scan_id=scan.id if scan else None,
+                            version=badge_version.version,
+                            critical_rules=badge_version.critical_rules,
+                            high_rules=badge_version.high_rules,
                             unknown=scan.unknown_count if scan else 0,
                             total=scan.total_findings if scan else 0,
                             scanned_at=(scan.finished_at or scan.created_at) if scan else None,
                         )
-                        if version
+                        if badge_version
                         else None
                     ),
                 )

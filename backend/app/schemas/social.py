@@ -1,9 +1,10 @@
 from datetime import datetime
 from typing import Literal
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models.enums import OriginType, Visibility
+from app.models.enums import OriginType, ScanStatus, Visibility
 
 
 class RepositoryRef(BaseModel):
@@ -12,7 +13,7 @@ class RepositoryRef(BaseModel):
 
 
 class BadgeInfo(BaseModel):
-    """What a card needs to draw the security badge for the newest stored version."""
+    """What a card needs to draw the security badge for the newest stored version (or unpublished attempt)."""
 
     version: str | None
     critical_rules: int
@@ -20,6 +21,9 @@ class BadgeInfo(BaseModel):
     unknown: int
     total: int
     scanned_at: datetime | None
+    scan_status: ScanStatus | None = None
+    partial_result: bool = False
+    scan_id: UUID | None = None
 
 
 class RepositoryCard(BaseModel):

@@ -31,7 +31,12 @@ test("home: my modules with badges, what needs a look and recent activity", asyn
 
   await page.goto("/home");
   const mine = page.getByRole("region", { name: "내 모듈" });
-  const card = mine.locator('a[href="/@dev-user/home-module"]');
+  const card = mine.getByRole("article").filter({
+    has: page.getByRole("link", { name: "home-module", exact: true }),
+  });
+  await expect(
+    card.getByRole("link", { name: "home-module", exact: true }),
+  ).toHaveAttribute("href", "/@dev-user/home-module");
   await expect(card).toBeVisible();
   await expect(card).toContainText("주요 위험 없음");
   await expect(
