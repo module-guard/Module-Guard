@@ -1,23 +1,24 @@
 import Link from "next/link";
 import { GitFork, Lock, Star } from "lucide-react";
 import type { components } from "@/api/generated/schema";
-import { Badge, Time } from "./live-shared";
+import { Time } from "./live-shared";
 import { SecurityBadge } from "./security-badge";
 export type Card = components["schemas"]["RepositoryCard"];
 
-/** 탐색과 프로필이 같이 쓰는 모듈 카드. 카드 전체가 모듈 페이지로 가는 링크다. */
+/** 탐색과 프로필이 같이 쓰는 모듈 카드. 배지 외의 카드 영역은 모듈 페이지로 이동한다. */
 export function RepositoryCard({ card }: { card: Card }) {
   return (
-    <Link
-      href={`/@${card.owner}/${card.name}`}
-      className="panel flex flex-col gap-3 p-5 hover:border-brand/40"
-    >
+    <article className="panel relative flex flex-col gap-3 p-5 hover:border-brand/40">
       <div className="min-w-0">
         {/* 이름이 먼저, 한 줄로. 주인 이름이 길어도 모듈 이름이 잘리지 않게 따로 둔다. */}
         <h2 className="flex items-center gap-2 font-semibold">
-          <span className="truncate" title={card.name}>
+          <Link
+            href={`/@${card.owner}/${card.name}`}
+            className="truncate after:absolute after:inset-0"
+            title={card.name}
+          >
             {card.name}
-          </span>
+          </Link>
           {card.visibility === "PRIVATE" && (
             <Lock
               size={13}
@@ -33,19 +34,7 @@ export function RepositoryCard({ card }: { card: Card }) {
           {card.description || " "}
         </p>
       </div>
-      {card.state === "PUBLISHED" && card.badge ? (
-        <SecurityBadge
-          criticalRules={card.badge.critical_rules}
-          highRules={card.badge.high_rules}
-          unknown={card.badge.unknown}
-          version={card.badge.version}
-          scannedAt={card.badge.scanned_at}
-        />
-      ) : (
-        <span>
-          <Badge value={card.state === "FAILED" ? "FAILED" : "RUNNING"} />
-        </span>
-      )}
+      <RepositorySecurityBadge card={card} />
       <p className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
         {card.mirror && (
           <span className="rounded bg-slate-100 px-1.5 py-0.5 font-semibold text-slate-700">
@@ -70,6 +59,38 @@ export function RepositoryCard({ card }: { card: Card }) {
           <Time value={card.updated_at} />
         </span>
       </p>
-    </Link>
+    </article>
+  );
+}
+
+/** Shared by published cards and owner-only failed cards. */
+export function RepositorySecurityBadge({ card }: { card: Card }) {
+  return card.badge ? (
+    <SecurityBadge
+      criticalRules={card.badge.critical_rules}
+      highRules={card.badge.high_rules}
+      unknown={card.badge.unknown}
+      version={card.badge.version}
+      scannedAt={card.badge.scanned_at}
+      scanStatus={card.badge.scan_status}
+      partialResult={card.badge.partial_result}
+      scanHref={
+        card.badge.scan_id
+          ? `/@${card.owner}/${card.name}/scans/${card.badge.scan_id}`
+          : null
+      }
+    />
+  ) : (
+    <SecurityBadge
+      criticalRules={0}
+      highRules={0}
+      scanStatus={
+        card.state === "FAILED"
+          ? "FAILED"
+          : card.state === "PENDING"
+            ? "QUEUED"
+            : null
+      }
+    />
   );
 }

@@ -271,7 +271,7 @@
         "type": "object"
       },
       "BadgeInfo": {
-        "description": "What a card needs to draw the security badge for the newest stored version.",
+        "description": "What a card needs to draw the security badge for the newest stored version (or unpublished attempt).",
         "properties": {
           "critical_rules": {
             "title": "Critical Rules",
@@ -280,6 +280,33 @@
           "high_rules": {
             "title": "High Rules",
             "type": "integer"
+          },
+          "partial_result": {
+            "default": false,
+            "title": "Partial Result",
+            "type": "boolean"
+          },
+          "scan_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan Id"
+          },
+          "scan_status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScanStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "scanned_at": {
             "anyOf": [

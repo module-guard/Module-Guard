@@ -144,6 +144,9 @@ def test_explore_lists_only_public_stored_repositories(stack, sessions):
     assert card["state"] == "PUBLISHED" and card["star_count"] == 0 and card["fork_count"] == 0
     assert card["badge"] == {
         "version": "v1",
+        "scan_status": "COMPLETED",
+        "partial_result": False,
+        "scan_id": card["badge"]["scan_id"],
         "critical_rules": 1,
         "high_rules": 1,
         "unknown": 1,

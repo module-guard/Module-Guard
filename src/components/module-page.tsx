@@ -148,13 +148,22 @@ function Interface({ version }: { version: Version }) {
 
 function Security({ base, version }: { base: string; version: Version }) {
   const scan = version.scan;
-  if (!scan) return <p className="text-slate-500">검사 결과가 없습니다.</p>;
+  if (!scan)
+    return (
+      <SecurityBadge
+        criticalRules={version.critical_rules}
+        highRules={version.high_rules}
+      />
+    );
   return (
     <div className="max-w-2xl">
       <SecurityBadge
         criticalRules={version.critical_rules}
         highRules={version.high_rules}
         unknown={scan.summary.unknown}
+        scanStatus={scan.status}
+        partialResult={scan.partial_result}
+        scanHref={`${base}/scans/${scan.id}`}
         version={version.version}
         scannedAt={scan.finished_at || scan.created_at}
       />
@@ -228,11 +237,20 @@ function Versions({ base, detail }: { base: string; detail: Detail }) {
               <SecurityBadge
                 criticalRules={v.critical_rules}
                 highRules={v.high_rules}
-                unknown={v.scan.summary.unknown}
+                unknown={v.scan?.summary.unknown}
+                scanStatus={v.scan?.status}
+                partialResult={v.scan?.partial_result}
+                scanHref={v.scan ? `${base}/scans/${v.scan.id}` : null}
               />
             </>
           ) : (
-            <Badge value={v.state === "FAILED" ? "FAILED" : "RUNNING"} />
+            <SecurityBadge
+              criticalRules={v.critical_rules}
+              highRules={v.high_rules}
+              scanStatus={v.scan?.status}
+              partialResult={v.scan?.partial_result}
+              scanHref={v.scan ? `${base}/scans/${v.scan.id}` : null}
+            />
           )}
           {v.scan && v.state !== "STORED" && (
             <Link className="text-brand" href={`${base}/scans/${v.scan.id}`}>
@@ -317,13 +335,16 @@ export function ModulePage({ owner, name }: { owner: string; name: string }) {
         </div>
       </div>
       <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-500">
-        {v?.state === "STORED" && v.scan && (
+        {v && (
           <SecurityBadge
             criticalRules={v.critical_rules}
             highRules={v.high_rules}
-            unknown={v.scan.summary.unknown}
+            unknown={v.scan?.summary.unknown}
+            scanStatus={v.scan?.status}
+            partialResult={v.scan?.partial_result}
+            scanHref={v.scan ? `${base}/scans/${v.scan.id}` : null}
             version={v.version}
-            scannedAt={v.scan.finished_at || v.scan.created_at}
+            scannedAt={v.scan?.finished_at || v.scan?.created_at}
           />
         )}
         {d.visibility === "PRIVATE" && (

@@ -870,13 +870,21 @@ export interface components {
         };
         /**
          * BadgeInfo
-         * @description What a card needs to draw the security badge for the newest stored version.
+         * @description What a card needs to draw the security badge for the newest stored version (or unpublished attempt).
          */
         BadgeInfo: {
             /** Critical Rules */
             critical_rules: number;
             /** High Rules */
             high_rules: number;
+            /**
+             * Partial Result
+             * @default false
+             */
+            partial_result: boolean;
+            /** Scan Id */
+            scan_id?: string | null;
+            scan_status?: components["schemas"]["ScanStatus"] | null;
             /** Scanned At */
             scanned_at: string | null;
             /** Total */
