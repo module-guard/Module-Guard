@@ -66,6 +66,13 @@ function write(context: BrowserContext) {
   return { headers: { Origin: origin } };
 }
 
+// The title and security badge are sibling links inside the card.
+function moduleCard(page: Page) {
+  return page.getByRole("article").filter({
+    has: page.getByRole("link", { name: MODULE, exact: true }),
+  });
+}
+
 test("find a module, star it, fork it, and see it on the profile", async ({
   browser,
   page,
@@ -86,7 +93,7 @@ test("find a module, star it, fork it, and see it on the profile", async ({
   await page.getByLabel("모듈 검색").fill(MODULE);
   await page.getByRole("button", { name: "검색" }).click();
   await expect(page).toHaveURL(new RegExp(`q=${MODULE}`));
-  const card = page.getByRole("link", { name: new RegExp(MODULE) });
+  const card = moduleCard(page);
   await expect(card).toHaveCount(1);
   await expect(card).toContainText("@alice-e2e");
   await expect(card).toContainText("Network for the explore test");
@@ -97,7 +104,7 @@ test("find a module, star it, fork it, and see it on the profile", async ({
   await shot(page, "33-explore");
 
   // 2. The module page shows README, inputs and the security summary.
-  await card.click();
+  await card.getByRole("link", { name: MODULE, exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/@alice-e2e/${MODULE}$`));
   await expect(page.locator(".markdown")).toContainText("A network module");
   await expect(page.getByText(badge).first()).toBeVisible();
@@ -146,9 +153,7 @@ test("find a module, star it, fork it, and see it on the profile", async ({
   await expect(card.getByTitle("별표")).toHaveText("1");
   await expect(card.getByTitle("가져간 수")).toHaveText("1");
   // Bob's fork is private: not in explore, not on his public profile, not by address.
-  await expect(
-    page.getByRole("link", { name: new RegExp(MODULE) }),
-  ).toHaveCount(1);
+  await expect(moduleCard(page)).toHaveCount(1);
   await page.goto("/@bob-e2e?tab=forked");
   await expect(page.getByText("가져온 모듈이 없습니다.")).toBeVisible();
   await page.goto(`/@bob-e2e/${MODULE}`);
@@ -159,17 +164,13 @@ test("find a module, star it, fork it, and see it on the profile", async ({
   await bob.page.getByRole("menuitem", { name: "내 프로필" }).click();
   await expect(bob.page).toHaveURL(/\/@bob-e2e$/);
   await bob.page.getByRole("link", { name: /^가져온 모듈/ }).click();
-  const forked = bob.page.getByRole("link", { name: new RegExp(MODULE) });
+  const forked = moduleCard(bob.page);
   await expect(forked).toContainText(`원본: @alice-e2e/${MODULE}`);
   await shot(bob.page, "36-profile");
   await bob.page.getByRole("link", { name: /^별표/ }).click();
-  await expect(
-    bob.page.getByRole("link", { name: new RegExp(MODULE) }),
-  ).toContainText("@alice-e2e");
+  await expect(moduleCard(bob.page)).toContainText("@alice-e2e");
   await page.goto("/@ALICE-E2E");
-  await expect(
-    page.getByRole("link", { name: new RegExp(MODULE) }),
-  ).toBeVisible();
+  await expect(moduleCard(page)).toBeVisible();
 
   // The fork keeps working when the origin is hidden.
   const hidden = await alice.context.request.patch(

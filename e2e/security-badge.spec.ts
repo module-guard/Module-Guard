@@ -32,6 +32,26 @@ const card: Card = {
   },
 };
 
+// /@bob checks user existence on the Next.js server, outside page.route().
+// Create the user through the isolated stack's fake OAuth before mocking scan data.
+// This also keeps the spec independent of other specs and their execution order.
+test.beforeEach(async ({ page, context }) => {
+  const api = process.env.PLAYWRIGHT_API_URL || "http://localhost:8001";
+  await context.addCookies([
+    { name: "mg_dev_login", value: card.owner, url: api },
+  ]);
+  await page.goto("/home");
+  await page
+    .getByRole("banner")
+    .getByRole("link", { name: "GitHub로 로그인" })
+    .click();
+  await expect(
+    page.getByRole("button", { name: `계정 메뉴: ${card.owner}` }),
+  ).toBeVisible();
+  const profile = await context.request.get(`${api}/api/users/${card.owner}`);
+  expect(profile.status()).toBe(200);
+});
+
 for (const scenario of [
   { status: "COMPLETED", partial: false, critical: 0, label: "주요 위험 없음" },
   { status: "COMPLETED", partial: true, critical: 0, label: "부분 분석" },
@@ -134,7 +154,10 @@ for (const scenario of [
       });
     });
     for (const path of ["/home", "/explore", "/@bob", "/@bob/net"]) {
-      await page.goto(path);
+      const response = await page.goto(path);
+      expect(response?.status(), `${path} must render the requested page`).toBe(
+        200,
+      );
       if (scan) {
         const link = page.getByRole("link", {
           name: `${scenario.label} · 검사 상세 보기`,
