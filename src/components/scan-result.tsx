@@ -5,6 +5,7 @@ import { Check, ChevronDown, Copy } from "lucide-react";
 import { explainScanError } from "@/api/errors";
 import { api, unwrap } from "@/api/client";
 import { useApi } from "@/api/hooks";
+import { DynamicDemo } from "./dynamic-demo";
 import { RiskPaths } from "./risk-paths";
 import { ReuseEvidence } from "./reuse-evidence";
 import { VerificationTimeline } from "./trust-explorer";
@@ -56,6 +57,8 @@ function CopyId({ id }: { id: string }) {
 }
 export function ScanResult({ id }: { id: string }) {
   const [tab, setTab] = useState(0);
+  const [riskOpen, setRiskOpen] = useState(false);
+  const [dynamicOpen, setDynamicOpen] = useState(false);
   const [coverageOpen, setCoverageOpen] = useState(false);
   const coverageSummary = useRef<HTMLElement>(null);
   const coverageFocusRequested = useRef(false);
@@ -191,9 +194,19 @@ export function ScanResult({ id }: { id: string }) {
               version={s.repository.version ?? ""}
             />
           )}
-          <details className="my-6 rounded border p-4">
+          <details
+            className="my-6 rounded border p-4"
+            onToggle={(e) => setRiskOpen(e.currentTarget.open)}
+          >
             <summary>정적 위험 경로·코드 근거 열기</summary>
-            <RiskPaths id={s.id} />
+            {riskOpen && <RiskPaths id={s.id} />}
+          </details>
+          <details
+            className="my-6 rounded border p-4"
+            onToggle={(e) => setDynamicOpen(e.currentTarget.open)}
+          >
+            <summary>동적 분석 비실행 데모 열기</summary>
+            {dynamicOpen && <DynamicDemo />}
           </details>
           <Summary scan={s} />
         </>
