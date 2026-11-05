@@ -384,6 +384,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/repositories/{owner}/{name}/reputation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** History */
+        get: operations["history_api_repositories__owner___name__reputation_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/repositories/{owner}/{name}/reputation/collect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Refresh */
+        post: operations["refresh_api_repositories__owner___name__reputation_collect_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/repositories/{owner}/{name}/star": {
         parameters: {
             query?: never;
@@ -2200,6 +2234,77 @@ export interface components {
             name?: string | null;
             visibility?: components["schemas"]["Visibility"] | null;
         };
+        /** ReputationEvaluation */
+        ReputationEvaluation: {
+            /**
+             * Collected At
+             * Format: date-time
+             */
+            collected_at: string;
+            /** Coverage */
+            coverage?: {
+                [key: string]: number;
+            };
+            /** Metrics */
+            metrics?: components["schemas"]["ReputationMetric"][];
+            /**
+             * Notice
+             * @default 근거 충족률은 보안 점수가 아닙니다. 독립 평가 전 총점을 제공하지 않습니다.
+             */
+            notice: string;
+            /**
+             * Policy Version
+             * @default evidence-v1
+             */
+            policy_version: string;
+            /** Raw */
+            raw?: {
+                [key: string]: unknown;
+            };
+            /** Total Score */
+            total_score?: null;
+            /**
+             * Validation
+             * @default not_independently_validated
+             * @constant
+             */
+            validation: "not_independently_validated";
+            /**
+             * Version Id
+             * Format: uuid
+             */
+            version_id: string;
+        };
+        /** ReputationHistory */
+        ReputationHistory: {
+            /** Entries */
+            entries?: components["schemas"]["ReputationEvaluation"][];
+            /** Next Offset */
+            next_offset?: number | null;
+        };
+        /** ReputationMetric */
+        ReputationMetric: {
+            /**
+             * Axis
+             * @enum {string}
+             */
+            axis: "security" | "maintenance" | "provenance" | "documentation" | "tests" | "popularity";
+            /** Formula */
+            formula: string;
+            /** Id */
+            id: string;
+            /** Reason */
+            reason?: string | null;
+            /** Source Url */
+            source_url?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "confirmed" | "insufficient" | "unverified" | "failed" | "not_applicable" | "stale";
+            /** Value */
+            value?: string | number | boolean | null;
+        };
         /** ReuseEvidence */
         ReuseEvidence: {
             /**
@@ -3492,6 +3597,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LineageGraph"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    history_api_repositories__owner___name__reputation_get: {
+        parameters: {
+            query?: {
+                version?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                owner: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReputationHistory"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    refresh_api_repositories__owner___name__reputation_collect_post: {
+        parameters: {
+            query?: {
+                version?: string | null;
+            };
+            header?: never;
+            path: {
+                owner: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReputationEvaluation"];
                 };
             };
             /** @description Validation Error */

@@ -6,6 +6,7 @@ from app.models.module import Module
 from app.models.module_version import ModuleVersion
 from app.models.parsed_entity import ParsedEntity
 from app.models.repository import Repository
+from app.models.reputation import ReputationSnapshot
 from app.models.reuse import ReuseRecord
 from app.models.scan import Scan
 from app.models.session import UserSession
@@ -18,6 +19,7 @@ __all__ = [
     "Module",
     "Scan",
     "ReuseRecord",
+    "ReputationSnapshot",
     "ParsedEntity",
     "GraphEdge",
     "LineageRecord",

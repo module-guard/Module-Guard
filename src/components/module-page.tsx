@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { ReputationEvidence } from "./reputation-evidence";
 import { TrustExplorer } from "./trust-explorer";
 import { useSearchParams } from "next/navigation";
 import { Lock, Upload } from "lucide-react";
@@ -38,6 +39,7 @@ const tabs = [
   ["security", "보안"],
   ["versions", "버전"],
   ["trust", "신뢰·비교"],
+  ["reputation", "평판 근거"],
   ["settings", "설정"],
 ] as const;
 const scannerNames: Record<string, string> = {
@@ -465,6 +467,14 @@ export function ModulePage({ owner, name }: { owner: string; name: string }) {
             등록이 끝난 버전만 사용할 수 있습니다.
           </p>
         )
+      ) : active === "reputation" ? (
+        <ReputationEvidence
+          key={`${owner}/${name}/${v.version}`}
+          owner={owner}
+          name={name}
+          version={v.version ?? ""}
+          canCollect={d.is_owner}
+        />
       ) : active === "trust" ? (
         <TrustExplorer
           key={`${owner}/${name}/${v.version}`}

@@ -3396,6 +3396,172 @@
         "title": "RepositoryEdit",
         "type": "object"
       },
+      "ReputationEvaluation": {
+        "properties": {
+          "collected_at": {
+            "format": "date-time",
+            "title": "Collected At",
+            "type": "string"
+          },
+          "coverage": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Coverage",
+            "type": "object"
+          },
+          "metrics": {
+            "items": {
+              "$ref": "#/components/schemas/ReputationMetric"
+            },
+            "title": "Metrics",
+            "type": "array"
+          },
+          "notice": {
+            "default": "\uadfc\uac70 \ucda9\uc871\ub960\uc740 \ubcf4\uc548 \uc810\uc218\uac00 \uc544\ub2d9\ub2c8\ub2e4. \ub3c5\ub9bd \ud3c9\uac00 \uc804 \ucd1d\uc810\uc744 \uc81c\uacf5\ud558\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4.",
+            "title": "Notice",
+            "type": "string"
+          },
+          "policy_version": {
+            "default": "evidence-v1",
+            "title": "Policy Version",
+            "type": "string"
+          },
+          "raw": {
+            "additionalProperties": true,
+            "title": "Raw",
+            "type": "object"
+          },
+          "total_score": {
+            "title": "Total Score",
+            "type": "null"
+          },
+          "validation": {
+            "const": "not_independently_validated",
+            "default": "not_independently_validated",
+            "title": "Validation",
+            "type": "string"
+          },
+          "version_id": {
+            "format": "uuid",
+            "title": "Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version_id",
+          "collected_at"
+        ],
+        "title": "ReputationEvaluation",
+        "type": "object"
+      },
+      "ReputationHistory": {
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/ReputationEvaluation"
+            },
+            "title": "Entries",
+            "type": "array"
+          },
+          "next_offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Offset"
+          }
+        },
+        "title": "ReputationHistory",
+        "type": "object"
+      },
+      "ReputationMetric": {
+        "properties": {
+          "axis": {
+            "enum": [
+              "security",
+              "maintenance",
+              "provenance",
+              "documentation",
+              "tests",
+              "popularity"
+            ],
+            "title": "Axis",
+            "type": "string"
+          },
+          "formula": {
+            "title": "Formula",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
+          "status": {
+            "enum": [
+              "confirmed",
+              "insufficient",
+              "unverified",
+              "failed",
+              "not_applicable",
+              "stale"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "id",
+          "axis",
+          "status",
+          "formula"
+        ],
+        "title": "ReputationMetric",
+        "type": "object"
+      },
       "ReuseEvidence": {
         "properties": {
           "created_at": {
@@ -6307,6 +6473,163 @@
         "summary": "Lineage Graph",
         "tags": [
           "lineage"
+        ]
+      }
+    },
+    "/api/repositories/{owner}/{name}/reputation": {
+      "get": {
+        "operationId": "history_api_repositories__owner___name__reputation_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "owner",
+            "required": true,
+            "schema": {
+              "title": "Owner",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "version",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReputationHistory"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "History",
+        "tags": [
+          "reputation"
+        ]
+      }
+    },
+    "/api/repositories/{owner}/{name}/reputation/collect": {
+      "post": {
+        "operationId": "refresh_api_repositories__owner___name__reputation_collect_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "owner",
+            "required": true,
+            "schema": {
+              "title": "Owner",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "version",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReputationEvaluation"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Refresh",
+        "tags": [
+          "reputation"
         ]
       }
     },
