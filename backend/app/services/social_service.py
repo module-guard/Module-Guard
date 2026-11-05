@@ -21,6 +21,7 @@ from app.schemas.social import (
     StarState,
     UserProfile,
 )
+from app.services.lineage_service import record_fork
 from app.uploads.limits import HourlyLimiter
 
 Sort = Literal["popular", "recent", "name"]
@@ -313,33 +314,35 @@ class SocialService:
                 session.flush()
             except IntegrityError:
                 raise ConflictError("같은 이름의 모듈이 이미 있습니다.") from None
-            session.add(
-                ModuleVersion(
-                    repository_id=fork.id,
-                    version="v1",
-                    # Same digest as the origin: storage/retention.py keeps the file alive
-                    # for as long as any version, the origin's or a fork's, references it.
-                    snapshot_sha256=source.snapshot_sha256,
-                    manifest=source.manifest,
-                    manifest_sha256=source.manifest_sha256,
-                    integrity_status=source.integrity_status,
-                    verified_at=source.verified_at,
-                    collected_at=source.collected_at,
-                    source_url=source.source_url,
-                    module_path=source.module_path,
-                    mismatched_files=source.mismatched_files,
-                    size_bytes=source.size_bytes,
-                    file_count=source.file_count,
-                    commit_hash=source.commit_hash,
-                    readme=source.readme,
-                    variables=source.variables,
-                    outputs=source.outputs,
-                    license=source.license,
-                    critical_rules=source.critical_rules,
-                    high_rules=source.high_rules,
-                    scan_id=scan_id,
-                )
+            copied = ModuleVersion(
+                repository_id=fork.id,
+                version="v1",
+                # Same digest as the origin: storage/retention.py keeps the file alive
+                # for as long as any version, the origin's or a fork's, references it.
+                snapshot_sha256=source.snapshot_sha256,
+                manifest=source.manifest,
+                manifest_sha256=source.manifest_sha256,
+                integrity_status=source.integrity_status,
+                verified_at=source.verified_at,
+                collected_at=source.collected_at,
+                source_url=source.source_url,
+                module_path=source.module_path,
+                mismatched_files=source.mismatched_files,
+                size_bytes=source.size_bytes,
+                file_count=source.file_count,
+                commit_hash=source.commit_hash,
+                readme=source.readme,
+                variables=source.variables,
+                outputs=source.outputs,
+                license=source.license,
+                critical_rules=source.critical_rules,
+                high_rules=source.high_rules,
+                scan_id=scan_id,
             )
+            session.add(copied)
+            session.flush()
+            # Immutable lineage row (#26): a verbatim copy of the origin's version.
+            record_fork(session, copied, source, viewer.id)
             self._bump(session, origin.id, Repository.fork_count, 1)
             session.commit()
             return ForkCreated(

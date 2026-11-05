@@ -333,6 +333,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/repositories/{owner}/{name}/lineage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lineage */
+        get: operations["lineage_api_repositories__owner___name__lineage_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/repositories/{owner}/{name}/lineage/diff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lineage Diff */
+        get: operations["lineage_diff_api_repositories__owner___name__lineage_diff_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/repositories/{owner}/{name}/lineage/graph": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lineage Graph */
+        get: operations["lineage_graph_api_repositories__owner___name__lineage_graph_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/repositories/{owner}/{name}/star": {
         parameters: {
             query?: never;
@@ -895,6 +946,39 @@ export interface components {
             version: string | null;
         };
         /**
+         * ComparisonSummary
+         * @description This version against its parent, from the #9 manifests recorded for both.
+         */
+        ComparisonSummary: {
+            /**
+             * Added
+             * @default 0
+             */
+            added: number;
+            /**
+             * Modified
+             * @default 0
+             */
+            modified: number;
+            /** Reason */
+            reason?: ("NO_VISIBLE_PARENT" | "MISSING_MANIFEST" | "FORMAT_MISMATCH") | null;
+            /**
+             * Removed
+             * @default 0
+             */
+            removed: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "IDENTICAL" | "CHANGED" | "NOT_COMPARABLE";
+            /**
+             * Unchanged
+             * @default 0
+             */
+            unchanged: number;
+        };
+        /**
          * Confidence
          * @enum {string}
          */
@@ -1050,6 +1134,27 @@ export interface components {
             path: string;
             /** Reason */
             reason: string;
+        };
+        /** FileChange */
+        FileChange: {
+            after?: components["schemas"]["FileSide"] | null;
+            before?: components["schemas"]["FileSide"] | null;
+            /**
+             * Change
+             * @enum {string}
+             */
+            change: "ADDED" | "REMOVED" | "MODIFIED";
+            /** Path */
+            path: string;
+        };
+        /** FileSide */
+        FileSide: {
+            /** Mode */
+            mode: number;
+            /** Sha256 */
+            sha256: string;
+            /** Size */
+            size: number;
         };
         /** FindingResponse */
         FindingResponse: {
@@ -1523,6 +1628,140 @@ export interface components {
             status: components["schemas"]["ScanStatus"];
             summary: components["schemas"]["FindingSummary"];
         };
+        /** LineageDiff */
+        LineageDiff: {
+            comparison: components["schemas"]["ComparisonSummary"];
+            /** Files */
+            files?: components["schemas"]["FileChange"][];
+            /** Limit */
+            limit: number;
+            /** Next Offset */
+            next_offset?: number | null;
+            /** Offset */
+            offset: number;
+            parent: components["schemas"]["LineageRef"] | null;
+            ref: components["schemas"]["LineageRef"];
+            /**
+             * Total
+             * @default 0
+             */
+            total: number;
+        };
+        /** LineageEdge */
+        LineageEdge: {
+            /**
+             * Child
+             * Format: uuid
+             */
+            child: string;
+            /**
+             * Comparison
+             * @enum {string}
+             */
+            comparison: "IDENTICAL" | "CHANGED" | "NOT_COMPARABLE";
+            /**
+             * Parent
+             * Format: uuid
+             */
+            parent: string;
+            /**
+             * Relation
+             * @enum {string}
+             */
+            relation: "ORIGINAL" | "VERSION" | "FORK";
+        };
+        /**
+         * LineageGraph
+         * @description One page of a walk from `root` in one direction, in walk order (nearest first).
+         *
+         *     `total` counts only visible nodes on the walk; hidden nodes end the walk and are never
+         *     counted. `edges` connect nodes on this page, plus the edge to `root` from the first.
+         */
+        LineageGraph: {
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "ancestors" | "descendants";
+            /** Edges */
+            edges: components["schemas"]["LineageEdge"][];
+            /** Limit */
+            limit: number;
+            /** Next Offset */
+            next_offset: number | null;
+            /** Nodes */
+            nodes: components["schemas"]["LineageNode"][];
+            /** Offset */
+            offset: number;
+            root: components["schemas"]["LineageRef"];
+            /** Total */
+            total: number;
+            /**
+             * Truncated
+             * @default false
+             */
+            truncated: boolean;
+        };
+        /** LineageNode */
+        LineageNode: {
+            /**
+             * Author Asserted
+             * @default false
+             */
+            author_asserted: boolean;
+            /**
+             * Backfilled
+             * @default false
+             */
+            backfilled: boolean;
+            comparison: components["schemas"]["ComparisonSummary"];
+            /** Declaration Version */
+            declaration_version: string | null;
+            /** File Count */
+            file_count: number | null;
+            /** Manifest Sha256 */
+            manifest_sha256: string | null;
+            parent: components["schemas"]["LineageRef"] | null;
+            /**
+             * Published At
+             * Format: date-time
+             */
+            published_at: string;
+            publisher: components["schemas"]["Publisher"];
+            ref: components["schemas"]["LineageRef"];
+            /**
+             * Relation
+             * @enum {string}
+             */
+            relation: "ORIGINAL" | "VERSION" | "FORK";
+            source: components["schemas"]["LineageSource"];
+        };
+        /**
+         * LineageRef
+         * @description A visible node, enough to link to it.
+         */
+        LineageRef: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Owner */
+            owner: string;
+            /** Version */
+            version: string | null;
+        };
+        /** LineageSource */
+        LineageSource: {
+            /** Commit Hash */
+            commit_hash: string | null;
+            /** Module Path */
+            module_path: string;
+            /** Url */
+            url: string | null;
+        };
         /** MeResponse */
         MeResponse: {
             /** Login Available */
@@ -1644,6 +1883,24 @@ export interface components {
             version_pinned: boolean;
             /** Version Type */
             version_type: string;
+        };
+        /**
+         * Publisher
+         * @description The account that published the version on this service.
+         *
+         *     It is not asserted to be the author of the code, and nothing here establishes legal
+         *     responsibility for it: see the declaration this account published under.
+         */
+        Publisher: {
+            /** Id */
+            id: string | null;
+            /** Login */
+            login: string | null;
+            /**
+             * System
+             * @default false
+             */
+            system: boolean;
         };
         /** RegistryImportRequest */
         RegistryImportRequest: {
@@ -2772,6 +3029,113 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IntegrityErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    lineage_api_repositories__owner___name__lineage_get: {
+        parameters: {
+            query?: {
+                version?: string | null;
+            };
+            header?: never;
+            path: {
+                owner: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LineageNode"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    lineage_diff_api_repositories__owner___name__lineage_diff_get: {
+        parameters: {
+            query?: {
+                version?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                owner: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LineageDiff"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    lineage_graph_api_repositories__owner___name__lineage_graph_get: {
+        parameters: {
+            query?: {
+                version?: string | null;
+                direction?: "ancestors" | "descendants";
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                owner: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LineageGraph"];
                 };
             };
             /** @description Validation Error */
