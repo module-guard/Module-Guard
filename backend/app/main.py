@@ -23,6 +23,7 @@ from app.api.routes import (
     repositories,
     scans,
     social,
+    trust,
     uploads,
     usage,
 )
@@ -147,6 +148,7 @@ def create_app(
         graphs.router,
         flows.router,
         lineage.router,
+        trust.router,
     ):
         app.include_router(router, prefix="/api")
 

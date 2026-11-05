@@ -453,6 +453,61 @@
         "title": "BadgeInfo",
         "type": "object"
       },
+      "Change": {
+        "properties": {
+          "after": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidenceLocation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "before": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidenceLocation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "change": {
+            "enum": [
+              "added",
+              "removed",
+              "modified",
+              "unchanged",
+              "uncertain"
+            ],
+            "title": "Change",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "resource",
+              "edge",
+              "finding"
+            ],
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "kind",
+          "change"
+        ],
+        "title": "Change",
+        "type": "object"
+      },
       "ComparisonSummary": {
         "description": "This version against its parent, from the #9 manifests recorded for both.",
         "properties": {
@@ -799,6 +854,67 @@
         ],
         "title": "EntityType",
         "type": "string"
+      },
+      "EvidenceLocation": {
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "file": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File"
+          },
+          "line": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line"
+          },
+          "rule": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rule"
+          },
+          "severity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severity"
+          }
+        },
+        "title": "EvidenceLocation",
+        "type": "object"
       },
       "ExcludedFile": {
         "properties": {
@@ -3696,6 +3812,137 @@
         "title": "StarState",
         "type": "object"
       },
+      "TrustEvent": {
+        "properties": {
+          "actor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor"
+          },
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "digest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Digest"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "time_basis": {
+            "default": "server_record",
+            "title": "Time Basis",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "stage",
+          "at",
+          "status"
+        ],
+        "title": "TrustEvent",
+        "type": "object"
+      },
+      "TrustTimeline": {
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/TrustEvent"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "observed_at": {
+            "format": "date-time",
+            "title": "Observed At",
+            "type": "string"
+          },
+          "scan_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan Id"
+          },
+          "security_guarantee": {
+            "const": false,
+            "default": false,
+            "title": "Security Guarantee",
+            "type": "boolean"
+          },
+          "signature_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Signature Reasons",
+            "type": "array"
+          },
+          "signature_status": {
+            "default": "unknown",
+            "title": "Signature Status",
+            "type": "string"
+          },
+          "unrecorded": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unrecorded",
+            "type": "array"
+          },
+          "version_id": {
+            "format": "uuid",
+            "title": "Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version_id",
+          "observed_at"
+        ],
+        "title": "TrustTimeline",
+        "type": "object"
+      },
       "UploadReport": {
         "description": "What was checked and will be stored if this prepared source is registered.",
         "properties": {
@@ -4147,6 +4394,113 @@
           "status"
         ],
         "title": "Verification",
+        "type": "object"
+      },
+      "VersionComparison": {
+        "properties": {
+          "after_scan": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "After Scan"
+          },
+          "after_version": {
+            "format": "uuid",
+            "title": "After Version",
+            "type": "string"
+          },
+          "before_scan": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Before Scan"
+          },
+          "before_version": {
+            "format": "uuid",
+            "title": "Before Version",
+            "type": "string"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/Change"
+            },
+            "title": "Changes",
+            "type": "array"
+          },
+          "comparable": {
+            "default": false,
+            "title": "Comparable",
+            "type": "boolean"
+          },
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Counts",
+            "type": "object"
+          },
+          "interpretation": {
+            "default": "\uc815\uc801 \ubd84\uc11d \ube44\uad50\uc774\uba70 \uc774\ub984\u00b7\uc8fc\uc18c \uc774\ub3d9\uc758 \ub3d9\uc77c\uc131\uc740 \ud655\uc778\ud560 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4.",
+            "title": "Interpretation",
+            "type": "string"
+          },
+          "manifest_equal": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manifest Equal"
+          },
+          "next_offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Offset"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "tool_conditions_equal": {
+            "default": false,
+            "title": "Tool Conditions Equal",
+            "type": "boolean"
+          },
+          "total": {
+            "default": 0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "before_version",
+          "after_version"
+        ],
+        "title": "VersionComparison",
         "type": "object"
       },
       "VersionCreate": {
@@ -5916,6 +6270,166 @@
         "summary": "Star",
         "tags": [
           "explore"
+        ]
+      }
+    },
+    "/api/repositories/{owner}/{name}/trust/compare": {
+      "get": {
+        "operationId": "compare_api_repositories__owner___name__trust_compare_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "owner",
+            "required": true,
+            "schema": {
+              "title": "Owner",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before",
+            "required": true,
+            "schema": {
+              "title": "Before",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "required": true,
+            "schema": {
+              "title": "After",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionComparison"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Compare",
+        "tags": [
+          "trust"
+        ]
+      }
+    },
+    "/api/repositories/{owner}/{name}/trust/timeline": {
+      "get": {
+        "operationId": "events_api_repositories__owner___name__trust_timeline_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "owner",
+            "required": true,
+            "schema": {
+              "title": "Owner",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "version",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrustTimeline"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Events",
+        "tags": [
+          "trust"
         ]
       }
     },
