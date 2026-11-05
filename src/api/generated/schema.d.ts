@@ -72,6 +72,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/dynamic-demo/{scenario}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Demo */
+        get: operations["demo_api_dynamic_demo__scenario__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -384,6 +401,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/repositories/{owner}/{name}/reputation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** History */
+        get: operations["history_api_repositories__owner___name__reputation_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/repositories/{owner}/{name}/reputation/collect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Refresh */
+        post: operations["refresh_api_repositories__owner___name__reputation_collect_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/repositories/{owner}/{name}/star": {
         parameters: {
             query?: never;
@@ -397,6 +448,57 @@ export interface paths {
         post?: never;
         /** Unstar */
         delete: operations["unstar_api_repositories__owner___name__star_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/repositories/{owner}/{name}/trust/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Compare */
+        get: operations["compare_api_repositories__owner___name__trust_compare_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/repositories/{owner}/{name}/trust/reuse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Reuse History */
+        get: operations["reuse_history_api_repositories__owner___name__trust_reuse_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/repositories/{owner}/{name}/trust/timeline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Events */
+        get: operations["events_api_repositories__owner___name__trust_timeline_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -695,6 +797,23 @@ export interface paths {
          * @description Retry the caller's failed scan from a freshly prepared source. The owner only.
          */
         post: operations["retry_scan_api_scans__scan_id__retry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/scans/{scan_id}/risk-paths": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Risk Paths */
+        get: operations["risk_paths_api_scans__scan_id__risk_paths_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1027,6 +1146,23 @@ export interface components {
             /** Version */
             version: string | null;
         };
+        /** Change */
+        Change: {
+            after?: components["schemas"]["EvidenceLocation"] | null;
+            before?: components["schemas"]["EvidenceLocation"] | null;
+            /**
+             * Change
+             * @enum {string}
+             */
+            change: "added" | "removed" | "modified" | "unchanged" | "uncertain";
+            /** Key */
+            key: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "resource" | "edge" | "finding";
+        };
         /**
          * ComparisonSummary
          * @description This version against its parent, from the #9 manifests recorded for both.
@@ -1150,6 +1286,121 @@ export interface components {
             /** Providers */
             providers: components["schemas"]["ProviderDependency"][];
         };
+        /** DynamicEnvironment */
+        DynamicEnvironment: {
+            /**
+             * Credentials
+             * @default none
+             * @constant
+             */
+            credentials: "none";
+            /** Image Digest */
+            image_digest: string;
+            /** Lockfile Digest */
+            lockfile_digest?: string | null;
+            /** Mock Version */
+            mock_version?: string | null;
+            /**
+             * Network
+             * @default denied
+             * @constant
+             */
+            network: "denied";
+            /** Policy Version */
+            policy_version: string;
+            /** Provider Versions */
+            provider_versions?: {
+                [key: string]: string;
+            };
+            /** Terraform Version */
+            terraform_version: string;
+            /** Test Suite Digest */
+            test_suite_digest: string;
+        };
+        /** DynamicEvidence */
+        DynamicEvidence: {
+            /**
+             * Code
+             * @enum {string}
+             */
+            code: "FIXTURE_ONLY" | "SIMULATED_RESOURCE" | "SIMULATED_FAILURE" | "TIME_BUDGET" | "CANCELLED" | "MISSING_OBSERVATION";
+            /** Id */
+            id: string;
+            /**
+             * Redacted
+             * @default true
+             * @constant
+             */
+            redacted: true;
+        };
+        /** DynamicRun */
+        DynamicRun: {
+            /** Edges */
+            edges?: components["schemas"]["ObservedEdge"][];
+            environment: components["schemas"]["DynamicEnvironment"];
+            /** Evidence */
+            evidence?: components["schemas"]["DynamicEvidence"][];
+            /** Execution Occurred */
+            execution_occurred: boolean;
+            /** Input Digest */
+            input_digest: string;
+            /** Manifest Digest */
+            manifest_digest: string;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "fixture" | "mock" | "runtime";
+            /** Nodes */
+            nodes?: components["schemas"]["ObservedNode"][];
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
+            /**
+             * Schema Version
+             * @default 1
+             * @constant
+             */
+            schema_version: 1;
+            /**
+             * Secret Policy
+             * @default structured-allowlist-v1
+             * @constant
+             */
+            secret_policy: "structured-allowlist-v1";
+            /** Stages */
+            stages: components["schemas"]["DynamicStage"][];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "success" | "failed" | "aborted" | "timeout" | "not_run" | "unobservable";
+        };
+        /** DynamicStage */
+        DynamicStage: {
+            /** Error Type */
+            error_type?: ("fixture_failure" | "timeout" | "cancelled" | "missing_observation") | null;
+            /** Evidence Ids */
+            evidence_ids?: string[];
+            /** Finished At */
+            finished_at?: string | null;
+            /** Id */
+            id: string;
+            /**
+             * Name
+             * @enum {string}
+             */
+            name: "prepare" | "isolation" | "test" | "observe" | "cleanup";
+            /** Started At */
+            started_at?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "success" | "failed" | "aborted" | "timeout" | "not_run" | "unobservable";
+        };
         /** EntityFlowResponse */
         EntityFlowResponse: {
             /** Downstream */
@@ -1210,6 +1461,19 @@ export interface components {
          * @enum {string}
          */
         EntityType: "ROOT_MODULE" | "MODULE" | "RESOURCE" | "DATA" | "VARIABLE" | "OUTPUT" | "LOCAL" | "PROVIDER" | "REQUIRED_PROVIDER";
+        /** EvidenceLocation */
+        EvidenceLocation: {
+            /** Address */
+            address?: string | null;
+            /** File */
+            file?: string | null;
+            /** Line */
+            line?: number | null;
+            /** Rule */
+            rule?: string | null;
+            /** Severity */
+            severity?: string | null;
+        };
         /** ExcludedFile */
         ExcludedFile: {
             /** Path */
@@ -1934,6 +2198,31 @@ export interface components {
             version: string | null;
             visibility: components["schemas"]["Visibility"];
         };
+        /** ObservedEdge */
+        ObservedEdge: {
+            /** Evidence Ids */
+            evidence_ids: string[];
+            /** Id */
+            id: string;
+            /**
+             * Relation
+             * @enum {string}
+             */
+            relation: "simulated_dependency" | "observed_dependency";
+            /** Source */
+            source: string;
+            /** Target */
+            target: string;
+        };
+        /** ObservedNode */
+        ObservedNode: {
+            /** Evidence Ids */
+            evidence_ids: string[];
+            /** Id */
+            id: string;
+            /** Resource Type */
+            resource_type: string;
+        };
         /**
          * OriginType
          * @enum {string}
@@ -2119,6 +2408,216 @@ export interface components {
             name?: string | null;
             visibility?: components["schemas"]["Visibility"] | null;
         };
+        /** ReputationEvaluation */
+        ReputationEvaluation: {
+            /**
+             * Collected At
+             * Format: date-time
+             */
+            collected_at: string;
+            /** Coverage */
+            coverage?: {
+                [key: string]: number;
+            };
+            /** Metrics */
+            metrics?: components["schemas"]["ReputationMetric"][];
+            /**
+             * Notice
+             * @default 근거 충족률은 보안 점수가 아닙니다. 독립 평가 전 총점을 제공하지 않습니다.
+             */
+            notice: string;
+            /**
+             * Policy Version
+             * @default evidence-v1
+             */
+            policy_version: string;
+            /** Raw */
+            raw?: {
+                [key: string]: unknown;
+            };
+            /** Total Score */
+            total_score?: null;
+            /**
+             * Validation
+             * @default not_independently_validated
+             * @constant
+             */
+            validation: "not_independently_validated";
+            /**
+             * Version Id
+             * Format: uuid
+             */
+            version_id: string;
+        };
+        /** ReputationHistory */
+        ReputationHistory: {
+            /** Entries */
+            entries?: components["schemas"]["ReputationEvaluation"][];
+            /** Next Offset */
+            next_offset?: number | null;
+        };
+        /** ReputationMetric */
+        ReputationMetric: {
+            /**
+             * Axis
+             * @enum {string}
+             */
+            axis: "security" | "maintenance" | "provenance" | "documentation" | "tests" | "popularity";
+            /** Formula */
+            formula: string;
+            /** Id */
+            id: string;
+            /** Reason */
+            reason?: string | null;
+            /** Source Url */
+            source_url?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "confirmed" | "insufficient" | "unverified" | "failed" | "not_applicable" | "stale";
+            /** Value */
+            value?: string | number | boolean | null;
+        };
+        /** ReuseEvidence */
+        ReuseEvidence: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Current Source Status
+             * @default unknown
+             */
+            current_source_status: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Key */
+            key?: string | null;
+            /**
+             * Lookup Duration Ms
+             * @default 0
+             */
+            lookup_duration_ms: number;
+            /** Measured Saving Ms */
+            measured_saving_ms?: number | null;
+            /** Policy Version */
+            policy_version: string;
+            /** Reason */
+            reason: string;
+            /**
+             * Reused
+             * @default false
+             */
+            reused: boolean;
+            /** Source Duration Ms */
+            source_duration_ms?: number | null;
+            /** Source Finished At */
+            source_finished_at?: string | null;
+            /** Source Scan Id */
+            source_scan_id?: string | null;
+            /**
+             * Target Scan Id
+             * Format: uuid
+             */
+            target_scan_id: string;
+        };
+        /** ReuseHistory */
+        ReuseHistory: {
+            /**
+             * Metric Note
+             * @default 측정 기록 없음: 원검사 소요 시간은 재실행했을 때의 절감 시간 측정값이 아닙니다.
+             */
+            metric_note: string;
+            /** Next Offset */
+            next_offset?: number | null;
+            /** Records */
+            records?: components["schemas"]["ReuseEvidence"][];
+        };
+        /** RiskEdge */
+        RiskEdge: {
+            /**
+             * Basis
+             * @default static_adjacent
+             */
+            basis: string;
+            /** Id */
+            id: string;
+            /**
+             * Resolved
+             * @default false
+             */
+            resolved: boolean;
+            /** Source */
+            source: string;
+            /** Target */
+            target?: string | null;
+            /** Type */
+            type: string;
+        };
+        /** RiskNode */
+        RiskNode: {
+            /** Address */
+            address: string;
+            /** File Path */
+            file_path?: string | null;
+            /** Id */
+            id: string;
+            /** Line Start */
+            line_start?: number | null;
+            /** Type */
+            type: string;
+        };
+        /** RiskPath */
+        RiskPath: {
+            /** Edges */
+            edges?: components["schemas"]["RiskEdge"][];
+            /**
+             * Finding Id
+             * Format: uuid
+             */
+            finding_id: string;
+            /**
+             * Interpretation
+             * @default 정적 추론 관계이며 실제 통신·실행 관측이 아닙니다. 인접 연결만으로 위험 전파를 확정하지 않습니다.
+             */
+            interpretation: string;
+            location: components["schemas"]["EvidenceLocation"];
+            /** Nodes */
+            nodes?: components["schemas"]["RiskNode"][];
+            /** Recommendation */
+            recommendation?: string | null;
+            /** Rule */
+            rule: string;
+            /** Severity */
+            severity: string;
+            /**
+             * Truncated
+             * @default false
+             */
+            truncated: boolean;
+        };
+        /** RiskPaths */
+        RiskPaths: {
+            /**
+             * Incomplete
+             * @default true
+             */
+            incomplete: boolean;
+            /** Next Offset */
+            next_offset?: number | null;
+            /** Paths */
+            paths?: components["schemas"]["RiskPath"][];
+            /**
+             * Scan Id
+             * Format: uuid
+             */
+            scan_id: string;
+        };
         /** ScanAccepted */
         ScanAccepted: {
             /**
@@ -2261,6 +2760,63 @@ export interface components {
             /** Starred */
             starred: boolean;
         };
+        /** TrustEvent */
+        TrustEvent: {
+            /** Actor */
+            actor?: string | null;
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /** Digest */
+            digest?: string | null;
+            /** Evidence */
+            evidence?: string | null;
+            /** Id */
+            id: string;
+            /** Stage */
+            stage: string;
+            /** Status */
+            status: string;
+            /**
+             * Time Basis
+             * @default server_record
+             */
+            time_basis: string;
+        };
+        /** TrustTimeline */
+        TrustTimeline: {
+            /** Events */
+            events?: components["schemas"]["TrustEvent"][];
+            /**
+             * Observed At
+             * Format: date-time
+             */
+            observed_at: string;
+            /** Scan Id */
+            scan_id?: string | null;
+            /**
+             * Security Guarantee
+             * @default false
+             * @constant
+             */
+            security_guarantee: false;
+            /** Signature Reasons */
+            signature_reasons?: string[];
+            /**
+             * Signature Status
+             * @default unknown
+             */
+            signature_status: string;
+            /** Unrecorded */
+            unrecorded?: string[];
+            /**
+             * Version Id
+             * Format: uuid
+             */
+            version_id: string;
+        };
         /**
          * UploadReport
          * @description What was checked and will be stored if this prepared source is registered.
@@ -2398,6 +2954,55 @@ export interface components {
             subject?: string | null;
             /** Trusted At */
             trusted_at?: string | null;
+        };
+        /** VersionComparison */
+        VersionComparison: {
+            /** After Scan */
+            after_scan?: string | null;
+            /**
+             * After Version
+             * Format: uuid
+             */
+            after_version: string;
+            /** Before Scan */
+            before_scan?: string | null;
+            /**
+             * Before Version
+             * Format: uuid
+             */
+            before_version: string;
+            /** Changes */
+            changes?: components["schemas"]["Change"][];
+            /**
+             * Comparable
+             * @default false
+             */
+            comparable: boolean;
+            /** Counts */
+            counts?: {
+                [key: string]: number;
+            };
+            /**
+             * Interpretation
+             * @default 정적 분석 비교이며 이름·주소 이동의 동일성은 확인할 수 없습니다.
+             */
+            interpretation: string;
+            /** Manifest Equal */
+            manifest_equal?: boolean | null;
+            /** Next Offset */
+            next_offset?: number | null;
+            /** Reasons */
+            reasons?: string[];
+            /**
+             * Tool Conditions Equal
+             * @default false
+             */
+            tool_conditions_equal: boolean;
+            /**
+             * Total
+             * @default 0
+             */
+            total: number;
         };
         /** VersionCreate */
         VersionCreate: {
@@ -2612,6 +3217,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ScanAccepted"];
+                };
+            };
+        };
+    };
+    demo_api_dynamic_demo__scenario__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scenario: "success" | "failed" | "aborted" | "timeout" | "not_run" | "unobservable";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DynamicRun"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -3259,6 +3895,76 @@ export interface operations {
             };
         };
     };
+    history_api_repositories__owner___name__reputation_get: {
+        parameters: {
+            query?: {
+                version?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                owner: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReputationHistory"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    refresh_api_repositories__owner___name__reputation_collect_post: {
+        parameters: {
+            query?: {
+                version?: string | null;
+            };
+            header?: never;
+            path: {
+                owner: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReputationEvaluation"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     star_api_repositories__owner___name__star_put: {
         parameters: {
             query?: never;
@@ -3310,6 +4016,113 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StarState"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    compare_api_repositories__owner___name__trust_compare_get: {
+        parameters: {
+            query: {
+                before: string;
+                after: string;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                owner: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VersionComparison"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reuse_history_api_repositories__owner___name__trust_reuse_get: {
+        parameters: {
+            query?: {
+                version?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                owner: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReuseHistory"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    events_api_repositories__owner___name__trust_timeline_get: {
+        parameters: {
+            query?: {
+                version?: string | null;
+            };
+            header?: never;
+            path: {
+                owner: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrustTimeline"];
                 };
             };
             /** @description Validation Error */
@@ -3927,6 +4740,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ScanAccepted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    risk_paths_api_scans__scan_id__risk_paths_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+                severity?: components["schemas"]["Severity"] | null;
+                rule?: string | null;
+                resource?: string | null;
+            };
+            header?: never;
+            path: {
+                scan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RiskPaths"];
                 };
             };
             /** @description Validation Error */

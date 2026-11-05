@@ -57,6 +57,7 @@ from app.scanners.severity_overrides import SEVERITY_OVERRIDES
 from app.schemas.analysis import AnalysisStage, AnalysisSummary, StageStatus
 from app.schemas.scan import ScanAccepted
 from app.services.analysis_service import StaticAnalysisResult, StaticAnalysisService
+from app.services.reuse_service import execution_context, try_reuse
 from app.storage.artifacts import wrapper
 from app.storage.integrity import IntegrityError, compare, digest, verify_tree
 from app.storage.snapshots import SnapshotStore
@@ -345,6 +346,11 @@ class ScanService:
                     provenance = capture_provenance(
                         self.settings, self.scanner, collected.local_path
                     )
+                    if try_reuse(
+                        session, scan, version, artifacts, provenance, self.snapshot_store, started
+                    ):
+                        return
+                    carry["execution_context"] = execution_context()
                     scan.status = ScanStatus.SCANNING
                     checkov_stage = AnalysisStage(status=StageStatus.RUNNING)
                     scan.analysis = stamp(

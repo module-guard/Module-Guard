@@ -15,14 +15,18 @@ from app.api.dependencies import SessionDep
 from app.api.routes import (
     auth,
     correlations,
+    dynamic,
     findings,
     flows,
     graphs,
     integrity,
     lineage,
     repositories,
+    reputation,
+    risk_paths,
     scans,
     social,
+    trust,
     uploads,
     usage,
 )
@@ -147,6 +151,10 @@ def create_app(
         graphs.router,
         flows.router,
         lineage.router,
+        trust.router,
+        reputation.router,
+        risk_paths.router,
+        dynamic.router,
     ):
         app.include_router(router, prefix="/api")
 

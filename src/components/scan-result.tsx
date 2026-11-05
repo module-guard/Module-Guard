@@ -5,6 +5,10 @@ import { Check, ChevronDown, Copy } from "lucide-react";
 import { explainScanError } from "@/api/errors";
 import { api, unwrap } from "@/api/client";
 import { useApi } from "@/api/hooks";
+import { DynamicDemo } from "./dynamic-demo";
+import { RiskPaths } from "./risk-paths";
+import { ReuseEvidence } from "./reuse-evidence";
+import { VerificationTimeline } from "./trust-explorer";
 import { ScanProvenance } from "./scan-provenance";
 import { IntegritySummary } from "./module-integrity";
 import { AttemptLinks, ScanRetry } from "./scan-retry";
@@ -53,6 +57,8 @@ function CopyId({ id }: { id: string }) {
 }
 export function ScanResult({ id }: { id: string }) {
   const [tab, setTab] = useState(0);
+  const [riskOpen, setRiskOpen] = useState(false);
+  const [dynamicOpen, setDynamicOpen] = useState(false);
   const [coverageOpen, setCoverageOpen] = useState(false);
   const coverageSummary = useRef<HTMLElement>(null);
   const coverageFocusRequested = useRef(false);
@@ -174,6 +180,34 @@ export function ScanResult({ id }: { id: string }) {
             summaryRef={coverageSummary}
           />
           <ScanProvenance key={s.id} scan={s} />
+          {s.repository && (
+            <VerificationTimeline
+              owner={s.repository.owner}
+              name={s.repository.name}
+              version={s.repository.version ?? ""}
+            />
+          )}
+          {s.repository && (
+            <ReuseEvidence
+              owner={s.repository.owner}
+              name={s.repository.name}
+              version={s.repository.version ?? ""}
+            />
+          )}
+          <details
+            className="my-6 rounded border p-4"
+            onToggle={(e) => setRiskOpen(e.currentTarget.open)}
+          >
+            <summary>정적 위험 경로·코드 근거 열기</summary>
+            {riskOpen && <RiskPaths id={s.id} />}
+          </details>
+          <details
+            className="my-6 rounded border p-4"
+            onToggle={(e) => setDynamicOpen(e.currentTarget.open)}
+          >
+            <summary>동적 분석 비실행 데모 열기</summary>
+            {dynamicOpen && <DynamicDemo />}
+          </details>
           <Summary scan={s} />
         </>
       ) : !["COMPLETED", "FAILED"].includes(s.status) ? (
