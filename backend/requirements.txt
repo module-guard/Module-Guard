@@ -7,3 +7,5 @@ pydantic-settings==2.15.0
 alembic==1.20.0
 python-hcl2==8.1.4
 httpx==0.28.1
+securesystemslib[crypto,awskms]==1.6.0
+rfc3161-client==1.0.9
