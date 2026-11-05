@@ -476,6 +476,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/scans/{scan_id}/attestations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Attestations */
+        get: operations["list_attestations_api_scans__scan_id__attestations_get"];
+        put?: never;
+        /** Issue Attestation */
+        post: operations["issue_attestation_api_scans__scan_id__attestations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/scans/{scan_id}/attestations/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify Attestation */
+        post: operations["verify_attestation_api_scans__scan_id__attestations_verify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/scans/{scan_id}/correlations": {
         parameters: {
             query?: never;
@@ -918,6 +953,53 @@ export interface components {
             reason: "failed" | "stale";
             /** Since */
             since: string | null;
+        };
+        /** AttestationEntry */
+        AttestationEntry: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            proof: components["schemas"]["AttestationProof"];
+            verification: components["schemas"]["Verification"];
+        };
+        /** AttestationProof */
+        AttestationProof: {
+            /** Envelope */
+            envelope: {
+                [key: string]: unknown;
+            };
+            /** Timestamp */
+            timestamp?: string | null;
+        };
+        /** AttestationResponse */
+        AttestationResponse: {
+            /** Entries */
+            entries?: components["schemas"]["AttestationEntry"][];
+            /** Reasons */
+            reasons?: string[];
+            /**
+             * Scan Id
+             * Format: uuid
+             */
+            scan_id: string;
+            /**
+             * Schema Version
+             * @default 1
+             * @constant
+             */
+            schema_version: 1;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "unsigned" | "valid" | "invalid" | "unknown" | "revoked" | "policy-expired";
+            /**
+             * Version Id
+             * Format: uuid
+             */
+            version_id: string;
         };
         /**
          * BadgeInfo
@@ -2289,6 +2371,34 @@ export interface components {
             /** Error Type */
             type: string;
         };
+        /** Verification */
+        Verification: {
+            /** Claimed At */
+            claimed_at?: string | null;
+            /** Issuer */
+            issuer?: string | null;
+            /** Policy Version */
+            policy_version?: string | null;
+            /** Purpose */
+            purpose?: ("platform" | "upstream") | null;
+            /** Reasons */
+            reasons?: string[];
+            /**
+             * Security Guarantee
+             * @default false
+             * @constant
+             */
+            security_guarantee: false;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "unsigned" | "valid" | "invalid" | "unknown" | "revoked" | "policy-expired";
+            /** Subject */
+            subject?: string | null;
+            /** Trusted At */
+            trusted_at?: string | null;
+        };
         /** VersionCreate */
         VersionCreate: {
             /**
@@ -3329,6 +3439,109 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ScanResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_attestations_api_scans__scan_id__attestations_get: {
+        parameters: {
+            query: {
+                version_id: string;
+            };
+            header?: never;
+            path: {
+                scan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttestationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    issue_attestation_api_scans__scan_id__attestations_post: {
+        parameters: {
+            query: {
+                version_id: string;
+            };
+            header?: never;
+            path: {
+                scan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttestationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_attestation_api_scans__scan_id__attestations_verify_post: {
+        parameters: {
+            query: {
+                version_id: string;
+            };
+            header?: never;
+            path: {
+                scan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttestationProof"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Verification"];
                 };
             };
             /** @description Validation Error */

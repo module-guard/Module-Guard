@@ -270,6 +270,108 @@
         "title": "Attention",
         "type": "object"
       },
+      "AttestationEntry": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "proof": {
+            "$ref": "#/components/schemas/AttestationProof"
+          },
+          "verification": {
+            "$ref": "#/components/schemas/Verification"
+          }
+        },
+        "required": [
+          "id",
+          "verification",
+          "proof"
+        ],
+        "title": "AttestationEntry",
+        "type": "object"
+      },
+      "AttestationProof": {
+        "additionalProperties": false,
+        "properties": {
+          "envelope": {
+            "additionalProperties": true,
+            "title": "Envelope",
+            "type": "object"
+          },
+          "timestamp": {
+            "anyOf": [
+              {
+                "maxLength": 196608,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timestamp"
+          }
+        },
+        "required": [
+          "envelope"
+        ],
+        "title": "AttestationProof",
+        "type": "object"
+      },
+      "AttestationResponse": {
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/AttestationEntry"
+            },
+            "title": "Entries",
+            "type": "array"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "scan_id": {
+            "format": "uuid",
+            "title": "Scan Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "unsigned",
+              "valid",
+              "invalid",
+              "unknown",
+              "revoked",
+              "policy-expired"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "version_id": {
+            "format": "uuid",
+            "title": "Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scan_id",
+          "version_id",
+          "status"
+        ],
+        "title": "AttestationResponse",
+        "type": "object"
+      },
       "BadgeInfo": {
         "description": "What a card needs to draw the security badge for the newest stored version (or unpublished attempt).",
         "properties": {
@@ -3941,6 +4043,112 @@
         "title": "ValidationError",
         "type": "object"
       },
+      "Verification": {
+        "properties": {
+          "claimed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claimed At"
+          },
+          "issuer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issuer"
+          },
+          "policy_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Policy Version"
+          },
+          "purpose": {
+            "anyOf": [
+              {
+                "enum": [
+                  "platform",
+                  "upstream"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Purpose"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "security_guarantee": {
+            "const": false,
+            "default": false,
+            "title": "Security Guarantee",
+            "type": "boolean"
+          },
+          "status": {
+            "enum": [
+              "unsigned",
+              "valid",
+              "invalid",
+              "unknown",
+              "revoked",
+              "policy-expired"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject"
+          },
+          "trusted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trusted At"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "Verification",
+        "type": "object"
+      },
       "VersionCreate": {
         "additionalProperties": false,
         "properties": {
@@ -5890,6 +6098,176 @@
         "summary": "Get Scan",
         "tags": [
           "scans"
+        ]
+      }
+    },
+    "/api/scans/{scan_id}/attestations": {
+      "get": {
+        "operationId": "list_attestations_api_scans__scan_id__attestations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "scan_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Scan Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttestationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Attestations",
+        "tags": [
+          "scans",
+          "attestations"
+        ]
+      },
+      "post": {
+        "operationId": "issue_attestation_api_scans__scan_id__attestations_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "scan_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Scan Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttestationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Issue Attestation",
+        "tags": [
+          "scans",
+          "attestations"
+        ]
+      }
+    },
+    "/api/scans/{scan_id}/attestations/verify": {
+      "post": {
+        "operationId": "verify_attestation_api_scans__scan_id__attestations_verify_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "scan_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Scan Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttestationProof"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Verification"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verify Attestation",
+        "tags": [
+          "scans",
+          "attestations"
         ]
       }
     },

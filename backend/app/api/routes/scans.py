@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Request, Response
 from starlette.concurrency import run_in_threadpool
 
 from app.api.dependencies import SessionDep
+from app.api.routes.attestations import router as attestations_router
 from app.auth.dependencies import CurrentUser, verify_origin
 from app.auth.visibility import require_visible_scan
 from app.core.exceptions import NotFoundError, ScanQueueFullError
@@ -11,6 +12,7 @@ from app.repositories.scan_repository import ScanRepository
 from app.schemas.scan import ScanAccepted, ScanRequest, ScanResponse, ScanRetryRequest
 
 router = APIRouter(prefix="/scans", tags=["scans"], dependencies=[Depends(require_visible_scan)])
+router.include_router(attestations_router)
 
 
 @router.post("", status_code=202, response_model=ScanAccepted)
