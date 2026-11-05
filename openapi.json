@@ -3699,6 +3699,195 @@
         "title": "ReuseHistory",
         "type": "object"
       },
+      "RiskEdge": {
+        "properties": {
+          "basis": {
+            "default": "static_adjacent",
+            "title": "Basis",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "resolved": {
+            "default": false,
+            "title": "Resolved",
+            "type": "boolean"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "source",
+          "type"
+        ],
+        "title": "RiskEdge",
+        "type": "object"
+      },
+      "RiskNode": {
+        "properties": {
+          "address": {
+            "title": "Address",
+            "type": "string"
+          },
+          "file_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Path"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "line_start": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line Start"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "address",
+          "type"
+        ],
+        "title": "RiskNode",
+        "type": "object"
+      },
+      "RiskPath": {
+        "properties": {
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/RiskEdge"
+            },
+            "title": "Edges",
+            "type": "array"
+          },
+          "finding_id": {
+            "format": "uuid",
+            "title": "Finding Id",
+            "type": "string"
+          },
+          "interpretation": {
+            "default": "\uc815\uc801 \ucd94\ub860 \uad00\uacc4\uc774\uba70 \uc2e4\uc81c \ud1b5\uc2e0\u00b7\uc2e4\ud589 \uad00\uce21\uc774 \uc544\ub2d9\ub2c8\ub2e4. \uc778\uc811 \uc5f0\uacb0\ub9cc\uc73c\ub85c \uc704\ud5d8 \uc804\ud30c\ub97c \ud655\uc815\ud558\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4.",
+            "title": "Interpretation",
+            "type": "string"
+          },
+          "location": {
+            "$ref": "#/components/schemas/EvidenceLocation"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/RiskNode"
+            },
+            "title": "Nodes",
+            "type": "array"
+          },
+          "recommendation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommendation"
+          },
+          "rule": {
+            "title": "Rule",
+            "type": "string"
+          },
+          "severity": {
+            "title": "Severity",
+            "type": "string"
+          },
+          "truncated": {
+            "default": false,
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "finding_id",
+          "rule",
+          "severity",
+          "location"
+        ],
+        "title": "RiskPath",
+        "type": "object"
+      },
+      "RiskPaths": {
+        "properties": {
+          "incomplete": {
+            "default": true,
+            "title": "Incomplete",
+            "type": "boolean"
+          },
+          "next_offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Offset"
+          },
+          "paths": {
+            "items": {
+              "$ref": "#/components/schemas/RiskPath"
+            },
+            "title": "Paths",
+            "type": "array"
+          },
+          "scan_id": {
+            "format": "uuid",
+            "title": "Scan Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scan_id"
+        ],
+        "title": "RiskPaths",
+        "type": "object"
+      },
       "ScanAccepted": {
         "properties": {
           "scan_id": {
@@ -8310,6 +8499,122 @@
         "summary": "Retry Scan",
         "tags": [
           "scans"
+        ]
+      }
+    },
+    "/api/scans/{scan_id}/risk-paths": {
+      "get": {
+        "operationId": "risk_paths_api_scans__scan_id__risk_paths_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "scan_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Scan Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "severity",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Severity"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Severity"
+            }
+          },
+          {
+            "in": "query",
+            "name": "rule",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 255,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rule"
+            }
+          },
+          {
+            "in": "query",
+            "name": "resource",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 8192,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Resource"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RiskPaths"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Risk Paths",
+        "tags": [
+          "risk-paths"
         ]
       }
     },

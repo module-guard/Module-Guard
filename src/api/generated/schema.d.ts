@@ -786,6 +786,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/scans/{scan_id}/risk-paths": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Risk Paths */
+        get: operations["risk_paths_api_scans__scan_id__risk_paths_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/uploads/github": {
         parameters: {
             query?: never;
@@ -2363,6 +2380,86 @@ export interface components {
             next_offset?: number | null;
             /** Records */
             records?: components["schemas"]["ReuseEvidence"][];
+        };
+        /** RiskEdge */
+        RiskEdge: {
+            /**
+             * Basis
+             * @default static_adjacent
+             */
+            basis: string;
+            /** Id */
+            id: string;
+            /**
+             * Resolved
+             * @default false
+             */
+            resolved: boolean;
+            /** Source */
+            source: string;
+            /** Target */
+            target?: string | null;
+            /** Type */
+            type: string;
+        };
+        /** RiskNode */
+        RiskNode: {
+            /** Address */
+            address: string;
+            /** File Path */
+            file_path?: string | null;
+            /** Id */
+            id: string;
+            /** Line Start */
+            line_start?: number | null;
+            /** Type */
+            type: string;
+        };
+        /** RiskPath */
+        RiskPath: {
+            /** Edges */
+            edges?: components["schemas"]["RiskEdge"][];
+            /**
+             * Finding Id
+             * Format: uuid
+             */
+            finding_id: string;
+            /**
+             * Interpretation
+             * @default 정적 추론 관계이며 실제 통신·실행 관측이 아닙니다. 인접 연결만으로 위험 전파를 확정하지 않습니다.
+             */
+            interpretation: string;
+            location: components["schemas"]["EvidenceLocation"];
+            /** Nodes */
+            nodes?: components["schemas"]["RiskNode"][];
+            /** Recommendation */
+            recommendation?: string | null;
+            /** Rule */
+            rule: string;
+            /** Severity */
+            severity: string;
+            /**
+             * Truncated
+             * @default false
+             */
+            truncated: boolean;
+        };
+        /** RiskPaths */
+        RiskPaths: {
+            /**
+             * Incomplete
+             * @default true
+             */
+            incomplete: boolean;
+            /** Next Offset */
+            next_offset?: number | null;
+            /** Paths */
+            paths?: components["schemas"]["RiskPath"][];
+            /**
+             * Scan Id
+             * Format: uuid
+             */
+            scan_id: string;
         };
         /** ScanAccepted */
         ScanAccepted: {
@@ -4455,6 +4552,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ScanAccepted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    risk_paths_api_scans__scan_id__risk_paths_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+                severity?: components["schemas"]["Severity"] | null;
+                rule?: string | null;
+                resource?: string | null;
+            };
+            header?: never;
+            path: {
+                scan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RiskPaths"];
                 };
             };
             /** @description Validation Error */
