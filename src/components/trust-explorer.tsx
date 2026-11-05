@@ -1,4 +1,5 @@
 "use client";
+import { ReuseEvidence } from "./reuse-evidence";
 import { useState } from "react";
 import Link from "next/link";
 import { api, unwrap } from "@/api/client";
@@ -239,7 +240,7 @@ export function TrustExplorer({
           </details>
         )}
       </section>
-
+      <ReuseEvidence owner={owner} name={name} version={version} />
       <VersionCompare
         owner={owner}
         name={name}

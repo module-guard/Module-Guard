@@ -3396,6 +3396,143 @@
         "title": "RepositoryEdit",
         "type": "object"
       },
+      "ReuseEvidence": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "current_source_status": {
+            "default": "unknown",
+            "title": "Current Source Status",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key"
+          },
+          "lookup_duration_ms": {
+            "default": 0,
+            "title": "Lookup Duration Ms",
+            "type": "integer"
+          },
+          "measured_saving_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Measured Saving Ms"
+          },
+          "policy_version": {
+            "title": "Policy Version",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "reused": {
+            "default": false,
+            "title": "Reused",
+            "type": "boolean"
+          },
+          "source_duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Duration Ms"
+          },
+          "source_finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Finished At"
+          },
+          "source_scan_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Scan Id"
+          },
+          "target_scan_id": {
+            "format": "uuid",
+            "title": "Target Scan Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "target_scan_id",
+          "reason",
+          "policy_version",
+          "created_at"
+        ],
+        "title": "ReuseEvidence",
+        "type": "object"
+      },
+      "ReuseHistory": {
+        "properties": {
+          "metric_note": {
+            "default": "\uce21\uc815 \uae30\ub85d \uc5c6\uc74c: \uc6d0\uac80\uc0ac \uc18c\uc694 \uc2dc\uac04\uc740 \uc7ac\uc2e4\ud589\ud588\uc744 \ub54c\uc758 \uc808\uac10 \uc2dc\uac04 \uce21\uc815\uac12\uc774 \uc544\ub2d9\ub2c8\ub2e4.",
+            "title": "Metric Note",
+            "type": "string"
+          },
+          "next_offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Offset"
+          },
+          "records": {
+            "items": {
+              "$ref": "#/components/schemas/ReuseEvidence"
+            },
+            "title": "Records",
+            "type": "array"
+          }
+        },
+        "title": "ReuseHistory",
+        "type": "object"
+      },
       "ScanAccepted": {
         "properties": {
           "scan_id": {
@@ -6360,6 +6497,96 @@
           }
         },
         "summary": "Compare",
+        "tags": [
+          "trust"
+        ]
+      }
+    },
+    "/api/repositories/{owner}/{name}/trust/reuse": {
+      "get": {
+        "operationId": "reuse_history_api_repositories__owner___name__trust_reuse_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "owner",
+            "required": true,
+            "schema": {
+              "title": "Owner",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "version",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReuseHistory"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reuse History",
         "tags": [
           "trust"
         ]

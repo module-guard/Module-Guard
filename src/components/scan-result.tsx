@@ -5,6 +5,7 @@ import { Check, ChevronDown, Copy } from "lucide-react";
 import { explainScanError } from "@/api/errors";
 import { api, unwrap } from "@/api/client";
 import { useApi } from "@/api/hooks";
+import { ReuseEvidence } from "./reuse-evidence";
 import { VerificationTimeline } from "./trust-explorer";
 import { ScanProvenance } from "./scan-provenance";
 import { IntegritySummary } from "./module-integrity";
@@ -182,7 +183,13 @@ export function ScanResult({ id }: { id: string }) {
               version={s.repository.version ?? ""}
             />
           )}
-
+          {s.repository && (
+            <ReuseEvidence
+              owner={s.repository.owner}
+              name={s.repository.name}
+              version={s.repository.version ?? ""}
+            />
+          )}
           <Summary scan={s} />
         </>
       ) : !["COMPLETED", "FAILED"].includes(s.status) ? (
