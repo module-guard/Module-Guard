@@ -21,6 +21,7 @@ from app.api.routes import (
     integrity,
     lineage,
     repositories,
+    reputation,
     scans,
     social,
     trust,
@@ -149,6 +150,7 @@ def create_app(
         flows.router,
         lineage.router,
         trust.router,
+        reputation.router,
     ):
         app.include_router(router, prefix="/api")
 
