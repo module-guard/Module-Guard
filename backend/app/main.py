@@ -22,6 +22,7 @@ from app.api.routes import (
     lineage,
     repositories,
     reputation,
+    risk_paths,
     scans,
     social,
     trust,
@@ -151,6 +152,7 @@ def create_app(
         lineage.router,
         trust.router,
         reputation.router,
+        risk_paths.router,
     ):
         app.include_router(router, prefix="/api")
 
