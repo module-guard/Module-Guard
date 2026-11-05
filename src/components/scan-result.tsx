@@ -5,6 +5,7 @@ import { Check, ChevronDown, Copy } from "lucide-react";
 import { explainScanError } from "@/api/errors";
 import { api, unwrap } from "@/api/client";
 import { useApi } from "@/api/hooks";
+import { ScanProvenance } from "./scan-provenance";
 import { IntegritySummary } from "./module-integrity";
 import { AttemptLinks, ScanRetry } from "./scan-retry";
 import {
@@ -172,6 +173,7 @@ export function ScanResult({ id }: { id: string }) {
             onOpenChange={setCoverageOpen}
             summaryRef={coverageSummary}
           />
+          <ScanProvenance key={s.id} scan={s} />
           <Summary scan={s} />
         </>
       ) : !["COMPLETED", "FAILED"].includes(s.status) ? (
