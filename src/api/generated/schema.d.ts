@@ -402,6 +402,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/repositories/{owner}/{name}/trust/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Compare */
+        get: operations["compare_api_repositories__owner___name__trust_compare_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/repositories/{owner}/{name}/trust/timeline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Events */
+        get: operations["events_api_repositories__owner___name__trust_timeline_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/repositories/{owner}/{name}/usage": {
         parameters: {
             query?: never;
@@ -1027,6 +1061,23 @@ export interface components {
             /** Version */
             version: string | null;
         };
+        /** Change */
+        Change: {
+            after?: components["schemas"]["EvidenceLocation"] | null;
+            before?: components["schemas"]["EvidenceLocation"] | null;
+            /**
+             * Change
+             * @enum {string}
+             */
+            change: "added" | "removed" | "modified" | "unchanged" | "uncertain";
+            /** Key */
+            key: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "resource" | "edge" | "finding";
+        };
         /**
          * ComparisonSummary
          * @description This version against its parent, from the #9 manifests recorded for both.
@@ -1210,6 +1261,19 @@ export interface components {
          * @enum {string}
          */
         EntityType: "ROOT_MODULE" | "MODULE" | "RESOURCE" | "DATA" | "VARIABLE" | "OUTPUT" | "LOCAL" | "PROVIDER" | "REQUIRED_PROVIDER";
+        /** EvidenceLocation */
+        EvidenceLocation: {
+            /** Address */
+            address?: string | null;
+            /** File */
+            file?: string | null;
+            /** Line */
+            line?: number | null;
+            /** Rule */
+            rule?: string | null;
+            /** Severity */
+            severity?: string | null;
+        };
         /** ExcludedFile */
         ExcludedFile: {
             /** Path */
@@ -2261,6 +2325,63 @@ export interface components {
             /** Starred */
             starred: boolean;
         };
+        /** TrustEvent */
+        TrustEvent: {
+            /** Actor */
+            actor?: string | null;
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /** Digest */
+            digest?: string | null;
+            /** Evidence */
+            evidence?: string | null;
+            /** Id */
+            id: string;
+            /** Stage */
+            stage: string;
+            /** Status */
+            status: string;
+            /**
+             * Time Basis
+             * @default server_record
+             */
+            time_basis: string;
+        };
+        /** TrustTimeline */
+        TrustTimeline: {
+            /** Events */
+            events?: components["schemas"]["TrustEvent"][];
+            /**
+             * Observed At
+             * Format: date-time
+             */
+            observed_at: string;
+            /** Scan Id */
+            scan_id?: string | null;
+            /**
+             * Security Guarantee
+             * @default false
+             * @constant
+             */
+            security_guarantee: false;
+            /** Signature Reasons */
+            signature_reasons?: string[];
+            /**
+             * Signature Status
+             * @default unknown
+             */
+            signature_status: string;
+            /** Unrecorded */
+            unrecorded?: string[];
+            /**
+             * Version Id
+             * Format: uuid
+             */
+            version_id: string;
+        };
         /**
          * UploadReport
          * @description What was checked and will be stored if this prepared source is registered.
@@ -2398,6 +2519,55 @@ export interface components {
             subject?: string | null;
             /** Trusted At */
             trusted_at?: string | null;
+        };
+        /** VersionComparison */
+        VersionComparison: {
+            /** After Scan */
+            after_scan?: string | null;
+            /**
+             * After Version
+             * Format: uuid
+             */
+            after_version: string;
+            /** Before Scan */
+            before_scan?: string | null;
+            /**
+             * Before Version
+             * Format: uuid
+             */
+            before_version: string;
+            /** Changes */
+            changes?: components["schemas"]["Change"][];
+            /**
+             * Comparable
+             * @default false
+             */
+            comparable: boolean;
+            /** Counts */
+            counts?: {
+                [key: string]: number;
+            };
+            /**
+             * Interpretation
+             * @default 정적 분석 비교이며 이름·주소 이동의 동일성은 확인할 수 없습니다.
+             */
+            interpretation: string;
+            /** Manifest Equal */
+            manifest_equal?: boolean | null;
+            /** Next Offset */
+            next_offset?: number | null;
+            /** Reasons */
+            reasons?: string[];
+            /**
+             * Tool Conditions Equal
+             * @default false
+             */
+            tool_conditions_equal: boolean;
+            /**
+             * Total
+             * @default 0
+             */
+            total: number;
         };
         /** VersionCreate */
         VersionCreate: {
@@ -3310,6 +3480,77 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StarState"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    compare_api_repositories__owner___name__trust_compare_get: {
+        parameters: {
+            query: {
+                before: string;
+                after: string;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                owner: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VersionComparison"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    events_api_repositories__owner___name__trust_timeline_get: {
+        parameters: {
+            query?: {
+                version?: string | null;
+            };
+            header?: never;
+            path: {
+                owner: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrustTimeline"];
                 };
             };
             /** @description Validation Error */
