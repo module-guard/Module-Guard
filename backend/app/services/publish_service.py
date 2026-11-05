@@ -40,6 +40,7 @@ from app.schemas.publish import (
 )
 from app.schemas.scan import LatestScanSummary
 from app.schemas.social import RepositoryRef
+from app.services.lineage_service import record_new_version
 from app.storage.integrity import digest, manifest_bytes, manifest_for, read_tree, verify_tree
 from app.uploads.archive import ArchiveLimits, extract_zip
 from app.uploads.limits import PreflightLimiter
@@ -378,6 +379,8 @@ class PublishService:
                 )
                 session.add(module)
         session.flush()
+        # Immutable lineage row (#26), in the same transaction as the version itself.
+        record_new_version(session, version, user.id)
         scan = Scan(module_id=module.id, module_version_id=version.id, scanner=scanner_name)
         session.add(scan)
         session.flush()

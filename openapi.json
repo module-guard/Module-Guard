@@ -351,6 +351,61 @@
         "title": "BadgeInfo",
         "type": "object"
       },
+      "ComparisonSummary": {
+        "description": "This version against its parent, from the #9 manifests recorded for both.",
+        "properties": {
+          "added": {
+            "default": 0,
+            "title": "Added",
+            "type": "integer"
+          },
+          "modified": {
+            "default": 0,
+            "title": "Modified",
+            "type": "integer"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "NO_VISIBLE_PARENT",
+                  "MISSING_MANIFEST",
+                  "FORMAT_MISMATCH"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "removed": {
+            "default": 0,
+            "title": "Removed",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "IDENTICAL",
+              "CHANGED",
+              "NOT_COMPARABLE"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "unchanged": {
+            "default": 0,
+            "title": "Unchanged",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "ComparisonSummary",
+        "type": "object"
+      },
       "Confidence": {
         "enum": [
           "HIGH",
@@ -659,6 +714,72 @@
           "reason"
         ],
         "title": "ExcludedFile",
+        "type": "object"
+      },
+      "FileChange": {
+        "properties": {
+          "after": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FileSide"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "before": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FileSide"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "change": {
+            "enum": [
+              "ADDED",
+              "REMOVED",
+              "MODIFIED"
+            ],
+            "title": "Change",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "change"
+        ],
+        "title": "FileChange",
+        "type": "object"
+      },
+      "FileSide": {
+        "properties": {
+          "mode": {
+            "title": "Mode",
+            "type": "integer"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "sha256",
+          "size",
+          "mode"
+        ],
+        "title": "FileSide",
         "type": "object"
       },
       "FindingResponse": {
@@ -1849,6 +1970,347 @@
         "title": "LatestScanSummary",
         "type": "object"
       },
+      "LineageDiff": {
+        "properties": {
+          "comparison": {
+            "$ref": "#/components/schemas/ComparisonSummary"
+          },
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/FileChange"
+            },
+            "title": "Files",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "next_offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Offset"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "parent": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LineageRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ref": {
+            "$ref": "#/components/schemas/LineageRef"
+          },
+          "total": {
+            "default": 0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ref",
+          "parent",
+          "comparison",
+          "limit",
+          "offset"
+        ],
+        "title": "LineageDiff",
+        "type": "object"
+      },
+      "LineageEdge": {
+        "properties": {
+          "child": {
+            "format": "uuid",
+            "title": "Child",
+            "type": "string"
+          },
+          "comparison": {
+            "enum": [
+              "IDENTICAL",
+              "CHANGED",
+              "NOT_COMPARABLE"
+            ],
+            "title": "Comparison",
+            "type": "string"
+          },
+          "parent": {
+            "format": "uuid",
+            "title": "Parent",
+            "type": "string"
+          },
+          "relation": {
+            "enum": [
+              "ORIGINAL",
+              "VERSION",
+              "FORK"
+            ],
+            "title": "Relation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent",
+          "child",
+          "relation",
+          "comparison"
+        ],
+        "title": "LineageEdge",
+        "type": "object"
+      },
+      "LineageGraph": {
+        "description": "One page of a walk from `root` in one direction, in walk order (nearest first).\n\n`total` counts only visible nodes on the walk; hidden nodes end the walk and are never\ncounted. `edges` connect nodes on this page, plus the edge to `root` from the first.",
+        "properties": {
+          "direction": {
+            "enum": [
+              "ancestors",
+              "descendants"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/LineageEdge"
+            },
+            "title": "Edges",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "next_offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Offset"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/LineageNode"
+            },
+            "title": "Nodes",
+            "type": "array"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "root": {
+            "$ref": "#/components/schemas/LineageRef"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "truncated": {
+            "default": false,
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "root",
+          "direction",
+          "nodes",
+          "edges",
+          "total",
+          "limit",
+          "offset",
+          "next_offset"
+        ],
+        "title": "LineageGraph",
+        "type": "object"
+      },
+      "LineageNode": {
+        "properties": {
+          "author_asserted": {
+            "default": false,
+            "title": "Author Asserted",
+            "type": "boolean"
+          },
+          "backfilled": {
+            "default": false,
+            "title": "Backfilled",
+            "type": "boolean"
+          },
+          "comparison": {
+            "$ref": "#/components/schemas/ComparisonSummary"
+          },
+          "declaration_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Declaration Version"
+          },
+          "file_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Count"
+          },
+          "manifest_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manifest Sha256"
+          },
+          "parent": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LineageRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "published_at": {
+            "format": "date-time",
+            "title": "Published At",
+            "type": "string"
+          },
+          "publisher": {
+            "$ref": "#/components/schemas/Publisher"
+          },
+          "ref": {
+            "$ref": "#/components/schemas/LineageRef"
+          },
+          "relation": {
+            "enum": [
+              "ORIGINAL",
+              "VERSION",
+              "FORK"
+            ],
+            "title": "Relation",
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/LineageSource"
+          }
+        },
+        "required": [
+          "ref",
+          "relation",
+          "parent",
+          "comparison",
+          "manifest_sha256",
+          "file_count",
+          "source",
+          "publisher",
+          "published_at",
+          "declaration_version"
+        ],
+        "title": "LineageNode",
+        "type": "object"
+      },
+      "LineageRef": {
+        "description": "A visible node, enough to link to it.",
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "owner": {
+            "title": "Owner",
+            "type": "string"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          }
+        },
+        "required": [
+          "id",
+          "owner",
+          "name",
+          "version"
+        ],
+        "title": "LineageRef",
+        "type": "object"
+      },
+      "LineageSource": {
+        "properties": {
+          "commit_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commit Hash"
+          },
+          "module_path": {
+            "title": "Module Path",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "url",
+          "commit_hash",
+          "module_path"
+        ],
+        "title": "LineageSource",
+        "type": "object"
+      },
       "MeResponse": {
         "properties": {
           "login_available": {
@@ -2237,6 +2699,45 @@
           "aliases"
         ],
         "title": "ProviderDependency",
+        "type": "object"
+      },
+      "Publisher": {
+        "description": "The account that published the version on this service.\n\nIt is not asserted to be the author of the code, and nothing here establishes legal\nresponsibility for it: see the declaration this account published under.",
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "login": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Login"
+          },
+          "system": {
+            "default": false,
+            "title": "System",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "login"
+        ],
+        "title": "Publisher",
         "type": "object"
       },
       "RegistryImportRequest": {
@@ -4843,6 +5344,270 @@
         "summary": "Verify",
         "tags": [
           "integrity"
+        ]
+      }
+    },
+    "/api/repositories/{owner}/{name}/lineage": {
+      "get": {
+        "operationId": "lineage_api_repositories__owner___name__lineage_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "owner",
+            "required": true,
+            "schema": {
+              "title": "Owner",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "version",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LineageNode"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Lineage",
+        "tags": [
+          "lineage"
+        ]
+      }
+    },
+    "/api/repositories/{owner}/{name}/lineage/diff": {
+      "get": {
+        "operationId": "lineage_diff_api_repositories__owner___name__lineage_diff_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "owner",
+            "required": true,
+            "schema": {
+              "title": "Owner",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "version",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LineageDiff"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Lineage Diff",
+        "tags": [
+          "lineage"
+        ]
+      }
+    },
+    "/api/repositories/{owner}/{name}/lineage/graph": {
+      "get": {
+        "operationId": "lineage_graph_api_repositories__owner___name__lineage_graph_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "owner",
+            "required": true,
+            "schema": {
+              "title": "Owner",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "version",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version"
+            }
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "required": false,
+            "schema": {
+              "default": "ancestors",
+              "enum": [
+                "ancestors",
+                "descendants"
+              ],
+              "title": "Direction",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LineageGraph"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Lineage Graph",
+        "tags": [
+          "lineage"
         ]
       }
     },
