@@ -211,6 +211,11 @@ class AttestationService:
             },
             "execution_profile": {"mode": "static", "environment_recorded": False},
             "metadata_complete": False,
+            **(
+                {"static_execution_context": analysis["execution_context"]}
+                if analysis.get("execution_context")
+                else {}
+            ),
         }
 
     def describe(self, scan, version):

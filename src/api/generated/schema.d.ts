@@ -419,6 +419,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/repositories/{owner}/{name}/trust/reuse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Reuse History */
+        get: operations["reuse_history_api_repositories__owner___name__trust_reuse_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/repositories/{owner}/{name}/trust/timeline": {
         parameters: {
             query?: never;
@@ -2183,6 +2200,65 @@ export interface components {
             name?: string | null;
             visibility?: components["schemas"]["Visibility"] | null;
         };
+        /** ReuseEvidence */
+        ReuseEvidence: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Current Source Status
+             * @default unknown
+             */
+            current_source_status: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Key */
+            key?: string | null;
+            /**
+             * Lookup Duration Ms
+             * @default 0
+             */
+            lookup_duration_ms: number;
+            /** Measured Saving Ms */
+            measured_saving_ms?: number | null;
+            /** Policy Version */
+            policy_version: string;
+            /** Reason */
+            reason: string;
+            /**
+             * Reused
+             * @default false
+             */
+            reused: boolean;
+            /** Source Duration Ms */
+            source_duration_ms?: number | null;
+            /** Source Finished At */
+            source_finished_at?: string | null;
+            /** Source Scan Id */
+            source_scan_id?: string | null;
+            /**
+             * Target Scan Id
+             * Format: uuid
+             */
+            target_scan_id: string;
+        };
+        /** ReuseHistory */
+        ReuseHistory: {
+            /**
+             * Metric Note
+             * @default 측정 기록 없음: 원검사 소요 시간은 재실행했을 때의 절감 시간 측정값이 아닙니다.
+             */
+            metric_note: string;
+            /** Next Offset */
+            next_offset?: number | null;
+            /** Records */
+            records?: components["schemas"]["ReuseEvidence"][];
+        };
         /** ScanAccepted */
         ScanAccepted: {
             /**
@@ -3517,6 +3593,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VersionComparison"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reuse_history_api_repositories__owner___name__trust_reuse_get: {
+        parameters: {
+            query?: {
+                version?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                owner: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReuseHistory"];
                 };
             };
             /** @description Validation Error */
