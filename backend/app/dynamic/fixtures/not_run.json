@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "run_id": "00000000-0000-0000-0000-000000000005",
+  "input_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "manifest_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "mode": "fixture",
+  "execution_occurred": false,
+  "status": "not_run",
+  "environment": {
+    "image_digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "terraform_version": "not-executed",
+    "provider_versions": {},
+    "lockfile_digest": null,
+    "test_suite_digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "mock_version": "synthetic-v1",
+    "policy_version": "design-v1",
+    "credentials": "none",
+    "network": "denied"
+  },
+  "stages": [
+    {
+      "id": "prepare",
+      "name": "prepare",
+      "status": "not_run",
+      "started_at": null,
+      "finished_at": null,
+      "evidence_ids": [
+        "fixture"
+      ],
+      "error_type": null
+    },
+    {
+      "id": "isolation",
+      "name": "isolation",
+      "status": "not_run",
+      "started_at": null,
+      "finished_at": null,
+      "evidence_ids": [
+        "fixture"
+      ],
+      "error_type": null
+    },
+    {
+      "id": "test",
+      "name": "test",
+      "status": "not_run",
+      "started_at": null,
+      "finished_at": null,
+      "evidence_ids": [
+        "fixture"
+      ],
+      "error_type": null
+    },
+    {
+      "id": "observe",
+      "name": "observe",
+      "status": "not_run",
+      "started_at": null,
+      "finished_at": null,
+      "evidence_ids": [
+        "fixture"
+      ],
+      "error_type": null
+    },
+    {
+      "id": "cleanup",
+      "name": "cleanup",
+      "status": "not_run",
+      "started_at": null,
+      "finished_at": null,
+      "evidence_ids": [
+        "fixture"
+      ],
+      "error_type": null
+    }
+  ],
+  "nodes": [],
+  "edges": [],
+  "evidence": [
+    {
+      "id": "fixture",
+      "code": "FIXTURE_ONLY",
+      "redacted": true
+    }
+  ],
+  "secret_policy": "structured-allowlist-v1"
+}

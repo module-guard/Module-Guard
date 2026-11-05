@@ -72,6 +72,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/dynamic-demo/{scenario}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Demo */
+        get: operations["demo_api_dynamic_demo__scenario__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -1269,6 +1286,121 @@ export interface components {
             /** Providers */
             providers: components["schemas"]["ProviderDependency"][];
         };
+        /** DynamicEnvironment */
+        DynamicEnvironment: {
+            /**
+             * Credentials
+             * @default none
+             * @constant
+             */
+            credentials: "none";
+            /** Image Digest */
+            image_digest: string;
+            /** Lockfile Digest */
+            lockfile_digest?: string | null;
+            /** Mock Version */
+            mock_version?: string | null;
+            /**
+             * Network
+             * @default denied
+             * @constant
+             */
+            network: "denied";
+            /** Policy Version */
+            policy_version: string;
+            /** Provider Versions */
+            provider_versions?: {
+                [key: string]: string;
+            };
+            /** Terraform Version */
+            terraform_version: string;
+            /** Test Suite Digest */
+            test_suite_digest: string;
+        };
+        /** DynamicEvidence */
+        DynamicEvidence: {
+            /**
+             * Code
+             * @enum {string}
+             */
+            code: "FIXTURE_ONLY" | "SIMULATED_RESOURCE" | "SIMULATED_FAILURE" | "TIME_BUDGET" | "CANCELLED" | "MISSING_OBSERVATION";
+            /** Id */
+            id: string;
+            /**
+             * Redacted
+             * @default true
+             * @constant
+             */
+            redacted: true;
+        };
+        /** DynamicRun */
+        DynamicRun: {
+            /** Edges */
+            edges?: components["schemas"]["ObservedEdge"][];
+            environment: components["schemas"]["DynamicEnvironment"];
+            /** Evidence */
+            evidence?: components["schemas"]["DynamicEvidence"][];
+            /** Execution Occurred */
+            execution_occurred: boolean;
+            /** Input Digest */
+            input_digest: string;
+            /** Manifest Digest */
+            manifest_digest: string;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "fixture" | "mock" | "runtime";
+            /** Nodes */
+            nodes?: components["schemas"]["ObservedNode"][];
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
+            /**
+             * Schema Version
+             * @default 1
+             * @constant
+             */
+            schema_version: 1;
+            /**
+             * Secret Policy
+             * @default structured-allowlist-v1
+             * @constant
+             */
+            secret_policy: "structured-allowlist-v1";
+            /** Stages */
+            stages: components["schemas"]["DynamicStage"][];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "success" | "failed" | "aborted" | "timeout" | "not_run" | "unobservable";
+        };
+        /** DynamicStage */
+        DynamicStage: {
+            /** Error Type */
+            error_type?: ("fixture_failure" | "timeout" | "cancelled" | "missing_observation") | null;
+            /** Evidence Ids */
+            evidence_ids?: string[];
+            /** Finished At */
+            finished_at?: string | null;
+            /** Id */
+            id: string;
+            /**
+             * Name
+             * @enum {string}
+             */
+            name: "prepare" | "isolation" | "test" | "observe" | "cleanup";
+            /** Started At */
+            started_at?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "success" | "failed" | "aborted" | "timeout" | "not_run" | "unobservable";
+        };
         /** EntityFlowResponse */
         EntityFlowResponse: {
             /** Downstream */
@@ -2065,6 +2197,31 @@ export interface components {
             /** Version */
             version: string | null;
             visibility: components["schemas"]["Visibility"];
+        };
+        /** ObservedEdge */
+        ObservedEdge: {
+            /** Evidence Ids */
+            evidence_ids: string[];
+            /** Id */
+            id: string;
+            /**
+             * Relation
+             * @enum {string}
+             */
+            relation: "simulated_dependency" | "observed_dependency";
+            /** Source */
+            source: string;
+            /** Target */
+            target: string;
+        };
+        /** ObservedNode */
+        ObservedNode: {
+            /** Evidence Ids */
+            evidence_ids: string[];
+            /** Id */
+            id: string;
+            /** Resource Type */
+            resource_type: string;
         };
         /**
          * OriginType
@@ -3060,6 +3217,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ScanAccepted"];
+                };
+            };
+        };
+    };
+    demo_api_dynamic_demo__scenario__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scenario: "success" | "failed" | "aborted" | "timeout" | "not_run" | "unobservable";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DynamicRun"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

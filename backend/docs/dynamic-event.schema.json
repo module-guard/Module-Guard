@@ -1,0 +1,386 @@
+{
+  "$defs": {
+    "DynamicEnvironment": {
+      "additionalProperties": false,
+      "properties": {
+        "image_digest": {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "title": "Image Digest",
+          "type": "string"
+        },
+        "terraform_version": {
+          "maxLength": 80,
+          "title": "Terraform Version",
+          "type": "string"
+        },
+        "provider_versions": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "maxProperties": 100,
+          "title": "Provider Versions",
+          "type": "object"
+        },
+        "lockfile_digest": {
+          "anyOf": [
+            {
+              "pattern": "^[a-f0-9]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lockfile Digest"
+        },
+        "test_suite_digest": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Test Suite Digest",
+          "type": "string"
+        },
+        "mock_version": {
+          "anyOf": [
+            {
+              "maxLength": 80,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mock Version"
+        },
+        "policy_version": {
+          "maxLength": 80,
+          "title": "Policy Version",
+          "type": "string"
+        },
+        "credentials": {
+          "const": "none",
+          "default": "none",
+          "title": "Credentials",
+          "type": "string"
+        },
+        "network": {
+          "const": "denied",
+          "default": "denied",
+          "title": "Network",
+          "type": "string"
+        }
+      },
+      "required": [
+        "image_digest",
+        "terraform_version",
+        "test_suite_digest",
+        "policy_version"
+      ],
+      "title": "DynamicEnvironment",
+      "type": "object"
+    },
+    "DynamicEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-z0-9_-]{1,80}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "code": {
+          "enum": [
+            "FIXTURE_ONLY",
+            "SIMULATED_RESOURCE",
+            "SIMULATED_FAILURE",
+            "TIME_BUDGET",
+            "CANCELLED",
+            "MISSING_OBSERVATION"
+          ],
+          "title": "Code",
+          "type": "string"
+        },
+        "redacted": {
+          "const": true,
+          "default": true,
+          "title": "Redacted",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "code"
+      ],
+      "title": "DynamicEvidence",
+      "type": "object"
+    },
+    "DynamicStage": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-z0-9_-]{1,80}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "enum": [
+            "prepare",
+            "isolation",
+            "test",
+            "observe",
+            "cleanup"
+          ],
+          "title": "Name",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "success",
+            "failed",
+            "aborted",
+            "timeout",
+            "not_run",
+            "unobservable"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "started_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Started At"
+        },
+        "finished_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Finished At"
+        },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 100,
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "error_type": {
+          "anyOf": [
+            {
+              "enum": [
+                "fixture_failure",
+                "timeout",
+                "cancelled",
+                "missing_observation"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error Type"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "status"
+      ],
+      "title": "DynamicStage",
+      "type": "object"
+    },
+    "ObservedEdge": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-z0-9_-]{1,80}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "source": {
+          "title": "Source",
+          "type": "string"
+        },
+        "target": {
+          "title": "Target",
+          "type": "string"
+        },
+        "relation": {
+          "enum": [
+            "simulated_dependency",
+            "observed_dependency"
+          ],
+          "title": "Relation",
+          "type": "string"
+        },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 100,
+          "minItems": 1,
+          "title": "Evidence Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "source",
+        "target",
+        "relation",
+        "evidence_ids"
+      ],
+      "title": "ObservedEdge",
+      "type": "object"
+    },
+    "ObservedNode": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-z0-9_-]{1,80}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "resource_type": {
+          "pattern": "^[a-z][a-z0-9_]{0,80}$",
+          "title": "Resource Type",
+          "type": "string"
+        },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 100,
+          "minItems": 1,
+          "title": "Evidence Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "resource_type",
+        "evidence_ids"
+      ],
+      "title": "ObservedNode",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "run_id": {
+      "format": "uuid",
+      "title": "Run Id",
+      "type": "string"
+    },
+    "input_digest": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Input Digest",
+      "type": "string"
+    },
+    "manifest_digest": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Manifest Digest",
+      "type": "string"
+    },
+    "mode": {
+      "enum": [
+        "fixture",
+        "mock",
+        "runtime"
+      ],
+      "title": "Mode",
+      "type": "string"
+    },
+    "execution_occurred": {
+      "title": "Execution Occurred",
+      "type": "boolean"
+    },
+    "status": {
+      "enum": [
+        "success",
+        "failed",
+        "aborted",
+        "timeout",
+        "not_run",
+        "unobservable"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "environment": {
+      "$ref": "#/$defs/DynamicEnvironment"
+    },
+    "stages": {
+      "items": {
+        "$ref": "#/$defs/DynamicStage"
+      },
+      "maxItems": 5000,
+      "title": "Stages",
+      "type": "array"
+    },
+    "nodes": {
+      "items": {
+        "$ref": "#/$defs/ObservedNode"
+      },
+      "maxItems": 1000,
+      "title": "Nodes",
+      "type": "array"
+    },
+    "edges": {
+      "items": {
+        "$ref": "#/$defs/ObservedEdge"
+      },
+      "maxItems": 2000,
+      "title": "Edges",
+      "type": "array"
+    },
+    "evidence": {
+      "items": {
+        "$ref": "#/$defs/DynamicEvidence"
+      },
+      "maxItems": 5000,
+      "title": "Evidence",
+      "type": "array"
+    },
+    "secret_policy": {
+      "const": "structured-allowlist-v1",
+      "default": "structured-allowlist-v1",
+      "title": "Secret Policy",
+      "type": "string"
+    }
+  },
+  "required": [
+    "run_id",
+    "input_digest",
+    "manifest_digest",
+    "mode",
+    "execution_occurred",
+    "status",
+    "environment",
+    "stages"
+  ],
+  "title": "DynamicRun",
+  "type": "object"
+}
