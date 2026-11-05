@@ -1,6 +1,7 @@
 from app.models.artifact import DownloadArtifact
 from app.models.finding import Finding
 from app.models.graph_edge import GraphEdge
+from app.models.lineage import LineageRecord
 from app.models.module import Module
 from app.models.module_version import ModuleVersion
 from app.models.parsed_entity import ParsedEntity
@@ -17,6 +18,7 @@ __all__ = [
     "Scan",
     "ParsedEntity",
     "GraphEdge",
+    "LineageRecord",
     "User",
     "Repository",
     "ModuleVersion",

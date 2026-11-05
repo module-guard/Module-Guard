@@ -19,6 +19,7 @@ from app.api.routes import (
     flows,
     graphs,
     integrity,
+    lineage,
     repositories,
     scans,
     social,
@@ -145,6 +146,7 @@ def create_app(
         findings.router,
         graphs.router,
         flows.router,
+        lineage.router,
     ):
         app.include_router(router, prefix="/api")
 
