@@ -453,6 +453,61 @@
         "title": "BadgeInfo",
         "type": "object"
       },
+      "Change": {
+        "properties": {
+          "after": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidenceLocation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "before": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidenceLocation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "change": {
+            "enum": [
+              "added",
+              "removed",
+              "modified",
+              "unchanged",
+              "uncertain"
+            ],
+            "title": "Change",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "resource",
+              "edge",
+              "finding"
+            ],
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "kind",
+          "change"
+        ],
+        "title": "Change",
+        "type": "object"
+      },
       "ComparisonSummary": {
         "description": "This version against its parent, from the #9 manifests recorded for both.",
         "properties": {
@@ -651,6 +706,310 @@
         "title": "DependencyResponse",
         "type": "object"
       },
+      "DynamicEnvironment": {
+        "additionalProperties": false,
+        "properties": {
+          "credentials": {
+            "const": "none",
+            "default": "none",
+            "title": "Credentials",
+            "type": "string"
+          },
+          "image_digest": {
+            "pattern": "^sha256:[a-f0-9]{64}$",
+            "title": "Image Digest",
+            "type": "string"
+          },
+          "lockfile_digest": {
+            "anyOf": [
+              {
+                "pattern": "^[a-f0-9]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lockfile Digest"
+          },
+          "mock_version": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mock Version"
+          },
+          "network": {
+            "const": "denied",
+            "default": "denied",
+            "title": "Network",
+            "type": "string"
+          },
+          "policy_version": {
+            "maxLength": 80,
+            "title": "Policy Version",
+            "type": "string"
+          },
+          "provider_versions": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "maxProperties": 100,
+            "title": "Provider Versions",
+            "type": "object"
+          },
+          "terraform_version": {
+            "maxLength": 80,
+            "title": "Terraform Version",
+            "type": "string"
+          },
+          "test_suite_digest": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Test Suite Digest",
+            "type": "string"
+          }
+        },
+        "required": [
+          "image_digest",
+          "terraform_version",
+          "test_suite_digest",
+          "policy_version"
+        ],
+        "title": "DynamicEnvironment",
+        "type": "object"
+      },
+      "DynamicEvidence": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "enum": [
+              "FIXTURE_ONLY",
+              "SIMULATED_RESOURCE",
+              "SIMULATED_FAILURE",
+              "TIME_BUDGET",
+              "CANCELLED",
+              "MISSING_OBSERVATION"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "id": {
+            "pattern": "^[a-z0-9_-]{1,80}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "redacted": {
+            "const": true,
+            "default": true,
+            "title": "Redacted",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "code"
+        ],
+        "title": "DynamicEvidence",
+        "type": "object"
+      },
+      "DynamicRun": {
+        "additionalProperties": false,
+        "properties": {
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/ObservedEdge"
+            },
+            "maxItems": 2000,
+            "title": "Edges",
+            "type": "array"
+          },
+          "environment": {
+            "$ref": "#/components/schemas/DynamicEnvironment"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/DynamicEvidence"
+            },
+            "maxItems": 5000,
+            "title": "Evidence",
+            "type": "array"
+          },
+          "execution_occurred": {
+            "title": "Execution Occurred",
+            "type": "boolean"
+          },
+          "input_digest": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Input Digest",
+            "type": "string"
+          },
+          "manifest_digest": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Manifest Digest",
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "fixture",
+              "mock",
+              "runtime"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/ObservedNode"
+            },
+            "maxItems": 1000,
+            "title": "Nodes",
+            "type": "array"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "secret_policy": {
+            "const": "structured-allowlist-v1",
+            "default": "structured-allowlist-v1",
+            "title": "Secret Policy",
+            "type": "string"
+          },
+          "stages": {
+            "items": {
+              "$ref": "#/components/schemas/DynamicStage"
+            },
+            "maxItems": 5000,
+            "title": "Stages",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "success",
+              "failed",
+              "aborted",
+              "timeout",
+              "not_run",
+              "unobservable"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "input_digest",
+          "manifest_digest",
+          "mode",
+          "execution_occurred",
+          "status",
+          "environment",
+          "stages"
+        ],
+        "title": "DynamicRun",
+        "type": "object"
+      },
+      "DynamicStage": {
+        "additionalProperties": false,
+        "properties": {
+          "error_type": {
+            "anyOf": [
+              {
+                "enum": [
+                  "fixture_failure",
+                  "timeout",
+                  "cancelled",
+                  "missing_observation"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Type"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "id": {
+            "pattern": "^[a-z0-9_-]{1,80}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "enum": [
+              "prepare",
+              "isolation",
+              "test",
+              "observe",
+              "cleanup"
+            ],
+            "title": "Name",
+            "type": "string"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "enum": [
+              "success",
+              "failed",
+              "aborted",
+              "timeout",
+              "not_run",
+              "unobservable"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "status"
+        ],
+        "title": "DynamicStage",
+        "type": "object"
+      },
       "EntityFlowResponse": {
         "properties": {
           "downstream": {
@@ -799,6 +1158,67 @@
         ],
         "title": "EntityType",
         "type": "string"
+      },
+      "EvidenceLocation": {
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "file": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File"
+          },
+          "line": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line"
+          },
+          "rule": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rule"
+          },
+          "severity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severity"
+          }
+        },
+        "title": "EvidenceLocation",
+        "type": "object"
       },
       "ExcludedFile": {
         "properties": {
@@ -2721,6 +3141,81 @@
         "title": "MyRepository",
         "type": "object"
       },
+      "ObservedEdge": {
+        "additionalProperties": false,
+        "properties": {
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "id": {
+            "pattern": "^[a-z0-9_-]{1,80}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "relation": {
+            "enum": [
+              "simulated_dependency",
+              "observed_dependency"
+            ],
+            "title": "Relation",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "target": {
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "source",
+          "target",
+          "relation",
+          "evidence_ids"
+        ],
+        "title": "ObservedEdge",
+        "type": "object"
+      },
+      "ObservedNode": {
+        "additionalProperties": false,
+        "properties": {
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "id": {
+            "pattern": "^[a-z0-9_-]{1,80}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "resource_type": {
+            "pattern": "^[a-z][a-z0-9_]{0,80}$",
+            "title": "Resource Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "resource_type",
+          "evidence_ids"
+        ],
+        "title": "ObservedNode",
+        "type": "object"
+      },
       "OriginType": {
         "enum": [
           "GITHUB",
@@ -3280,6 +3775,498 @@
         "title": "RepositoryEdit",
         "type": "object"
       },
+      "ReputationEvaluation": {
+        "properties": {
+          "collected_at": {
+            "format": "date-time",
+            "title": "Collected At",
+            "type": "string"
+          },
+          "coverage": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Coverage",
+            "type": "object"
+          },
+          "metrics": {
+            "items": {
+              "$ref": "#/components/schemas/ReputationMetric"
+            },
+            "title": "Metrics",
+            "type": "array"
+          },
+          "notice": {
+            "default": "\uadfc\uac70 \ucda9\uc871\ub960\uc740 \ubcf4\uc548 \uc810\uc218\uac00 \uc544\ub2d9\ub2c8\ub2e4. \ub3c5\ub9bd \ud3c9\uac00 \uc804 \ucd1d\uc810\uc744 \uc81c\uacf5\ud558\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4.",
+            "title": "Notice",
+            "type": "string"
+          },
+          "policy_version": {
+            "default": "evidence-v1",
+            "title": "Policy Version",
+            "type": "string"
+          },
+          "raw": {
+            "additionalProperties": true,
+            "title": "Raw",
+            "type": "object"
+          },
+          "total_score": {
+            "title": "Total Score",
+            "type": "null"
+          },
+          "validation": {
+            "const": "not_independently_validated",
+            "default": "not_independently_validated",
+            "title": "Validation",
+            "type": "string"
+          },
+          "version_id": {
+            "format": "uuid",
+            "title": "Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version_id",
+          "collected_at"
+        ],
+        "title": "ReputationEvaluation",
+        "type": "object"
+      },
+      "ReputationHistory": {
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/ReputationEvaluation"
+            },
+            "title": "Entries",
+            "type": "array"
+          },
+          "next_offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Offset"
+          }
+        },
+        "title": "ReputationHistory",
+        "type": "object"
+      },
+      "ReputationMetric": {
+        "properties": {
+          "axis": {
+            "enum": [
+              "security",
+              "maintenance",
+              "provenance",
+              "documentation",
+              "tests",
+              "popularity"
+            ],
+            "title": "Axis",
+            "type": "string"
+          },
+          "formula": {
+            "title": "Formula",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
+          "status": {
+            "enum": [
+              "confirmed",
+              "insufficient",
+              "unverified",
+              "failed",
+              "not_applicable",
+              "stale"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "id",
+          "axis",
+          "status",
+          "formula"
+        ],
+        "title": "ReputationMetric",
+        "type": "object"
+      },
+      "ReuseEvidence": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "current_source_status": {
+            "default": "unknown",
+            "title": "Current Source Status",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key"
+          },
+          "lookup_duration_ms": {
+            "default": 0,
+            "title": "Lookup Duration Ms",
+            "type": "integer"
+          },
+          "measured_saving_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Measured Saving Ms"
+          },
+          "policy_version": {
+            "title": "Policy Version",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "reused": {
+            "default": false,
+            "title": "Reused",
+            "type": "boolean"
+          },
+          "source_duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Duration Ms"
+          },
+          "source_finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Finished At"
+          },
+          "source_scan_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Scan Id"
+          },
+          "target_scan_id": {
+            "format": "uuid",
+            "title": "Target Scan Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "target_scan_id",
+          "reason",
+          "policy_version",
+          "created_at"
+        ],
+        "title": "ReuseEvidence",
+        "type": "object"
+      },
+      "ReuseHistory": {
+        "properties": {
+          "metric_note": {
+            "default": "\uce21\uc815 \uae30\ub85d \uc5c6\uc74c: \uc6d0\uac80\uc0ac \uc18c\uc694 \uc2dc\uac04\uc740 \uc7ac\uc2e4\ud589\ud588\uc744 \ub54c\uc758 \uc808\uac10 \uc2dc\uac04 \uce21\uc815\uac12\uc774 \uc544\ub2d9\ub2c8\ub2e4.",
+            "title": "Metric Note",
+            "type": "string"
+          },
+          "next_offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Offset"
+          },
+          "records": {
+            "items": {
+              "$ref": "#/components/schemas/ReuseEvidence"
+            },
+            "title": "Records",
+            "type": "array"
+          }
+        },
+        "title": "ReuseHistory",
+        "type": "object"
+      },
+      "RiskEdge": {
+        "properties": {
+          "basis": {
+            "default": "static_adjacent",
+            "title": "Basis",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "resolved": {
+            "default": false,
+            "title": "Resolved",
+            "type": "boolean"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "source",
+          "type"
+        ],
+        "title": "RiskEdge",
+        "type": "object"
+      },
+      "RiskNode": {
+        "properties": {
+          "address": {
+            "title": "Address",
+            "type": "string"
+          },
+          "file_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Path"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "line_start": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line Start"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "address",
+          "type"
+        ],
+        "title": "RiskNode",
+        "type": "object"
+      },
+      "RiskPath": {
+        "properties": {
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/RiskEdge"
+            },
+            "title": "Edges",
+            "type": "array"
+          },
+          "finding_id": {
+            "format": "uuid",
+            "title": "Finding Id",
+            "type": "string"
+          },
+          "interpretation": {
+            "default": "\uc815\uc801 \ucd94\ub860 \uad00\uacc4\uc774\uba70 \uc2e4\uc81c \ud1b5\uc2e0\u00b7\uc2e4\ud589 \uad00\uce21\uc774 \uc544\ub2d9\ub2c8\ub2e4. \uc778\uc811 \uc5f0\uacb0\ub9cc\uc73c\ub85c \uc704\ud5d8 \uc804\ud30c\ub97c \ud655\uc815\ud558\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4.",
+            "title": "Interpretation",
+            "type": "string"
+          },
+          "location": {
+            "$ref": "#/components/schemas/EvidenceLocation"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/RiskNode"
+            },
+            "title": "Nodes",
+            "type": "array"
+          },
+          "recommendation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommendation"
+          },
+          "rule": {
+            "title": "Rule",
+            "type": "string"
+          },
+          "severity": {
+            "title": "Severity",
+            "type": "string"
+          },
+          "truncated": {
+            "default": false,
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "finding_id",
+          "rule",
+          "severity",
+          "location"
+        ],
+        "title": "RiskPath",
+        "type": "object"
+      },
+      "RiskPaths": {
+        "properties": {
+          "incomplete": {
+            "default": true,
+            "title": "Incomplete",
+            "type": "boolean"
+          },
+          "next_offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Offset"
+          },
+          "paths": {
+            "items": {
+              "$ref": "#/components/schemas/RiskPath"
+            },
+            "title": "Paths",
+            "type": "array"
+          },
+          "scan_id": {
+            "format": "uuid",
+            "title": "Scan Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scan_id"
+        ],
+        "title": "RiskPaths",
+        "type": "object"
+      },
       "ScanAccepted": {
         "properties": {
           "scan_id": {
@@ -3694,6 +4681,137 @@
           "star_count"
         ],
         "title": "StarState",
+        "type": "object"
+      },
+      "TrustEvent": {
+        "properties": {
+          "actor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor"
+          },
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "digest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Digest"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "time_basis": {
+            "default": "server_record",
+            "title": "Time Basis",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "stage",
+          "at",
+          "status"
+        ],
+        "title": "TrustEvent",
+        "type": "object"
+      },
+      "TrustTimeline": {
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/TrustEvent"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "observed_at": {
+            "format": "date-time",
+            "title": "Observed At",
+            "type": "string"
+          },
+          "scan_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan Id"
+          },
+          "security_guarantee": {
+            "const": false,
+            "default": false,
+            "title": "Security Guarantee",
+            "type": "boolean"
+          },
+          "signature_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Signature Reasons",
+            "type": "array"
+          },
+          "signature_status": {
+            "default": "unknown",
+            "title": "Signature Status",
+            "type": "string"
+          },
+          "unrecorded": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unrecorded",
+            "type": "array"
+          },
+          "version_id": {
+            "format": "uuid",
+            "title": "Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version_id",
+          "observed_at"
+        ],
+        "title": "TrustTimeline",
         "type": "object"
       },
       "UploadReport": {
@@ -4147,6 +5265,113 @@
           "status"
         ],
         "title": "Verification",
+        "type": "object"
+      },
+      "VersionComparison": {
+        "properties": {
+          "after_scan": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "After Scan"
+          },
+          "after_version": {
+            "format": "uuid",
+            "title": "After Version",
+            "type": "string"
+          },
+          "before_scan": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Before Scan"
+          },
+          "before_version": {
+            "format": "uuid",
+            "title": "Before Version",
+            "type": "string"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/Change"
+            },
+            "title": "Changes",
+            "type": "array"
+          },
+          "comparable": {
+            "default": false,
+            "title": "Comparable",
+            "type": "boolean"
+          },
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Counts",
+            "type": "object"
+          },
+          "interpretation": {
+            "default": "\uc815\uc801 \ubd84\uc11d \ube44\uad50\uc774\uba70 \uc774\ub984\u00b7\uc8fc\uc18c \uc774\ub3d9\uc758 \ub3d9\uc77c\uc131\uc740 \ud655\uc778\ud560 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4.",
+            "title": "Interpretation",
+            "type": "string"
+          },
+          "manifest_equal": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manifest Equal"
+          },
+          "next_offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Offset"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "tool_conditions_equal": {
+            "default": false,
+            "title": "Tool Conditions Equal",
+            "type": "boolean"
+          },
+          "total": {
+            "default": 0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "before_version",
+          "after_version"
+        ],
+        "title": "VersionComparison",
         "type": "object"
       },
       "VersionCreate": {
@@ -4658,6 +5883,56 @@
           }
         },
         "summary": "Demo"
+      }
+    },
+    "/api/dynamic-demo/{scenario}": {
+      "get": {
+        "operationId": "demo_api_dynamic_demo__scenario__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "scenario",
+            "required": true,
+            "schema": {
+              "enum": [
+                "success",
+                "failed",
+                "aborted",
+                "timeout",
+                "not_run",
+                "unobservable"
+              ],
+              "title": "Scenario",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DynamicRun"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Demo",
+        "tags": [
+          "dynamic-demo"
+        ]
       }
     },
     "/api/health": {
@@ -5819,6 +7094,163 @@
         ]
       }
     },
+    "/api/repositories/{owner}/{name}/reputation": {
+      "get": {
+        "operationId": "history_api_repositories__owner___name__reputation_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "owner",
+            "required": true,
+            "schema": {
+              "title": "Owner",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "version",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReputationHistory"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "History",
+        "tags": [
+          "reputation"
+        ]
+      }
+    },
+    "/api/repositories/{owner}/{name}/reputation/collect": {
+      "post": {
+        "operationId": "refresh_api_repositories__owner___name__reputation_collect_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "owner",
+            "required": true,
+            "schema": {
+              "title": "Owner",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "version",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReputationEvaluation"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Refresh",
+        "tags": [
+          "reputation"
+        ]
+      }
+    },
     "/api/repositories/{owner}/{name}/star": {
       "delete": {
         "operationId": "unstar_api_repositories__owner___name__star_delete",
@@ -5916,6 +7348,256 @@
         "summary": "Star",
         "tags": [
           "explore"
+        ]
+      }
+    },
+    "/api/repositories/{owner}/{name}/trust/compare": {
+      "get": {
+        "operationId": "compare_api_repositories__owner___name__trust_compare_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "owner",
+            "required": true,
+            "schema": {
+              "title": "Owner",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before",
+            "required": true,
+            "schema": {
+              "title": "Before",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "required": true,
+            "schema": {
+              "title": "After",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionComparison"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Compare",
+        "tags": [
+          "trust"
+        ]
+      }
+    },
+    "/api/repositories/{owner}/{name}/trust/reuse": {
+      "get": {
+        "operationId": "reuse_history_api_repositories__owner___name__trust_reuse_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "owner",
+            "required": true,
+            "schema": {
+              "title": "Owner",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "version",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReuseHistory"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reuse History",
+        "tags": [
+          "trust"
+        ]
+      }
+    },
+    "/api/repositories/{owner}/{name}/trust/timeline": {
+      "get": {
+        "operationId": "events_api_repositories__owner___name__trust_timeline_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "owner",
+            "required": true,
+            "schema": {
+              "title": "Owner",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "version",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrustTimeline"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Events",
+        "tags": [
+          "trust"
         ]
       }
     },
@@ -7246,6 +8928,122 @@
         "summary": "Retry Scan",
         "tags": [
           "scans"
+        ]
+      }
+    },
+    "/api/scans/{scan_id}/risk-paths": {
+      "get": {
+        "operationId": "risk_paths_api_scans__scan_id__risk_paths_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "scan_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Scan Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "severity",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Severity"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Severity"
+            }
+          },
+          {
+            "in": "query",
+            "name": "rule",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 255,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rule"
+            }
+          },
+          {
+            "in": "query",
+            "name": "resource",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 8192,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Resource"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RiskPaths"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Risk Paths",
+        "tags": [
+          "risk-paths"
         ]
       }
     },
