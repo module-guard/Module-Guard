@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
+import type { components } from "../src/api/generated/schema";
 import type { Scan } from "../src/components/live-shared";
 import { partialAnalysis, scanFixture } from "./fixtures/analysis-coverage";
 
@@ -121,6 +122,27 @@ async function mockApi(page: Page, options: Options = {}) {
         origin_type: originType,
         origin_url: originType === "GITHUB" ? ORIGIN : null,
       });
+    if (path === "/api/repositories/dev-user/net/trust/timeline") {
+      expect(request.method()).toBe("GET");
+      return fulfill(route, {
+        version_id: "22222222-2222-4222-8222-222222222222",
+        scan_id: calls.newScan ? NEW : OLD,
+        events: [],
+        unrecorded: [],
+        signature_status: "unsigned",
+        signature_reasons: ["NO_SIGNATURE"],
+        observed_at: "2026-11-05T00:00:00Z",
+        security_guarantee: false,
+      } satisfies components["schemas"]["TrustTimeline"]);
+    }
+    if (path === "/api/repositories/dev-user/net/trust/reuse") {
+      expect(request.method()).toBe("GET");
+      return fulfill(route, {
+        records: [],
+        next_offset: null,
+        metric_note: "측정 기록 없음",
+      } satisfies components["schemas"]["ReuseHistory"]);
+    }
     if (path === "/api/uploads/github" || path === "/api/uploads/zip") {
       calls.prepare += 1;
       return fulfill(route, prepare());
