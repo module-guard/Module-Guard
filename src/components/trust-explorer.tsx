@@ -421,6 +421,56 @@ export function VerificationTimeline({
       ),
     `${owner}/${name}/${version}`,
   );
+  const policy = useApi(
+    async (signal) =>
+      r.data?.scan_id
+        ? {
+            observedAt: r.data.observed_at,
+            response: await unwrap(
+              api.GET("/api/scans/{scan_id}/attestations", {
+                params: {
+                  path: { scan_id: r.data.scan_id },
+                  query: { version_id: r.data.version_id },
+                },
+                signal,
+              }),
+            ),
+          }
+        : null,
+    `${owner}/${name}/${version}/${r.data?.scan_id ?? "none"}/${r.data?.version_id ?? "none"}/${r.data?.observed_at ?? "none"}/attestation-policy`,
+  );
+  // Generated API types are updated by the frontend contract owner.
+  const response = policy.data?.response as
+    | {
+        policy_enabled?: boolean;
+        scan_id: string;
+        version_id: string;
+        status: string;
+        reasons?: string[];
+      }
+    | undefined;
+  const attestation =
+    policy.data?.observedAt === r.data?.observed_at &&
+    response?.scan_id === r.data?.scan_id &&
+    response?.version_id === r.data?.version_id
+      ? response
+      : undefined;
+  const signatureStatus =
+    attestation?.status === "unsigned"
+      ? attestation.policy_enabled === false
+        ? "서명 비활성"
+        : attestation.policy_enabled === true
+          ? "서명 없음"
+          : "검증 상태 확인 불가"
+      : (attestation?.status ??
+        (r.data?.signature_status === "unsigned"
+          ? "unsigned"
+          : "검증 상태 확인 불가"));
+  const statusNote = attestation
+    ? attestation.policy_enabled === false && attestation.status !== "unsigned"
+      ? " (서명 비활성)"
+      : ""
+    : " (서명 정책 확인 불가)";
   return (
     <section className="space-y-3" aria-label="검증 타임라인">
       <h2 className="text-xl font-bold">검증 타임라인</h2>
@@ -429,9 +479,12 @@ export function VerificationTimeline({
       ) : (
         <>
           <p>
-            현재 서명 상태: {r.data.signature_status} · 조회 시각{" "}
-            {r.data.observed_at}
+            현재 서명 상태: {signatureStatus}
+            {statusNote} · 조회 시각 {r.data.observed_at}
           </p>
+          {attestation?.reasons?.length ? (
+            <p>검증 근거: {attestation.reasons.join(", ")}</p>
+          ) : null}
           <p>서명이 유효해도 보안 위험이 없다는 뜻은 아닙니다.</p>
           <label>
             이벤트 검색{" "}

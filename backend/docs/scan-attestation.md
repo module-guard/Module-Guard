@@ -210,6 +210,51 @@ reapply 전후·no-op/원문 비노출/저장 경쟁·권한·상한·심볼릭 
 생성 API 계약(`openapi.json`, `src/api/generated/schema.d.ts`)도 사용자의 예외 승인 범위로 동기화했다.
 기존 경로·schema는 유지하며, ORM·migration·main.py는 수정하지 않았다.
 
+## #45 스테이징 활성화·검증 런북 (실행 전 체크리스트)
+
+현재 저장소에는 승인된 AWS 계정/리전, KMS 키 소유자, TSA와 비용 한도, 스테이징 자격증명,
+실제 정책 파일이 없다. 아래 절차는 **실행 계획**이며 실제 KMS/TSA 결과로 간주하지 않는다.
+인프라 소유자가 계정·리전·키·TSA·비용 한도를 승인하기 전에는 키/역할을 생성하거나
+외부 TSA로 증명 데이터를 보내지 않는다.
+
+1. 배포 담당자는 승인된 스테이징 전용 비대칭 KMS 키의 고정 ARN, 공개키 ID,
+   승인된 TSA의 HTTPS URL과 독립 검증한 신뢰 루트를 확인한다. 발급 역할에는 해당 키의
+   `kms:Sign`만 허용하고, 검증기는 공개키/증명 파일만 사용한다. 키·인증 정보·실제
+   증명 원문은 Git에 올리지 않는다. 서명 정책 JSON은 API가 수정할 수 없는 읽기 전용
+   배포 경로에 버전 관리하고, 환경변수 `MODULEGUARD_ATTESTATION_POLICY_FILE`에
+   **절대 경로**를 주입한다. 정책·폐기 자료 롤백 방지는 별도 배포 책임이다.
+2. 스테이징에 검사 완료된 전용 모듈 버전을 준비하고, 해당 버전의 `scan_id`·`version_id`를
+   기록한다. `GET /api/scans/{scan_id}/attestations?version_id={version_id}`의
+   `policy_enabled=true`, `status=unsigned`를 확인한 뒤 소유자 세션과 허용 Origin으로
+   동일 경로에 POST한다. `201 valid`와 저장된 proof ID를 기록하고 GET 재검증 결과와
+   `POST /api/scans/{scan_id}/attestations/verify?version_id={version_id}`의 `valid`를
+   대조한다. 공개 결과에는 민감한 proof/claim 원문 대신 ID, 상태, 근거 코드, UTC 시각만 남긴다.
+3. 복사본 proof의 payload 한 바이트 변경, 다른 scan/version에 재사용, 정책에서 제외한
+   signer를 각각 verify API로 검사해 `invalid`와 대응 근거 코드를 기록한다. 원본
+   proof 파일은 직접 바꾸지 않는다. 정책에 기존 키 `revoked=true`를 배포하여
+   저장 증명이 `revoked`로 재평가되는지 확인하고, 유효기간이 지난 정책으로
+   `policy-expired`를 확인한다. 검증 후 승인된 정책으로 복원한다.
+4. 회전 리허설은 **새 공개키를 먼저** 검증 정책에 추가하고 새 KMS 키로 발급을 전환한 뒤
+   이전 키의 Sign 권한을 제거한다. 이전/새 증명의 검증 결과를 각각 기록한다.
+   장애 리허설은 발급 역할에서 KMS 접근을 차단하거나 승인 TSA를 격리한 스테이징에서
+   503 및 미게시를 확인하고, 복구 뒤 정상 발급을 재확인한다. 우회 키/TSA로 자동 전환하지 않는다.
+5. 정책 파일 경로 누락·손상 시 미서명 조회는 기존 호환성대로 `unsigned`이나
+   `policy_enabled=false`다. 기존 증명은 `unknown`/`POLICY_UNAVAILABLE`로 처리한다.
+   UI는 미서명+정책 비활성을 ‘서명 비활성’으로, 미서명+정책 구성을 ‘서명 없음’으로
+   구분한다. `policy_enabled=true`는 **파일이 파싱된 상태**만 뜻하며 KMS/TSA 연결,
+   키 사용 가능성 또는 정책 시간 유효성의 운영 검증을 보증하지 않는다. 발급 503,
+   `policy_enabled=false`, `unknown`, `policy-expired`, `revoked`는 운영 경보 대상으로
+   삼고, 각각 정책 배포·KMS/TSA 연결·키/폐기 자료를 점검한다.
+
+실측 기록 양식 (미실행 — 값 입력 전 완료 표시 금지):
+
+| 환경/UTC 시각 | 키 ID(비밀 제외)·정책 버전 | 시나리오 | HTTP/상태·근거 코드 | 증명 ID | 실행자·복구 확인 |
+| --- | --- | --- | --- | --- | --- |
+| 미실행 | 미정 | 발급/검증/변조/재사용/금지 signer/폐기/만료/회전/KMS·TSA 장애 | 미측정 | 미측정 | 미정 |
+
+생성 API 계약(`openapi.json`, `src/api/generated/schema.d.ts`)의 `policy_enabled` 동기화는
+프런트 담당자가 `npm run api:sync` 후 커밋해야 한다. 동기화 전에는 `api:check`가 실패한다.
+
 ## 근거
 
 - [#27](https://github.com/module-guard/Module-Guard/issues/27), [#26 병합 PR #40](https://github.com/module-guard/Module-Guard/pull/40)
