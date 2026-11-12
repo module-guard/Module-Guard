@@ -1,0 +1,9 @@
+# Test titles (substring match) that may be skipped in the live-smoke run.
+# Anything else skipped fails the job (require-no-new-skips.py).
+# Terraform is removed from the runner (AGENTS.md rule 7), so its steps skip.
+use tab: fill the form, get code, download a zip that terraform accepts
+live: terraform-aws-vpc downloads into a tree that passes init and validate
+live: terraform-aws-eks downloads into a tree that passes init and validate
+# Need a hand-prepared scan id (GRAPH_AUDIT_SCAN_ID); never set in CI.
+existing VPC scan: full flow count and grouped attribute edges
+large dependency graph remains navigable

@@ -1,0 +1,121 @@
+{
+ "suites": [
+  {
+   "title": "sample.spec.ts",
+   "file": "sample.spec.ts",
+   "column": 0,
+   "line": 0,
+   "specs": [],
+   "suites": [
+    {
+     "title": "group",
+     "file": "sample.spec.ts",
+     "line": 2,
+     "column": 6,
+     "specs": [
+      {
+       "title": "passes",
+       "ok": true,
+       "tags": [],
+       "tests": [
+        {
+         "timeout": 30000,
+         "expectedStatus": "passed",
+         "projectId": "",
+         "projectName": "",
+         "results": [
+          {
+           "status": "passed"
+          }
+         ],
+         "status": "expected"
+        }
+       ],
+       "id": "b92766bcf73bd5c029a8-97245f2944526f9bf1dd",
+       "file": "sample.spec.ts",
+       "line": 3,
+       "column": 7
+      },
+      {
+       "title": "live: expected skip (terraform is not installed)",
+       "ok": true,
+       "tags": [],
+       "tests": [
+        {
+         "timeout": 30000,
+         "expectedStatus": "skipped",
+         "projectId": "",
+         "projectName": "",
+         "results": [
+          {
+           "status": "skipped"
+          }
+         ],
+         "status": "skipped"
+        }
+       ],
+       "id": "b92766bcf73bd5c029a8-f7f48816201562009d92",
+       "file": "sample.spec.ts",
+       "line": 4,
+       "column": 7
+      },
+      {
+       "title": "surprise skip",
+       "ok": true,
+       "tags": [],
+       "tests": [
+        {
+         "timeout": 30000,
+         "expectedStatus": "skipped",
+         "projectId": "",
+         "projectName": "",
+         "results": [
+          {
+           "status": "skipped"
+          }
+         ],
+         "status": "skipped"
+        }
+       ],
+       "id": "b92766bcf73bd5c029a8-b3ab396b7b74c04135fb",
+       "file": "sample.spec.ts",
+       "line": 5,
+       "column": 7
+      },
+      {
+       "title": "fails",
+       "ok": false,
+       "tags": [],
+       "tests": [
+        {
+         "timeout": 30000,
+         "expectedStatus": "passed",
+         "projectId": "",
+         "projectName": "",
+         "results": [
+          {
+           "status": "failed"
+          }
+         ],
+         "status": "unexpected"
+        }
+       ],
+       "id": "b92766bcf73bd5c029a8-ea4fd87d1de80ad9ce5a",
+       "file": "sample.spec.ts",
+       "line": 6,
+       "column": 7
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "stats": {
+  "startTime": "2026-11-12T01:04:23.396Z",
+  "duration": 607.904,
+  "expected": 1,
+  "skipped": 2,
+  "unexpected": 1,
+  "flaky": 0
+ }
+}

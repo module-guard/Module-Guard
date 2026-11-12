@@ -14,6 +14,8 @@
 name: Live smoke
 
 on:
+  schedule:
+    - cron: "0 18 * * 0" # weekly, Sunday 18:00 UTC; runs the live specs (see backend/docs/live-smoke.md)
   workflow_dispatch:
     inputs:
       live:
@@ -41,10 +43,13 @@ jobs:
       COMPOSE: docker compose -p module-guard-e2e -f docker-compose.e2e.yml
       PLAYWRIGHT_BASE_URL: http://localhost:3100
       PLAYWRIGHT_API_URL: http://localhost:8001
-      RUN_LIVE_SCAN: ${{ inputs.live && 'true' || 'false' }}
+      # inputs are empty on a schedule: it always runs the live specs.
+      RUN_LIVE_SCAN: ${{ (github.event_name == 'schedule' || inputs.live) && 'true' || 'false' }}
       RUN_DEMO: ${{ inputs.demo && 'true' || 'false' }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false # nothing here pushes; keep the token out of .git/config
       - uses: ./.github/actions/no-terraform
       - uses: actions/setup-node@v4
         with:
@@ -75,15 +80,23 @@ jobs:
           exit 1
 
       - name: Playwright (live and demo specs)
+        id: playwright
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_NAME: test-results/report.json
         run: |
           specs=""
-          [ "$RUN_LIVE_SCAN" = true ] && specs="$specs e2e/mirror.spec.ts e2e/platform.spec.ts e2e/use.spec.ts"
+          [ "$RUN_LIVE_SCAN" = true ] && specs="$specs e2e/mirror.spec.ts e2e/platform.spec.ts e2e/use.spec.ts e2e/integrity.spec.ts"
           [ "$RUN_DEMO" = true ] && specs="$specs e2e/demo.spec.ts"
           if [ -z "$specs" ]; then
             echo "::error::Choose live, demo or both."
             exit 1
           fi
-          npx playwright test $specs --retries=0 --reporter=list,html
+          npx playwright test $specs --retries=0 --reporter=list,html,json
+
+      # A skip outside the allow-list means a live spec silently stopped running.
+      - name: Fail on unexpected skips
+        if: always() && steps.playwright.outcome != 'skipped' && env.RUN_LIVE_SCAN == 'true'
+        run: python3 .github/scripts/require-no-new-skips.py test-results/report.json .github/scripts/live-smoke-allowed-skips.txt 9
 
       - name: Collect stack logs
         if: always()
@@ -106,3 +119,26 @@ jobs:
       - name: Tear down the stack
         if: always()
         run: $COMPOSE down -v --remove-orphans
+
+  # Scheduled runs have nobody watching: open (or add to) one issue per failure streak.
+  notify:
+    name: Report scheduled failure
+    needs: smoke
+    if: failure() && github.event_name == 'schedule'
+    runs-on: ubuntu-24.04
+    permissions:
+      issues: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh label create live-smoke-failure --color B60205 2>/dev/null || true
+          open=$(gh issue list --label live-smoke-failure --state open --json number --jq '.[0].number // empty')
+          if [ -n "$open" ]; then
+            gh issue comment "$open" --body "Failed again: $RUN_URL"
+          else
+            gh issue create --label live-smoke-failure \
+              --title "Live smoke failed" --body "Scheduled live smoke failed: $RUN_URL"
+          fi

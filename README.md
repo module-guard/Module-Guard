@@ -44,7 +44,7 @@ make verify                        # ruff → pytest → api:check(+tsc, Vitest)
 | `checkov` | 실제 Checkov 실행 | `CHECKOV_BINARY`가 없으면 건너뜀. 기본 실행(`not checkov`)에서는 제외 |
 | `postgres` | 일회용 PostgreSQL 필요 | `TEST_DATABASE_URL`이 없으면 건너뜀. 기본 실행에서는 제외 |
 
-E2E의 `RUN_LIVE_SCAN`(실제 GitHub·Registry 수집), `RUN_DEMO`(시연 시나리오)는 설정하지 않으면 해당 spec이 건너뜁니다. `use.spec.ts`의 terraform 단계는 로컬에 `terraform`이 없으면 건너뜁니다. 실제 수집 시나리오는 아래 '외부 네트워크가 필요한 시나리오 (수동 실행)'을 보세요.
+E2E의 `RUN_LIVE_SCAN`(실제 GitHub·Registry 수집), `RUN_DEMO`(시연 시나리오)는 설정하지 않으면 해당 spec이 건너뜁니다. `use.spec.ts`의 terraform 단계는 로컬에 `terraform`이 없으면 건너뜁니다. 정기 실행은 [live smoke (예약 실행)](backend/docs/live-smoke.md)를 보세요.
 
 | 로컬 | CI 작업 (`ci.yml`) |
 |---|---|
