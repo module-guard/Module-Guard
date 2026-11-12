@@ -93,7 +93,7 @@ export function RiskPaths({ id }: { id: string }) {
             {paths.map((p) => (
               <li key={p.finding_id}>
                 <button
-                  className="min-h-11 text-brand underline"
+                  className="min-h-11 text-violet-700 underline"
                   onClick={() => setSelected(p.finding_id)}
                 >
                   {p.severity} · {p.rule} ·{" "}

@@ -22,18 +22,18 @@ import { useGraphLayout } from "./use-graph-layout";
 import type { VisualNode, VisualEdge } from "./types";
 export const nodeColors: Record<string, string> = {
   ROOT_MODULE: "#7c3aed",
-  MODULE: "#6366f1",
-  RESOURCE: "#dc2626",
-  DATA: "#0891b2",
-  VARIABLE: "#16a34a",
-  LOCAL: "#ca8a04",
-  OUTPUT: "#db2777",
-  PROVIDER: "#0d9488",
-  REQUIRED_PROVIDER: "#0d9488",
-  UNRESOLVED: "#64748b",
+  MODULE: "#4f46e5",
+  RESOURCE: "#b91c1c",
+  DATA: "#0e7490",
+  VARIABLE: "#15803d",
+  LOCAL: "#a16207",
+  OUTPUT: "#be185d",
+  PROVIDER: "#0f766e",
+  REQUIRED_PROVIDER: "#0f766e",
+  UNRESOLVED: "#475569",
   SOURCE_TRUST: "#b45309",
   FLOW: "#2563eb",
-  SINK: "#dc2626",
+  SINK: "#b91c1c",
   CHECKOV: "#9333ea",
   TFCR: "#be123c",
 };
@@ -98,12 +98,12 @@ function EntityNode({ data, selected }: NodeProps) {
           ))}
       </div>
       {n.metadata?.attribute_path != null && (
-        <div className="truncate text-xs text-slate-500">
+        <div className="truncate text-xs text-slate-600">
           속성 · {String(n.metadata.attribute_path)}
         </div>
       )}
       {Number(n.metadata?.attribute_count) > 1 && (
-        <div className="text-xs text-slate-500">
+        <div className="text-xs text-slate-600">
           흐름 속성 {String(n.metadata?.attribute_count)}개 · 상세에서 펼치기
         </div>
       )}
@@ -114,7 +114,7 @@ function EntityNode({ data, selected }: NodeProps) {
         <div className="text-xs font-mono">{String(n.metadata.rule)}</div>
       )}
       {n.file_path && (
-        <div className="mt-1 truncate text-xs text-slate-500">
+        <div className="mt-1 truncate text-xs text-slate-600">
           {n.file_path}
           {n.line_start != null ? `:${n.line_start}` : ""}
         </div>
@@ -126,7 +126,7 @@ function EntityNode({ data, selected }: NodeProps) {
 const nodeTypes = {
   entity: EntityNode,
   moduleGroup: ({ data }: NodeProps) => (
-    <div className="p-2 text-xs text-slate-500">{String(data.label)}</div>
+    <div className="p-2 text-xs text-slate-600">{String(data.label)}</div>
   ),
 };
 export function edgeStyle(e: VisualEdge) {
@@ -285,18 +285,18 @@ export function GraphCanvas({
       className={
         expanded
           ? "fixed inset-3 z-50 overflow-auto rounded-xl border bg-white p-5 shadow-xl"
-          : "relative"
+          : "relative min-w-0"
       }
     >
       <div className="my-3 flex flex-wrap items-center gap-3 rounded-lg bg-slate-50 p-3 text-sm">
         <strong>
           노드 {shownNodes.length}개 · 연결선 {shownEdges.length}개
         </strong>
-        <label>
+        <label className="min-w-0 max-w-full">
           연결 그룹{" "}
           <select
             aria-label={`${label} 연결 그룹`}
-            className="max-w-full rounded border p-1 sm:max-w-64"
+            className="block max-w-full rounded border p-1 sm:max-w-64"
             value={component}
             onChange={(e) => {
               setComponent(e.target.value);
@@ -312,11 +312,11 @@ export function GraphCanvas({
             ))}
           </select>
         </label>
-        <label>
+        <label className="min-w-0 max-w-full">
           노드 찾기{" "}
           <select
             aria-label={`${label} 노드 찾기`}
-            className="max-w-full rounded border p-1 sm:max-w-64"
+            className="block max-w-full rounded border p-1 sm:max-w-64"
             value={selected}
             onChange={(e) => {
               setSelected(e.target.value);
@@ -378,7 +378,11 @@ export function GraphCanvas({
           표시했습니다. 연결선은 유지됩니다.
         </p>
       )}
-      <div className="my-3 flex flex-wrap gap-3 text-xs" aria-label="노드 범례">
+      <div
+        className="my-3 flex flex-wrap gap-3 text-xs"
+        role="group"
+        aria-label="노드 범례"
+      >
         {Object.entries(nodeColors)
           .filter(([type]) => shownNodes.some((n) => n.type === type))
           .map(([type, color]) => (
@@ -387,7 +391,7 @@ export function GraphCanvas({
             </span>
           ))}
       </div>
-      <p className="mb-2 text-xs text-slate-500">
+      <p className="mb-2 text-xs text-slate-600">
         드래그로 이동 · 휠로 확대/축소 · 선택하면 상세 표시 · 전체 맞춤은 글자가
         작아질 수 있습니다.
         {shownNodes.length > 150 &&
@@ -406,7 +410,7 @@ export function GraphCanvas({
       ) : (
         <div className="relative">
           <div
-            role="img"
+            role="group"
             aria-label={label}
             className="h-[560px] min-w-0 rounded-xl border border-line bg-slate-50/50"
           >
@@ -462,7 +466,7 @@ export function GraphCanvas({
               className="absolute right-3 top-3 z-10 max-h-[490px] w-72 max-w-[85%] overflow-auto rounded-xl border bg-white p-4 text-sm shadow-lg"
             >
               <button
-                className="mb-3 float-right text-brand"
+                className="mb-3 float-right text-violet-700"
                 aria-label="그래프 상세 닫기"
                 onClick={() => {
                   setSelected("");
@@ -502,7 +506,7 @@ export function GraphCanvas({
                   </details>
                   {onCenter && (
                     <button
-                      className="mt-3 text-brand"
+                      className="mt-3 text-violet-700"
                       onClick={() => onCenter(detail.address)}
                     >
                       {centerLabel}
@@ -563,7 +567,7 @@ export function GraphCanvas({
             ))}
           {edgeListOpen && shownEdges.length > edgeListLimit && (
             <button
-              className="p-2 text-brand"
+              className="p-2 text-violet-700"
               onClick={() => setEdgeListLimit((n) => n + 100)}
             >
               연결선 100개 더 보기

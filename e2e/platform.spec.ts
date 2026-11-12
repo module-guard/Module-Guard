@@ -40,11 +40,13 @@ test("scan form → actual fixture pipeline → results, graph, trace and attack
   await page.getByRole("button", { name: /^공급망/ }).click();
   await expect(page.getByText("TFSC004", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: /^의존성/ }).click();
-  await expect(page.getByRole("img", { name: "의존성 그래프" })).toBeVisible();
+  await expect(
+    page.getByRole("group", { name: "의존성 그래프" }),
+  ).toBeVisible();
   await expect(page.getByLabel("그래프 깊이")).toHaveValue("1");
   await page.getByLabel("그래프 깊이").selectOption("2");
   await page.getByLabel("그래프 방향").selectOption("out");
-  const dependencyGraph = page.getByRole("img", { name: "의존성 그래프" });
+  const dependencyGraph = page.getByRole("group", { name: "의존성 그래프" });
   const firstNode = dependencyGraph.locator(".react-flow__node-entity").first();
   await firstNode.click();
   await expect(
@@ -80,7 +82,7 @@ test("scan form → actual fixture pipeline → results, graph, trace and attack
   const flows = await (
     await request.get(`${backend}/api/scans/${scanId}/flows`)
   ).json();
-  const flowCanvas = page.getByRole("img", {
+  const flowCanvas = page.getByRole("group", {
     name: "데이터 흐름 그래프",
     exact: true,
   });
@@ -99,7 +101,7 @@ test("scan form → actual fixture pipeline → results, graph, trace and attack
   const adjacent = await (
     await request.get(`${backend}/api/scans/${scanId}/flows/local.policy`)
   ).json();
-  const adjacentCanvas = page.getByRole("img", {
+  const adjacentCanvas = page.getByRole("group", {
     name: "인접 흐름 그래프",
     exact: true,
   });
@@ -123,7 +125,7 @@ test("scan form → actual fixture pipeline → results, graph, trace and attack
   await page.getByRole("button", { name: "흐름 추적", exact: true }).click();
   await expect(
     page
-      .getByRole("img", { name: "흐름 추적 그래프" })
+      .getByRole("group", { name: "흐름 추적 그래프" })
       .getByText("local.policy", { exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: /^상관 위험/ }).click();
@@ -136,9 +138,9 @@ test("scan form → actual fixture pipeline → results, graph, trace and attack
     page.getByRole("region", { name: "상관 분석 근거" }),
   ).toContainText("local.policy");
   await expect(
-    page.getByRole("img", { name: "상관 공격 경로 그래프" }),
+    page.getByRole("group", { name: "상관 공격 경로 그래프" }),
   ).toBeVisible();
-  const attack = page.getByRole("img", { name: "상관 공격 경로 그래프" });
+  const attack = page.getByRole("group", { name: "상관 공격 경로 그래프" });
   await expect(attack.locator(".react-flow__node-entity")).toHaveCount(6);
   await expect(attack.locator(".react-flow__edge")).toHaveCount(5);
   await page.getByRole("button", { name: "크게 보기", exact: true }).click();
@@ -321,7 +323,7 @@ test("graph audit preserves parallel, missing and isolated endpoints", async ({
   await page
     .getByRole("button", { name: "전체 그래프 (고립 노드 포함)", exact: true })
     .click();
-  const graph = page.getByRole("img", { name: "의존성 그래프", exact: true });
+  const graph = page.getByRole("group", { name: "의존성 그래프", exact: true });
   await expect(graph.locator(".react-flow__node-entity")).toHaveCount(5);
   await expect(graph.locator(".react-flow__edge")).toHaveCount(3);
   await expect(page.getByText(/상세가 없는 노드 1개/)).toBeVisible();
@@ -381,7 +383,7 @@ test("existing VPC scan: full flow count and grouped attribute edges", async ({
   await page
     .getByLabel("선언별 묶기 (속성 연결 유지)", { exact: true })
     .uncheck();
-  const large = page.getByRole("img", {
+  const large = page.getByRole("group", {
     name: "데이터 흐름 그래프",
     exact: true,
   });
@@ -418,7 +420,7 @@ test("existing VPC scan: full flow count and grouped attribute edges", async ({
   ).json();
   expect(expected.edges.length).toBeGreaterThan(1);
   await page.getByLabel("Flow source", { exact: true }).fill(source);
-  const graph = page.getByRole("img", {
+  const graph = page.getByRole("group", {
     name: "데이터 흐름 그래프",
     exact: true,
   });
@@ -468,7 +470,10 @@ test("large dependency graph remains navigable without dropping nodes or edges",
   await page
     .getByRole("button", { name: "전체 그래프 (고립 노드 포함)" })
     .click();
-  const canvas = page.getByRole("img", { name: "의존성 그래프", exact: true });
+  const canvas = page.getByRole("group", {
+    name: "의존성 그래프",
+    exact: true,
+  });
   await expect(canvas).toBeVisible({ timeout: 30000 });
   await expect
     .poll(() => canvas.locator(".react-flow__node-entity").count())

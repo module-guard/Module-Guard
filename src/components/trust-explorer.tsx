@@ -168,7 +168,7 @@ export function TrustExplorer({
               {nodes.map((n) => (
                 <li key={n.ref.id} className="flex flex-wrap gap-3 py-3">
                   <button
-                    className="text-brand underline min-h-11"
+                    className="text-violet-700 underline min-h-11"
                     onClick={() => setSelected(n.ref.id)}
                   >
                     {n.ref.owner}/{n.ref.name}@{n.ref.version}

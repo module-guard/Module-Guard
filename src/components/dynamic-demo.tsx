@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { api, unwrap } from "@/api/client";
 import { useApi } from "@/api/hooks";
 import type { components } from "@/api/generated/schema";
@@ -30,6 +30,19 @@ export function DynamicDemo() {
   );
   const run = r.data,
     stages = (run?.stages ?? []).filter((s) => !filter || s.status === filter);
+  const graphNodes = useMemo(
+    () =>
+      run?.nodes?.map((n) => ({
+        id: n.id,
+        address: n.id,
+        type: n.resource_type,
+      })),
+    [run],
+  );
+  const graphEdges = useMemo(
+    () => run?.edges?.map((e) => ({ ...e, type: "합성 연결" })),
+    [run],
+  );
   return (
     <section
       aria-label="동적 분석 비실행 데모"
@@ -102,7 +115,7 @@ export function DynamicDemo() {
               <li className="border-l-2 p-3" key={s.id}>
                 <button
                   onClick={() => setSelected(s.evidence_ids?.[0] ?? "")}
-                  className="text-brand underline"
+                  className="text-violet-700 underline"
                 >
                   {s.name} · {words[s.status]}
                 </button>
@@ -124,12 +137,8 @@ export function DynamicDemo() {
           )}
           <GraphCanvas
             label="합성 관측 그래프 (실제 실행 아님)"
-            nodes={run.nodes?.map((n) => ({
-              id: n.id,
-              address: n.id,
-              type: n.resource_type,
-            }))}
-            edges={run.edges?.map((e) => ({ ...e, type: "합성 연결" }))}
+            nodes={graphNodes}
+            edges={graphEdges}
             onCenter={(address) =>
               setSelected(
                 run.nodes?.find((n) => n.id === address)?.evidence_ids[0] ?? "",
