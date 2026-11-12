@@ -56,12 +56,37 @@ def test_unconfigured_legacy_is_unsigned_and_issuance_is_unavailable(stack, sess
     response = client.get(path)
     assert response.status_code == 200
     assert response.json()["status"] == "unsigned"
+    assert response.json()["policy_enabled"] is False
     assert response.headers["cache-control"] == "no-store"
     assert client.post(path).status_code == 503
     with sessions() as session:
         assert session.get(Scan, scan_id).analysis == before
     assert client.get(f"/api/scans/{scan_id}").status_code == 200
     assert client.get(f"/api/scans/{scan_id}/graph").status_code == 200
+
+
+def test_configured_policy_without_proof_is_unsigned(signed_stack):
+    client, _, _, path, _ = signed_stack
+    result = client.get(path)
+    assert result.status_code == 200
+    assert result.json()["status"] == "unsigned"
+    assert result.json()["policy_enabled"] is True
+
+
+def test_invalid_policy_file_is_disabled(stack, sessions, monkeypatch, tmp_path):
+    policy_file = tmp_path / "policy.json"
+    policy_file.write_text("{invalid", encoding="utf-8")
+    monkeypatch.setenv("MODULEGUARD_ATTESTATION_POLICY_FILE", str(policy_file))
+    client = stack()
+    sign_in(client, sessions)
+    created, _ = publish(client)
+    scan_id = UUID(created["scan_id"])
+    with sessions() as session:
+        version = session.scalar(select(ModuleVersion).where(ModuleVersion.scan_id == scan_id))
+    response = client.get(f"/api/scans/{scan_id}/attestations?version_id={version.id}")
+    assert response.status_code == 200
+    assert response.json()["status"] == "unsigned"
+    assert response.json()["policy_enabled"] is False
 
 
 def issue(client, path):
@@ -83,6 +108,7 @@ def test_issue_read_verify_and_preserve_original_metadata(signed_stack, sessions
         finding.raw_data = {**finding.raw_data, "private": "SECRET_RAW_FINDING"}
         session.commit()
     result = issue(client, path)
+    assert result["policy_enabled"] is True
     [entry] = result["entries"]
     assert entry["verification"]["purpose"] == "platform"
     assert entry["verification"]["trusted_at"]
@@ -199,6 +225,16 @@ def test_revocation_and_policy_expiry_are_rechecked(signed_stack):
     assert client.get(path).json()["status"] == "revoked"
     policy.expires_at = datetime.now(UTC) - timedelta(seconds=1)
     assert client.get(path).json()["status"] == "policy-expired"
+
+
+def test_existing_proof_without_policy_is_unknown(signed_stack, monkeypatch):
+    client, _, _, path, _ = signed_stack
+    issue(client, path)
+    monkeypatch.setattr("app.api.routes.attestations.load_policy", lambda: None)
+    result = client.get(path).json()
+    assert result["status"] == "unknown"
+    assert result["reasons"] == ["POLICY_UNAVAILABLE"]
+    assert result["policy_enabled"] is False
 
 
 def test_noop_reapply_does_not_change_signature_binding(signed_stack, sessions):

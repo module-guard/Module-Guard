@@ -227,10 +227,15 @@ class AttestationService:
                 version_id=version.id,
                 status="unknown",
                 reasons=["PROOF_STORE_UNAVAILABLE"],
+                policy_enabled=self.policy is not None,
             )
         if not saved:
             return AttestationResponse(
-                scan_id=scan.id, version_id=version.id, status="unsigned", reasons=["NO_SIGNATURE"]
+                scan_id=scan.id,
+                version_id=version.id,
+                status="unsigned",
+                reasons=["NO_SIGNATURE"],
+                policy_enabled=self.policy is not None,
             )
         try:
             binding, problem = self.binding(scan, version), None
@@ -256,12 +261,14 @@ class AttestationService:
                 version_id=version.id,
                 status="unknown",
                 reasons=["PROOF_STORE_INVALID"],
+                policy_enabled=self.policy is not None,
             )
         return AttestationResponse(
             scan_id=scan.id,
             version_id=version.id,
             status=entries[-1].verification.status,
             reasons=entries[-1].verification.reasons,
+            policy_enabled=self.policy is not None,
             entries=entries,
         )
 
