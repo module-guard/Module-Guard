@@ -90,5 +90,6 @@ class AttestationResponse(BaseModel):
     scan_id: UUID
     version_id: UUID
     status: AttestationStatus
+    policy_enabled: bool = False
     reasons: list[str] = Field(default_factory=list)
     entries: list[AttestationEntry] = Field(default_factory=list)
