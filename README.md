@@ -17,6 +17,47 @@ docker compose up --build
 
 Frontend: http://localhost:3000 · Backend: http://localhost:8000 · Swagger: http://localhost:8000/docs
 
+## 처음 설정 → 전체 검증
+
+```sh
+cd backend
+python3.12 -m venv .venv && .venv/bin/pip install -e '.[test]'
+python3.12 -m venv .venv-checkov && .venv-checkov/bin/pip install -r requirements-scanner.txt   # Checkov는 별도 venv (hcl2 충돌 방지)
+cd ..
+npm ci
+npx playwright install chromium    # E2E를 돌릴 때만
+make doctor                        # 환경 점검: 문제가 있으면 [환경 문제]와 해결 명령을 출력
+make verify                        # ruff → pytest → api:check(+tsc, Vitest). VERIFY_FULL=1 이면 Checkov·PostgreSQL 마커, VERIFY_E2E=1 이면 Playwright까지
+```
+
+`[환경 문제]`로 끝나면 코드가 아니라 이 PC의 환경 문제입니다. 테스트 실패는 `verify`의 `== 번호` 단계 아래에 pytest/tsc/Playwright 출력으로 나옵니다. `VERIFY_E2E=1`은 Docker와 포트 3100·8001이 비어 있어야 합니다(E2E의 DB는 호스트 포트를 열지 않으므로 5432는 상관없습니다). `VERIFY_FULL=1`은 **일회용** PostgreSQL이 필요합니다. 예: `docker run -d --name mg-test-pg -e POSTGRES_USER=ci -e POSTGRES_PASSWORD=ci -e POSTGRES_DB=ci -p 127.0.0.1:55432:5432 postgres:16-alpine` 후 `TEST_DATABASE_URL=postgresql+psycopg://ci:ci@127.0.0.1:55432/ci make verify VERIFY_FULL=1`. 개발 DB를 가리키면 안 됩니다(`downgrade base`와 테스트가 스키마를 지웁니다). DB 이름이 `ci`이거나 `test`를 포함하지 않으면 `verify-full`이 거부합니다.
+
+| 도구 | 버전 |
+|---|---|
+| Python | 3.12 (CI·`backend/Dockerfile`과 같음) |
+| Node | 22 |
+| Docker | E2E에만 필요 (`docker compose`) |
+| Chromium | `npx playwright install chromium` (설치된 `@playwright/test`가 기대하는 버전) |
+
+| pytest 마커 | 의미 | 건너뛰는 조건 |
+|---|---|---|
+| `checkov` | 실제 Checkov 실행 | `CHECKOV_BINARY`가 없으면 건너뜀. 기본 실행(`not checkov`)에서는 제외 |
+| `postgres` | 일회용 PostgreSQL 필요 | `TEST_DATABASE_URL`이 없으면 건너뜀. 기본 실행에서는 제외 |
+
+E2E의 `RUN_LIVE_SCAN`(실제 GitHub·Registry 수집), `RUN_DEMO`(시연 시나리오)는 설정하지 않으면 해당 spec이 건너뜁니다. `use.spec.ts`의 terraform 단계는 로컬에 `terraform`이 없으면 건너뜁니다. 실제 수집 시나리오는 아래 '외부 네트워크가 필요한 시나리오 (수동 실행)'을 보세요.
+
+| 로컬 | CI 작업 (`ci.yml`) |
+|---|---|
+| `make verify` 1~3단계 | Backend lint and tests |
+| `make verify` 4단계 (`npm run api:check`) | API contract, typecheck and unit tests |
+| `make verify VERIFY_E2E=1`의 `== e2e` | Browser tests (isolated stack) |
+| `make verify VERIFY_FULL=1` (`verify-full`) | Real Checkov scanner, PostgreSQL and migrations (기본 `verify`에는 없음) |
+
+- CI의 e2e는 스택을 먼저 띄우고 `--reporter=list,html`로 돌리지만, 로컬은 `playwright.config.ts`가 같은 스택(`module-guard-e2e`)을 직접 띄웁니다.
+- CI는 `no-terraform` 액션으로 terraform을 지웁니다. 로컬 `VERIFY_E2E=1`도 실행하는 동안 PATH에서 terraform을 가려서 `use.spec.ts`의 terraform 단계가 건너뛰어집니다(AGENTS.md 7번: terraform 실행 금지). 직접 `npx playwright test`를 돌릴 때는 로컬에 terraform이 있으면 그 단계가 실제로 실행되니 같은 방식으로 가리세요.
+
+명령은 `ci.yml`이 바뀌면 `Makefile`의 `verify`도 같이 고칩니다.
+
 ## 자동 검증 (GitHub Actions)
 
 PR을 올리거나 main에 push하면 `.github/workflows/ci.yml`이 아래 다섯 작업을 돌립니다. 하나라도 실패하면 PR에 실패로 표시됩니다. 운영 데이터와 실제 OAuth 비밀값은 쓰지 않고, GitHub 토큰은 읽기 권한만 씁니다.
