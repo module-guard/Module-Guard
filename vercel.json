@@ -3,7 +3,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://module-guard-api.onrender.com/api/:path*"
+      "destination": "https://module-guard-api-csdmfnf5d0b2hvgz.eastasia-01.azurewebsites.net/api/:path*"
     }
   ]
 }
