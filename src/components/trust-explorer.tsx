@@ -439,16 +439,7 @@ export function VerificationTimeline({
         : null,
     `${owner}/${name}/${version}/${r.data?.scan_id ?? "none"}/${r.data?.version_id ?? "none"}/${r.data?.observed_at ?? "none"}/attestation-policy`,
   );
-  // Generated API types are updated by the frontend contract owner.
-  const response = policy.data?.response as
-    | {
-        policy_enabled?: boolean;
-        scan_id: string;
-        version_id: string;
-        status: string;
-        reasons?: string[];
-      }
-    | undefined;
+  const response = policy.data?.response;
   const attestation =
     policy.data?.observedAt === r.data?.observed_at &&
     response?.scan_id === r.data?.scan_id &&

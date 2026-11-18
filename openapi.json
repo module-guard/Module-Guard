@@ -328,6 +328,11 @@
             "title": "Entries",
             "type": "array"
           },
+          "policy_enabled": {
+            "default": false,
+            "title": "Policy Enabled",
+            "type": "boolean"
+          },
           "reasons": {
             "items": {
               "type": "string"
