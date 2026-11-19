@@ -1,0 +1,263 @@
+{
+  "account": {
+    "login": "terraform-collected-mirror",
+    "name": "terraform 모듈 수집 미러"
+  },
+  "modules": [
+    {
+      "repository": "terraform-aws-modules/terraform-aws-sns",
+      "tag": "v7.2.0",
+      "commit": "4538b7e208f5bbd6c9972f427f85c9bd735aedad"
+    },
+    {
+      "repository": "terraform-aws-modules/terraform-aws-eventbridge",
+      "tag": "v4.4.1",
+      "commit": "6c61052393e80bb89cf4e2e08249f1f441ec2951"
+    },
+    {
+      "repository": "terraform-aws-modules/terraform-aws-apigateway-v2",
+      "tag": "v6.1.1",
+      "commit": "95e6a1d56d6d761ec12c89b36b29aad03a421b2f"
+    },
+    {
+      "repository": "terraform-aws-modules/terraform-aws-step-functions",
+      "tag": "v5.1.1",
+      "commit": "16c7a1ffaa72643d714a7b3924216edce9413482"
+    },
+    {
+      "repository": "terraform-aws-modules/terraform-aws-acm",
+      "tag": "v6.3.1",
+      "commit": "aae84c011dd68ace1beb5d10e1feddfe9a334953"
+    },
+    {
+      "repository": "terraform-aws-modules/terraform-aws-route53",
+      "tag": "v6.5.1",
+      "commit": "883f987d6bb328c09bd4dfc5a04024534b371d59"
+    },
+    {
+      "repository": "terraform-aws-modules/terraform-aws-ecr",
+      "tag": "v3.2.1",
+      "commit": "f05e615fa452e813935986295e7770f8fa96948b"
+    },
+    {
+      "repository": "terraform-aws-modules/terraform-aws-efs",
+      "tag": "v2.2.1",
+      "commit": "e0ec33d8436363960395b859aff0168ce25c27a4"
+    },
+    {
+      "repository": "terraform-aws-modules/terraform-aws-elb",
+      "tag": "v4.0.3",
+      "commit": "3267e53700b96da3b02ed77d40eaee37a9ff646d"
+    },
+    {
+      "repository": "terraform-aws-modules/terraform-aws-rds-aurora",
+      "tag": "v10.4.2",
+      "commit": "652c0648a304e04bb53b5411874f519ace3585b6"
+    },
+    {
+      "repository": "terraform-aws-modules/terraform-aws-redshift",
+      "tag": "v7.1.1",
+      "commit": "20863dab73fd48244752522fd131eef3a4318c9c"
+    },
+    {
+      "repository": "terraform-aws-modules/terraform-aws-elasticache",
+      "tag": "v1.11.2",
+      "commit": "41a277b73b9d375a2856886ab8469fd3f8b6d0ef"
+    },
+    {
+      "repository": "terraform-aws-modules/terraform-aws-cloudwatch",
+      "tag": "v6.0.0",
+      "commit": "f6dff9f79a5f4d2653b359182364f30db638ad48"
+    },
+    {
+      "repository": "terraform-aws-modules/terraform-aws-secrets-manager",
+      "tag": "v2.2.0",
+      "commit": "f3d3da1c801816563080065c5f37f212c8dee444"
+    },
+    {
+      "repository": "terraform-aws-modules/terraform-aws-batch",
+      "tag": "v3.1.0",
+      "commit": "93a3e2ec1ab003dde08e95b3da055ba040c04ca9"
+    },
+    {
+      "repository": "terraform-aws-modules/terraform-aws-appsync",
+      "tag": "v4.2.0",
+      "commit": "8269c71077ab3da41fb6894c5eb7a03e33d4ff60"
+    },
+    {
+      "repository": "terraform-aws-modules/terraform-aws-transit-gateway",
+      "tag": "v3.3.1",
+      "commit": "7973ea0890176868b62bb60a694768cec19daf9a"
+    },
+    {
+      "repository": "terraform-aws-modules/terraform-aws-wafv2",
+      "tag": "v2.1.0",
+      "commit": "36eceb918a237a80b69ce98e50b6f83fe17d2401"
+    },
+    {
+      "repository": "terraform-aws-modules/terraform-aws-opensearch",
+      "tag": "v2.11.1",
+      "commit": "370988b1bd771fd26037e8b1471ddd0ae651c602"
+    },
+    {
+      "repository": "terraform-aws-modules/terraform-aws-notify-slack",
+      "tag": "v7.5.3",
+      "commit": "a8518190cfdafca9025d979aa9b7f5a50677d72e"
+    },
+    {
+      "repository": "terraform-aws-modules/terraform-aws-key-pair",
+      "tag": "v3.0.1",
+      "commit": "f3221d392c436a874f189aa2d217d4aff60eb05e"
+    },
+    {
+      "repository": "terraform-aws-modules/terraform-aws-rds-proxy",
+      "tag": "v4.4.1",
+      "commit": "2524d394b402bf8b9deaa541231eba50d6745f2b"
+    },
+    {
+      "repository": "terraform-aws-modules/terraform-aws-emr",
+      "tag": "v3.3.0",
+      "commit": "e26ebda0500b5c4b8bf2f839ed7bc2599d545f64"
+    },
+    {
+      "repository": "terraform-google-modules/terraform-google-network",
+      "tag": "v18.3.1",
+      "commit": "91352bed3014ddbfb323d979b6413a90e7253acf"
+    },
+    {
+      "repository": "terraform-google-modules/terraform-google-kubernetes-engine",
+      "tag": "v47.0.0",
+      "commit": "a19597ac18ad833d224448e2954df93095b8ce9d"
+    },
+    {
+      "repository": "terraform-google-modules/terraform-google-project-factory",
+      "tag": "v18.4.0",
+      "commit": "eeda8a6ece829ceab899fbb528279bb4cff52ff7"
+    },
+    {
+      "repository": "terraform-google-modules/terraform-google-iam",
+      "tag": "v8.3.0",
+      "commit": "9b9eacfa2b4f849b5ef183cf5124b1e72aa72363"
+    },
+    {
+      "repository": "terraform-google-modules/terraform-google-sql-db",
+      "tag": "v28.3.1",
+      "commit": "6bfb2194e9ff509f63e3e07df7cf1c6c88dd6784"
+    },
+    {
+      "repository": "terraform-google-modules/terraform-google-cloud-storage",
+      "tag": "v12.4.1",
+      "commit": "c7effc0be0f4de78ae45d8d9d426f8478cc397ca"
+    },
+    {
+      "repository": "terraform-google-modules/terraform-google-vm",
+      "tag": "v15.4.1",
+      "commit": "781a3a1230d5a06499d3d7af96762302b5d812c6"
+    },
+    {
+      "repository": "terraform-google-modules/terraform-google-lb-http",
+      "tag": "v14.3.0",
+      "commit": "aa5991c527901391e690bae9b5edecec71930f4b"
+    },
+    {
+      "repository": "terraform-google-modules/terraform-google-pubsub",
+      "tag": "v8.9.1",
+      "commit": "ff4789090504c5eee08cc861b398d4de76470e0b"
+    },
+    {
+      "repository": "terraform-google-modules/terraform-google-bigquery",
+      "tag": "v10.2.1",
+      "commit": "ac8f494e16c9579490a9996afffc4d25bbaf8ffb"
+    },
+    {
+      "repository": "terraform-google-modules/terraform-google-service-accounts",
+      "tag": "v5.1.0",
+      "commit": "570caafff32d2cdbaee61069c2d209d6bfc9968e"
+    },
+    {
+      "repository": "terraform-google-modules/terraform-google-log-export",
+      "tag": "v12.0.0",
+      "commit": "8fc4fa266dd15ab73520d5dba72877e3cf64a4bf"
+    },
+    {
+      "repository": "terraform-google-modules/terraform-google-cloud-router",
+      "tag": "v9.1.0",
+      "commit": "fb2e999f013c128bc85b60f2fb6dfd1a445adad6"
+    },
+    {
+      "repository": "Azure/terraform-azurerm-aks",
+      "tag": "11.7.0",
+      "commit": "58ffc7c71a36871dc955ded13816fd29ac798791"
+    },
+    {
+      "repository": "Azure/terraform-azurerm-network",
+      "tag": "5.3.0",
+      "commit": "5c26aab38bc663f25819707d66611fa947ebf8c7"
+    },
+    {
+      "repository": "Azure/terraform-azurerm-compute",
+      "tag": "v5.3.1",
+      "commit": "fe57914a9301ceba61bf28e284933f470c174018"
+    },
+    {
+      "repository": "Azure/terraform-azurerm-loadbalancer",
+      "tag": "4.4.0",
+      "commit": "e68d973d21a4675e55ae5d64b7cda21de857cd7b"
+    },
+    {
+      "repository": "Azure/terraform-azurerm-vnet",
+      "tag": "5.0.1",
+      "commit": "27359ed290331d84d850e7ee6c6c88f3adb0377e"
+    },
+    {
+      "repository": "cloudposse/terraform-aws-ecs-cluster",
+      "tag": "v2.0.1",
+      "commit": "2fb65f6f79587c087c767599d2057b35393f12ce"
+    },
+    {
+      "repository": "cloudposse/terraform-aws-elasticache-redis",
+      "tag": "v2.1.0",
+      "commit": "3cd8ecd3efc9f84420af61c526a1e3c74ab968d3"
+    },
+    {
+      "repository": "cloudposse/terraform-aws-lambda-function",
+      "tag": "v0.6.1",
+      "commit": "302a4d51364735edac015baa372efcbf35da5722"
+    },
+    {
+      "repository": "cloudposse/terraform-aws-dynamodb",
+      "tag": "v0.37.0",
+      "commit": "5ac050b789ecd7bd0935e46e9a01fe262c4efbc3"
+    },
+    {
+      "repository": "cloudposse/terraform-aws-cloudfront-s3-cdn",
+      "tag": "v2.1.1",
+      "commit": "e6f9f61a3410a6d3fa1ff3811edf23c01d6835bf"
+    },
+    {
+      "repository": "cloudposse/terraform-aws-sns-topic",
+      "tag": "v1.2.0",
+      "commit": "08d95871f351c5aa83fadbef6f95334f1efbb242"
+    },
+    {
+      "repository": "cloudposse/terraform-aws-ec2-bastion-server",
+      "tag": "v0.31.2",
+      "commit": "b4ae13d7ce948616d6e79577aa94b8ee3571b39e"
+    },
+    {
+      "repository": "cloudposse/terraform-aws-s3-log-storage",
+      "tag": "v2.1.0",
+      "commit": "0e1cb0c3812d4a75edc9c3aacd041551193bef82"
+    },
+    {
+      "repository": "cn-terraform/terraform-aws-ecs-fargate",
+      "tag": "2.0.60",
+      "commit": "8aa36813aca00c8eb4247ba01e326484c17c6018"
+    },
+    {
+      "repository": "meltwater/terraform-aws-asg-dns-handler",
+      "tag": "v2.1.8",
+      "commit": "51cfc4a7e9706d1e5fea78a598f1b30ba389d9bc"
+    }
+  ]
+}

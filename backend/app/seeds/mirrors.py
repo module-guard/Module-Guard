@@ -82,6 +82,9 @@ class Outcome:
     license: str | None = None
     files: int | None = None
     notes: list[str] = field(default_factory=list)
+    # Counts for the quality report; zero until the source has been prepared.
+    excluded: int = 0
+    warning_count: int = 0
 
 
 class MirrorSeeder:
@@ -144,6 +147,7 @@ class MirrorSeeder:
             outcome.reason = f"{getattr(error, 'code', type(error).__name__)}: {error}"
             return outcome
         outcome.license, outcome.files = report.license, report.file_count
+        outcome.excluded, outcome.warning_count = report.excluded_count, len(report.warnings)
         if report.excluded_count:
             outcome.notes.append(f"excluded {report.excluded_count} files not on the allowlist")
         # Locations only; the short previews stay out of the output.
