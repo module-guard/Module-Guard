@@ -50,7 +50,10 @@ test("mirror: published through the normal path, labelled, and impossible to sig
   await page.goto("/explore");
   await page.getByLabel("모듈 검색").fill("kms");
   await page.getByRole("button", { name: "검색" }).click();
-  const card = page.locator(`a[href="/@${MIRROR}/${MODULE}"]`);
+  // The link is only the title; the 미러 label and counters live in the surrounding card.
+  const card = page.locator("article", {
+    has: page.locator(`a[href="/@${MIRROR}/${MODULE}"]`),
+  });
   await expect(card).toContainText("미러");
   await expect(card.getByTitle("별표")).toHaveText("0");
   await expect(card.getByTitle("가져간 수")).toHaveText("0");

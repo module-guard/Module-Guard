@@ -11,7 +11,7 @@ async function login(page: Page) {
   ).toBeVisible();
 }
 
-async function publishPrepared(page: Page, name: string) {
+async function publishPrepared(page: Page, name: string, checkTrust = false) {
   await expect(page.getByRole("region", { name: "확인 결과" })).toBeVisible({
     timeout: 180000,
   });
@@ -26,6 +26,26 @@ async function publishPrepared(page: Page, name: string) {
   await expect(page.getByRole("region", { name: "모듈 무결성" })).toContainText(
     "원본 무결성 · 정상",
   );
+  if (checkTrust) {
+    const scanId = page.url().split("/").pop()!;
+    const api = process.env.PLAYWRIGHT_API_URL || "http://localhost:8001";
+    const response = await page.request.get(`${api}/api/scans/${scanId}`);
+    expect(response.ok()).toBeTruthy();
+    const scan = await response.json();
+    expect(scan.status).toBe("COMPLETED");
+    expect(scan.analysis.stages.checkov.status).toBe("COMPLETED");
+    await page.goto(`/@dev-user/${name}`);
+    await page.getByRole("link", { name: "신뢰·비교", exact: true }).click();
+    await expect(
+      page.getByRole("heading", { name: "출처·계보 탐색" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("list", { name: "계보 목록 대체 보기" }),
+    ).toContainText(name);
+    await expect(
+      page.getByRole("region", { name: "검증 타임라인" }),
+    ).toBeVisible();
+  }
   await page.goto(`/@dev-user/${name}?tab=use`);
 }
 
@@ -65,16 +85,14 @@ test("upload → analysis → manifest → verified ZIP; altered received bytes 
   test.setTimeout(360000);
   await login(page);
   await page.getByRole("tab", { name: "zip 파일" }).click();
-  await page
-    .locator("#source-zip")
-    .setInputFiles({
-      name: "integrity.zip",
-      mimeType: "application/zip",
-      buffer: makeZip({
-        "main.tf": 'resource "null_resource" "example" {}\n',
-        "README.md": "# Integrity",
-      }),
-    });
+  await page.locator("#source-zip").setInputFiles({
+    name: "integrity.zip",
+    mimeType: "application/zip",
+    buffer: makeZip({
+      "main.tf": 'resource "null_resource" "example" {}\n',
+      "README.md": "# Integrity",
+    }),
+  });
   await page.getByRole("button", { name: "확인", exact: true }).click();
   await publishPrepared(page, "integrity-upload");
   await verifyAndDownload(page, "integrity-upload");
@@ -124,7 +142,7 @@ for (const source of ["github", "registry"] as const) {
       await page.getByLabel("버전 (선택)").fill("4.2.2");
     }
     await page.getByRole("button", { name: "확인", exact: true }).click();
-    await publishPrepared(page, `integrity-${source}`);
+    await publishPrepared(page, `integrity-${source}`, true);
     await verifyAndDownload(page, `integrity-${source}`);
   });
 }
