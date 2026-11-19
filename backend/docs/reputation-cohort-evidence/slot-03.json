@@ -1,0 +1,46 @@
+{
+ "slot": 3,
+ "module_url": "https://github.com/trussworks/terraform-aws-ecs-cluster",
+ "policy_version": "evidence-v1",
+ "collected_at": "2026-11-19T02:21:56Z",
+ "commit": "7b1ac66c1b5f613ee19893b86f1b8b041ebbb9a4",
+ "tag": null,
+ "evidence": {
+  "source": "https://github.com/trussworks/terraform-aws-ecs-cluster",
+  "commit": "7b1ac66c1b5f613ee19893b86f1b8b041ebbb9a4",
+  "files": [
+   ".gitignore",
+   ".markdownlintrc",
+   ".pre-commit-config.yaml",
+   ".terraform-docs.yml",
+   "LICENSE",
+   "Makefile",
+   "README.md",
+   "examples/simple/main.tf",
+   "examples/simple/outputs.tf",
+   "examples/simple/variables.tf",
+   "main.tf",
+   "outputs.tf",
+   "variables.tf",
+   "versions.tf"
+  ],
+  "github": {
+   "archived": true,
+   "pushed_at": "2023-02-02T17:09:14Z",
+   "created_at": "2018-07-13T20:30:29Z",
+   "stargazers_count": 56
+  },
+  "github_error": null,
+  "registry": null,
+  "registry_error": null
+ },
+ "stratum_facts": {
+  "repo": "trussworks/terraform-aws-ecs-cluster",
+  "repo_source_url": "https://github.com/trussworks/terraform-aws-ecs-cluster",
+  "archived": true,
+  "created_at": "2018-07-13T20:30:29Z",
+  "pushed_at": "2023-02-02T17:09:14Z",
+  "tf_count": 7,
+  "file_count": 14
+ }
+}

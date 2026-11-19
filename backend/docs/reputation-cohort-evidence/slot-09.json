@@ -1,0 +1,57 @@
+{
+ "slot": 9,
+ "module_url": "https://github.com/Azure/terraform-azurerm-naming",
+ "policy_version": "evidence-v1",
+ "collected_at": "2026-11-19T02:21:56Z",
+ "commit": "2359079c7a07a447a7ce25958de3c203aeb7e0ab",
+ "tag": "0.4.4",
+ "evidence": {
+  "source": "https://github.com/Azure/terraform-azurerm-naming",
+  "commit": "2359079c7a07a447a7ce25958de3c203aeb7e0ab",
+  "files": [
+   ".github/dependabot.yml",
+   ".github/workflows/pr-validation.yaml",
+   ".gitignore",
+   ".pre-commit-config.yaml",
+   "CODE_OF_CONDUCT.md",
+   "LICENSE",
+   "Makefile",
+   "README.md",
+   "SECURITY.md",
+   "docs/cdktf_usage.md",
+   "docs/defined_specs",
+   "docs/missing_resources.md",
+   "docs/not_defined.md",
+   "examples/main.tf",
+   "go.mod",
+   "go.sum",
+   "main.go",
+   "main.tf",
+   "make.ps1",
+   "outputs.tf",
+   "resourceDefinition.json",
+   "resourceDefinition_out_of_docs.json",
+   "templates/main.tmpl",
+   "templates/outputs.tmpl",
+   "variables.tf"
+  ],
+  "github": {
+   "archived": true,
+   "pushed_at": "2026-09-15T22:44:37Z",
+   "created_at": "2020-06-03T22:55:17Z",
+   "stargazers_count": 272
+  },
+  "github_error": null,
+  "registry": null,
+  "registry_error": null
+ },
+ "stratum_facts": {
+  "repo": "Azure/terraform-azurerm-naming",
+  "repo_source_url": "https://github.com/Azure/terraform-azurerm-naming",
+  "archived": true,
+  "created_at": "2020-06-03T22:55:17Z",
+  "pushed_at": "2026-09-15T22:44:37Z",
+  "tf_count": 4,
+  "file_count": 25
+ }
+}

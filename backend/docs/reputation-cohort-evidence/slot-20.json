@@ -1,0 +1,47 @@
+{
+ "slot": 20,
+ "module_url": "https://github.com/harness/terraform-kubernetes-harness-delegate",
+ "policy_version": "evidence-v1",
+ "collected_at": "2026-11-19T02:21:56Z",
+ "commit": "993aaef52dd09e2e4e600e61e6adca68390a5bf2",
+ "tag": "0.3.0",
+ "evidence": {
+  "source": "https://github.com/harness/terraform-kubernetes-harness-delegate",
+  "commit": "993aaef52dd09e2e4e600e61e6adca68390a5bf2",
+  "files": [
+   ".gitignore",
+   "LICENSE.md",
+   "README.md",
+   "examples/main.tf",
+   "go.mod",
+   "go.sum",
+   "main.tf",
+   "test/.env.example",
+   "test/README.md",
+   "test/basic_test.go",
+   "test/helpers.go",
+   "test/proxy_test.go",
+   "test/upgrader_test.go",
+   "vars.tf",
+   "versions.tf"
+  ],
+  "github": {
+   "archived": false,
+   "pushed_at": "2026-08-31T16:37:49Z",
+   "created_at": "2022-04-22T14:03:17Z",
+   "stargazers_count": 4
+  },
+  "github_error": null,
+  "registry": null,
+  "registry_error": null
+ },
+ "stratum_facts": {
+  "repo": "harness/terraform-kubernetes-harness-delegate",
+  "repo_source_url": "https://github.com/harness/terraform-kubernetes-harness-delegate",
+  "archived": false,
+  "created_at": "2022-04-22T14:03:17Z",
+  "pushed_at": "2026-08-31T16:37:49Z",
+  "tf_count": 4,
+  "file_count": 15
+ }
+}

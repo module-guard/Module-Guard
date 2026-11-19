@@ -1,0 +1,51 @@
+{
+ "slot": 1,
+ "module_url": "https://github.com/andreswebs/terraform-aws-ecr-repository",
+ "policy_version": "evidence-v1",
+ "collected_at": "2026-11-19T02:21:56Z",
+ "commit": "4bd6889257b95059e72d7d98e1220d35377d1ec2",
+ "tag": "0.1.0",
+ "evidence": {
+  "source": "https://github.com/andreswebs/terraform-aws-ecr-repository",
+  "commit": "4bd6889257b95059e72d7d98e1220d35377d1ec2",
+  "files": [
+   ".editorconfig",
+   ".gitattributes",
+   ".gitignore",
+   ".ls-lint.yml",
+   ".pre-commit-config.yaml",
+   ".terraform-docs.yml",
+   ".tflint.hcl",
+   "Makefile",
+   "README.md",
+   "SECURITY.md",
+   "UNLICENSE",
+   "examples/.editorconfig",
+   "examples/main.tf",
+   "main.tf",
+   "outputs.tf",
+   "tests/main.tftest.hcl",
+   "tpl/lifecycle-policy.json",
+   "variables.tf",
+   "versions.tf"
+  ],
+  "github": {
+   "archived": false,
+   "pushed_at": "2026-03-11T18:50:49Z",
+   "created_at": "2026-03-11T16:45:38Z",
+   "stargazers_count": 5
+  },
+  "github_error": null,
+  "registry": null,
+  "registry_error": null
+ },
+ "stratum_facts": {
+  "repo": "andreswebs/terraform-aws-ecr-repository",
+  "repo_source_url": "https://github.com/andreswebs/terraform-aws-ecr-repository",
+  "archived": false,
+  "created_at": "2026-03-11T16:45:38Z",
+  "pushed_at": "2026-03-11T18:50:49Z",
+  "tf_count": 5,
+  "file_count": 19
+ }
+}
