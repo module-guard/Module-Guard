@@ -1,0 +1,44 @@
+{
+ "slot": 25,
+ "module_url": "https://github.com/marcuwynu23/terraform-cloudflare-turnstile",
+ "policy_version": "evidence-v1",
+ "collected_at": "2026-11-19T02:21:56Z",
+ "commit": "ad7aa8750883149a5528afbf3a1ebf64dad1c81d",
+ "tag": null,
+ "evidence": {
+  "source": "https://github.com/marcuwynu23/terraform-cloudflare-turnstile",
+  "commit": "ad7aa8750883149a5528afbf3a1ebf64dad1c81d",
+  "files": [
+   ".github/workflows/terraform-cd-apply.yml",
+   ".github/workflows/terraform-cd-destroy.yml",
+   ".github/workflows/terraform-ci.yml",
+   ".gitignore",
+   "LICENSE",
+   "README.md",
+   "backend.tfvars.example",
+   "outputs.tf",
+   "providers.tf",
+   "terraform.tfvars.example",
+   "turnstile-widget.tf",
+   "variables.tf"
+  ],
+  "github": {
+   "archived": false,
+   "pushed_at": "2026-08-09T16:54:39Z",
+   "created_at": "2026-06-20T14:17:05Z",
+   "stargazers_count": 2
+  },
+  "github_error": null,
+  "registry": null,
+  "registry_error": null
+ },
+ "stratum_facts": {
+  "repo": "marcuwynu23/terraform-cloudflare-turnstile",
+  "repo_source_url": "https://github.com/marcuwynu23/terraform-cloudflare-turnstile",
+  "archived": false,
+  "created_at": "2026-06-20T14:17:05Z",
+  "pushed_at": "2026-08-09T16:54:39Z",
+  "tf_count": 4,
+  "file_count": 12
+ }
+}

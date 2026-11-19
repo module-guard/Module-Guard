@@ -1,0 +1,58 @@
+{
+ "slot": 15,
+ "module_url": "https://github.com/terraform-google-modules/terraform-google-endpoints-dns",
+ "policy_version": "evidence-v1",
+ "collected_at": "2026-11-19T02:21:56Z",
+ "commit": "b2e057ef19d7fd366d31a3a1378b8bef76985dfb",
+ "tag": "v3.0.1",
+ "evidence": {
+  "source": "https://github.com/terraform-google-modules/terraform-google-endpoints-dns",
+  "commit": "b2e057ef19d7fd366d31a3a1378b8bef76985dfb",
+  "files": [
+   ".github/release-please.yml",
+   ".github/workflows/stale.yml",
+   ".gitignore",
+   "CHANGELOG.md",
+   "CONTRIBUTING.md",
+   "LICENSE",
+   "Makefile",
+   "README.md",
+   "examples/gce-acme/README.md",
+   "examples/gce-acme/main.tf",
+   "examples/gce-acme/startup.sh",
+   "examples/gce-acme/test.sh",
+   "examples/gce-acme/variables.tf",
+   "examples/gce-acme/versions.tf",
+   "examples/terraform-install.sh",
+   "main.tf",
+   "outputs.tf",
+   "scripts/cloudep_prep.sh",
+   "scripts/openapi_spec.yaml",
+   "tests/pipelines/tf-ep-dns-pull-requests.yaml",
+   "tests/pipelines/tf-ep-dns-regression.yaml",
+   "tests/pipelines/tf-examples-ep-dns-gce-acme.yaml",
+   "tests/pipelines/values.yaml",
+   "tests/set_pipelines.sh",
+   "variables.tf",
+   "versions.tf"
+  ],
+  "github": {
+   "archived": true,
+   "pushed_at": "2022-06-22T16:05:39Z",
+   "created_at": "2018-09-23T23:00:38Z",
+   "stargazers_count": 11
+  },
+  "github_error": null,
+  "registry": null,
+  "registry_error": null
+ },
+ "stratum_facts": {
+  "repo": "terraform-google-modules/terraform-google-endpoints-dns",
+  "repo_source_url": "https://github.com/terraform-google-modules/terraform-google-endpoints-dns",
+  "archived": true,
+  "created_at": "2018-09-23T23:00:38Z",
+  "pushed_at": "2022-06-22T16:05:39Z",
+  "tf_count": 7,
+  "file_count": 26
+ }
+}

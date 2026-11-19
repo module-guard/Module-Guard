@@ -1,0 +1,38 @@
+{
+ "slot": 27,
+ "module_url": "https://github.com/bluk/terraform-cloudflare-fastmail-dns",
+ "policy_version": "evidence-v1",
+ "collected_at": "2026-11-19T02:21:56Z",
+ "commit": "6150ccdac9484238f14881de3450b3fc68f7a888",
+ "tag": "v0.7.0",
+ "evidence": {
+  "source": "https://github.com/bluk/terraform-cloudflare-fastmail-dns",
+  "commit": "6150ccdac9484238f14881de3450b3fc68f7a888",
+  "files": [
+   "CHANGELOG.md",
+   "LICENSE",
+   "README.md",
+   "main.tf",
+   "variables.tf",
+   "versions.tf"
+  ],
+  "github": {
+   "archived": true,
+   "pushed_at": "2022-01-07T18:29:33Z",
+   "created_at": "2018-10-29T03:21:16Z",
+   "stargazers_count": 4
+  },
+  "github_error": null,
+  "registry": null,
+  "registry_error": null
+ },
+ "stratum_facts": {
+  "repo": "bluk/terraform-cloudflare-fastmail-dns",
+  "repo_source_url": "https://github.com/bluk/terraform-cloudflare-fastmail-dns",
+  "archived": true,
+  "created_at": "2018-10-29T03:21:16Z",
+  "pushed_at": "2022-01-07T18:29:33Z",
+  "tf_count": 3,
+  "file_count": 6
+ }
+}

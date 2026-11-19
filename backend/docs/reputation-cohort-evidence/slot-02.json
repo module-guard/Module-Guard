@@ -1,0 +1,60 @@
+{
+ "slot": 2,
+ "module_url": "https://github.com/terraform-aws-modules/terraform-aws-sns",
+ "policy_version": "evidence-v1",
+ "collected_at": "2026-11-19T02:21:56Z",
+ "commit": "4538b7e208f5bbd6c9972f427f85c9bd735aedad",
+ "tag": "v7.2.0",
+ "evidence": {
+  "source": "https://github.com/terraform-aws-modules/terraform-aws-sns",
+  "commit": "4538b7e208f5bbd6c9972f427f85c9bd735aedad",
+  "files": [
+   ".editorconfig",
+   ".github/workflows/lock.yml",
+   ".github/workflows/pr-title.yml",
+   ".github/workflows/pre-commit.yml",
+   ".github/workflows/release.yml",
+   ".github/workflows/stale-actions.yaml",
+   ".gitignore",
+   ".pre-commit-config.yaml",
+   ".releaserc.json",
+   "CHANGELOG.md",
+   "LICENSE",
+   "README.md",
+   "docs/UPGRADE-5.0.md",
+   "examples/README.md",
+   "examples/complete/README.md",
+   "examples/complete/main.tf",
+   "examples/complete/outputs.tf",
+   "examples/complete/variables.tf",
+   "examples/complete/versions.tf",
+   "main.tf",
+   "outputs.tf",
+   "variables.tf",
+   "versions.tf",
+   "wrappers/README.md",
+   "wrappers/main.tf",
+   "wrappers/outputs.tf",
+   "wrappers/variables.tf",
+   "wrappers/versions.tf"
+  ],
+  "github": {
+   "archived": false,
+   "pushed_at": "2026-10-02T08:42:52Z",
+   "created_at": "2017-09-26T08:41:27Z",
+   "stargazers_count": 112
+  },
+  "github_error": null,
+  "registry": null,
+  "registry_error": null
+ },
+ "stratum_facts": {
+  "repo": "terraform-aws-modules/terraform-aws-sns",
+  "repo_source_url": "https://github.com/terraform-aws-modules/terraform-aws-sns",
+  "archived": false,
+  "created_at": "2017-09-26T08:41:27Z",
+  "pushed_at": "2026-10-02T08:42:52Z",
+  "tf_count": 12,
+  "file_count": 28
+ }
+}

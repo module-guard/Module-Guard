@@ -1,0 +1,45 @@
+{
+ "slot": 21,
+ "module_url": "https://github.com/cookielab/terraform-kubernetes-metrics-server",
+ "policy_version": "evidence-v1",
+ "collected_at": "2026-11-19T02:21:56Z",
+ "commit": "1e0dda42c02df5f1a3adc88b6851ba3b7468fb28",
+ "tag": "0.11.2",
+ "evidence": {
+  "source": "https://github.com/cookielab/terraform-kubernetes-metrics-server",
+  "commit": "1e0dda42c02df5f1a3adc88b6851ba3b7468fb28",
+  "files": [
+   "LICENSE.md",
+   "README.md",
+   "main.tf",
+   "outputs.tf",
+   "resources/aggregated-metrics-reader.yaml",
+   "resources/auth-delegator.yaml",
+   "resources/auth-reader.yaml",
+   "resources/metrics-apiservice.yaml",
+   "resources/metrics-server-deployment.yaml",
+   "resources/metrics-server-service.yaml",
+   "resources/resource-reader.yaml",
+   "variables.tf",
+   "versions.tf"
+  ],
+  "github": {
+   "archived": true,
+   "pushed_at": "2024-08-05T12:15:25Z",
+   "created_at": "2019-12-02T11:23:27Z",
+   "stargazers_count": 7
+  },
+  "github_error": null,
+  "registry": null,
+  "registry_error": null
+ },
+ "stratum_facts": {
+  "repo": "cookielab/terraform-kubernetes-metrics-server",
+  "repo_source_url": "https://github.com/cookielab/terraform-kubernetes-metrics-server",
+  "archived": true,
+  "created_at": "2019-12-02T11:23:27Z",
+  "pushed_at": "2024-08-05T12:15:25Z",
+  "tf_count": 4,
+  "file_count": 13
+ }
+}

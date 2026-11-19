@@ -1,0 +1,53 @@
+{
+ "slot": 7,
+ "module_url": "https://github.com/hoolser/terraform-azurerm-keycloak-aca",
+ "policy_version": "evidence-v1",
+ "collected_at": "2026-11-19T02:21:56Z",
+ "commit": "12368a2c71055506686a0838f694b6988a914d3b",
+ "tag": null,
+ "evidence": {
+  "source": "https://github.com/hoolser/terraform-azurerm-keycloak-aca",
+  "commit": "12368a2c71055506686a0838f694b6988a914d3b",
+  "files": [
+   ".gitignore",
+   "ARCHITECTURE_SEPARATION.md",
+   "LICENSE",
+   "README.md",
+   "terraform-keyvault/README_VAULT.md",
+   "terraform-keyvault/main.tf",
+   "terraform-keyvault/outputs.tf",
+   "terraform-keyvault/tfvars-environments/dev.tfvars",
+   "terraform-keyvault/tfvars-environments/prod.tfvars",
+   "terraform-keyvault/variables.tf",
+   "terraform/keyvault.tf",
+   "terraform/main.tf",
+   "terraform/outputs.tf",
+   "terraform/provider.tf",
+   "terraform/terraform.tf",
+   "terraform/tfvars-environments/dev.tfvars",
+   "terraform/tfvars-environments/prod.tfvars",
+   "terraform/tfvars-environments/terraform.tfvars",
+   "terraform/variables.tf",
+   "testing-ha-results.md",
+   "testing-ha.md"
+  ],
+  "github": {
+   "archived": false,
+   "pushed_at": "2026-04-19T00:00:22Z",
+   "created_at": "2026-03-07T11:56:26Z",
+   "stargazers_count": 5
+  },
+  "github_error": null,
+  "registry": null,
+  "registry_error": null
+ },
+ "stratum_facts": {
+  "repo": "hoolser/terraform-azurerm-keycloak-aca",
+  "repo_source_url": "https://github.com/hoolser/terraform-azurerm-keycloak-aca",
+  "archived": false,
+  "created_at": "2026-03-07T11:56:26Z",
+  "pushed_at": "2026-04-19T00:00:22Z",
+  "tf_count": 9,
+  "file_count": 21
+ }
+}
