@@ -1096,6 +1096,11 @@ export interface components {
         AttestationResponse: {
             /** Entries */
             entries?: components["schemas"]["AttestationEntry"][];
+            /**
+             * Policy Enabled
+             * @default false
+             */
+            policy_enabled: boolean;
             /** Reasons */
             reasons?: string[];
             /**

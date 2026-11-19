@@ -41,7 +41,25 @@ test("real API: publish, trust, comparison, reputation, risk and non-executing d
     )
     .toBe("COMPLETED");
   await page.goto(`/@dev-user/${name}`);
+  const attestationResponse = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      url.pathname === `/api/scans/${scanId}/attestations` &&
+      response.request().method() === "GET"
+    );
+  });
   await page.getByRole("link", { name: "신뢰·비교", exact: true }).click();
+  const attestation = await attestationResponse;
+  expect(attestation.status()).toBe(200);
+  expect(await attestation.json()).toEqual({
+    schema_version: 1,
+    scan_id: scanId,
+    version_id: new URL(attestation.url()).searchParams.get("version_id"),
+    status: "unsigned",
+    policy_enabled: false,
+    reasons: ["NO_SIGNATURE"],
+    entries: [],
+  });
   await expect(
     page.getByRole("heading", { name: "출처·계보 탐색" }),
   ).toBeVisible();
@@ -60,9 +78,9 @@ test("real API: publish, trust, comparison, reputation, risk and non-executing d
   await expect(page.getByRole("region", { name: "버전 비교" })).toContainText(
     "동일",
   );
-  await expect(
-    page.getByRole("region", { name: "검증 타임라인" }),
-  ).toContainText("unsigned");
+  const timeline = page.getByRole("region", { name: "검증 타임라인" });
+  await expect(timeline).toContainText("현재 서명 상태: 서명 비활성");
+  await expect(timeline).toContainText("검증 근거: NO_SIGNATURE");
   await expect(page.getByRole("region", { name: "검사 재사용" })).toContainText(
     "측정 기록 없음",
   );

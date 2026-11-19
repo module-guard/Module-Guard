@@ -7,6 +7,7 @@ import { partialAnalysis, scanFixture } from "./fixtures/analysis-coverage";
 const OLD = "11111111-1111-4111-8111-111111111111";
 const NEW = "33333333-3333-4333-8333-333333333333";
 const OTHER = "44444444-4444-4444-8444-444444444444";
+const VERSION = "22222222-2222-4222-8222-222222222222";
 const ORIGIN = "https://github.com/dev-user/net";
 const repository = {
   owner: "dev-user",
@@ -125,7 +126,7 @@ async function mockApi(page: Page, options: Options = {}) {
     if (path === "/api/repositories/dev-user/net/trust/timeline") {
       expect(request.method()).toBe("GET");
       return fulfill(route, {
-        version_id: "22222222-2222-4222-8222-222222222222",
+        version_id: VERSION,
         scan_id: calls.newScan ? NEW : OLD,
         events: [],
         unrecorded: [],
@@ -134,6 +135,24 @@ async function mockApi(page: Page, options: Options = {}) {
         observed_at: "2026-11-05T00:00:00Z",
         security_guarantee: false,
       } satisfies components["schemas"]["TrustTimeline"]);
+    }
+    if (
+      path === `/api/scans/${OLD}/attestations` ||
+      path === `/api/scans/${NEW}/attestations`
+    ) {
+      expect(request.method()).toBe("GET");
+      expect(new URL(request.url()).searchParams.get("version_id")).toBe(
+        VERSION,
+      );
+      return fulfill(route, {
+        scan_id: path === `/api/scans/${OLD}/attestations` ? OLD : NEW,
+        schema_version: 1,
+        version_id: VERSION,
+        status: "unsigned",
+        policy_enabled: false,
+        reasons: ["NO_SIGNATURE"],
+        entries: [],
+      } satisfies components["schemas"]["AttestationResponse"]);
     }
     if (path === "/api/repositories/dev-user/net/trust/reuse") {
       expect(request.method()).toBe("GET");
