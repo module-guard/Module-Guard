@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import type { components } from "../../src/api/generated/schema";
 import dynamicFixture from "../../backend/app/dynamic/fixtures/success.json";
 import { scanFixture } from "./analysis-coverage";
@@ -173,7 +173,18 @@ export async function mockGraphQuality(page: Page, size: number) {
         versions: [{ ...version, version: "v0" }, version],
       };
     else if (path === `/api/scans/${scanId}`) data = scan;
-    else if (path.endsWith("/integrity")) data = version.integrity;
+    else if (path === `/api/scans/${scanId}/attestations`) {
+      expect(url.searchParams.get("version_id")).toBe(root.ref.id);
+      data = {
+        schema_version: 1,
+        scan_id: scanId,
+        version_id: root.ref.id,
+        status: "unsigned",
+        policy_enabled: false,
+        reasons: ["NO_SIGNATURE"],
+        entries: [],
+      } satisfies Schema["AttestationResponse"];
+    } else if (path.endsWith("/integrity")) data = version.integrity;
     else if (path.endsWith("/lineage")) data = root;
     else if (path.endsWith("/lineage/graph")) {
       const limit = Number(url.searchParams.get("limit") ?? 20);
