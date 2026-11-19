@@ -153,3 +153,107 @@ API/worker 프로세스가 강제 종료되면 DB에 `QUEUED`·`COLLECTING`·`SC
 | `SCAN_RECOVERY_STALE_SECONDS` | `900` | 멀티 프로세스에서 heartbeat가 이 시간보다 오래되면 중단으로 간주. 최장 단계(checkov+git)보다 크게 둠. |
 
 응답 본문 1MB 상한은 `app/collectors/terraform_registry.py`의 `MAX_RESPONSE_BYTES` 상수입니다.
+
+## 대량 수집 (이슈 #46)
+
+`seeds/candidates.json`의 고정(pinned) 후보를 기존 시드 경로(`MirrorSeeder` → `PublishService` →
+`ScanService`)로 한 모듈씩 게시·검사합니다. 새 수집 경로, 새 API, 새 DB 테이블은 없고, 상태와 리포트는
+파일(JSON + markdown)로만 남깁니다. 파일 정책·비밀값 규칙·크기 제한·라이선스 허용목록은 일반 업로드와
+같습니다.
+
+### 선정 기준
+
+후보로 올리려면 모두 만족해야 합니다. 마지막 둘은 사람이 정하고, 앞의 것은 도구가 다시 확인합니다.
+
+1. 공개 GitHub 저장소(`owner/repo`, `https://github.com/` 고정). 비공개·다른 호스트는 제외.
+2. 재배포 가능 라이선스: `Apache-2.0`, `MIT`, `BSD-3-Clause`(`REDISTRIBUTABLE`). LICENSE 파일이 없거나
+   인식되지 않으면 미리보기에서 `license`로 격리됩니다.
+3. 실제 Terraform 모듈: 루트에 `.tf`가 있어야 합니다(없으면 `not_terraform`). 루트에 `.tf`가 없는
+   wrapper 저장소와 `examples/`만 있는 저장소는 후보에 넣지 않습니다. 남아 있으면 같은 이유로 격리됩니다.
+4. 릴리스 태그 `vX.Y.Z`/`X.Y.Z`(사전 릴리스 제외)와 그 태그가 가리키는 전체 커밋 40자로 고정합니다.
+   커밋이 다르면 `PinnedCommitMismatch`로 격리되므로 이동·삭제된 태그는 저장되지 않습니다.
+5. 중복 제거: 같은 저장소 또는 같은 모듈 이름(저장소 이름에서 만든 이름)이 manifest에 두 번 있으면 실행이
+   중단됩니다(서로 다른 조직의 `terraform-aws-vpc` 두 개가 한 저장소로 합쳐지는 것을 막기 위함).
+   같은 커밋을 가진 항목과 `seeds/mirrors.json`에 이미 있는 저장소는 `duplicate`로 건너뜁니다.
+6. 계정은 `mirrors.json`과 다른 시스템 계정(`terraform-collected-mirror`)입니다. 정지된 저장소(오래 갱신되지
+   않음)와 공급자 분포는 사람이 목록을 고를 때 판단하며 도구가 강제하지 않습니다.
+
+### pin 생성과 검증 (재실행 가능)
+
+```
+# list.txt: 줄마다 "owner/repo" 또는 "owner/repo vX.Y.Z" ('#' 이후는 주석)
+python scripts/collect_modules.py pin list.txt > seeds/candidates.json
+python scripts/collect_modules.py verify-pins          # 지금도 태그가 고정한 커밋을 가리키는지
+```
+
+`pin`은 `git ls-remote`(ProcessRunner, https만, 리디렉션 금지)로 태그를 풀고, 주석 태그면 `^{}`로 벗긴
+커밋을 씁니다. 태그를 생략하면 가장 높은 `x.y.z` 태그를 고릅니다. 태그를 찾지 못하면 그 줄은 건너뛰고
+stderr에 알립니다. 커밋 해시는 손으로 쓰지 말고 이 명령으로만 만듭니다. 최종 검증은 미리보기가 합니다
+(받아 온 커밋과 비교).
+
+### 실행
+
+```
+python scripts/collect_modules.py run                   # 미리보기(dry-run): 가져와 검사만, 저장 없음
+python scripts/collect_modules.py run --apply           # 미리보기가 받아들인 것만 게시
+python scripts/collect_modules.py run --apply --resume  # 중단된 실행을 이어서
+python scripts/collect_modules.py run --only=terraform-aws-sns --limit=5
+```
+
+| 옵션 | 기본 | 설명 |
+|---|---|---|
+| `--min-interval` | 1.0 | 모듈 시작 사이 최소 간격(초). 요청 속도 제한. |
+| `--retries` | 3 | 일시 오류(`RepositoryCloneError`, 타임아웃)에만 재시도. 지수 backoff(2·4·8초…, 상한 60초) + jitter. |
+| `--workers` | 1 | 미리보기에서만 병렬. `--apply`는 항상 1: `PublishService`가 소유자당 준비 소스 1개만 두므로 같은 계정으로 동시에 적용하면 서로의 슬롯을 지웁니다. |
+| `--resume` | 끔 | `--report-dir/checkpoint.json`에 끝난 모듈을 건너뜁니다. 같은 모드(미리보기/적용)의 체크포인트만 쓰며, 일시 오류로 끝난 모듈은 기록하지 않아 다시 시도합니다. |
+| `--report-dir` | `backups/collection` | 리포트·체크포인트 위치(`.gitignore`의 `backups/`라서 커밋되지 않음). |
+
+license·SecretsDetected·SensitiveFiles·NoTerraformFiles·PinnedCommitMismatch는 모듈 자체의 문제이므로
+재시도하지 않습니다. 중단(Ctrl+C) 시 처리 중이던 모듈은 끝까지 가고 대기 중인 모듈은 시작하지 않으며,
+체크포인트는 임시 파일에 쓴 뒤 교체(atomic)합니다. 예상 밖의 예외는 클래스 이름만 기록하고, 외부 도구의
+stderr나 메시지는 응답·로그·리포트 어디에도 남기지 않습니다. 선택적 GitHub 토큰은 지원하지 않습니다:
+수집은 git 전송만 쓰고 REST API를 부르지 않아 시간당 60회 한도가 적용되지 않으며, 토큰을 git 인자로 넘기면
+프로세스 목록에 노출될 수 있습니다.
+
+### 격리와 상태 분류
+
+한 모듈의 실패는 배치를 멈추지 않습니다. 저장되지 않은 모듈은 사유와 함께 리포트에 남습니다.
+
+| state | 뜻 |
+|---|---|
+| `stored` | 저장되었고 스캔이 `COMPLETED`(`partial`이면 부분 완료) |
+| `stored_scan_failed` | 스냅샷은 저장되었으나 스캔이 `FAILED`. **성공으로 세지 않습니다.** 이 도구는 행을 지우지 않으므로 처리(재시도·삭제)는 팀이 정합니다. |
+| `quarantined` | 저장하지 않음. category: `license`, `secret`(확정 비밀값), `secret_review`(검토 필요 경고), `sensitive_file`, `not_terraform`, `pin_mismatch`, `too_large`, `clone_failed`, `unsupported_source`, `scan_failed`, `parser_failed`, `other` |
+| `would_add` | 미리보기에서 저장 대상 |
+| `duplicate` | 실행 전에 건너뜀(같은 커밋, 이미 미러됨) |
+
+`examples/`·`tests/` 아래 `*.tfvars` 등 민감 파일은 기존 정책(scope 분리 + 비밀값 경고 검토 흐름)을
+그대로 따르며 이 도구는 완화하지 않습니다. 경고를 사람이 확인했다면 manifest에서
+`acknowledge_warnings`와 `reviewed`를 함께 적습니다. provider 탐지는 기존 동작(루트
+`required_providers`)을 바꾸지 않았습니다.
+
+### 품질 지표
+
+리포트(`<run_id>.json`, `<run_id>.md`)의 `summary`:
+
+- `success_rate` = (저장 + 스캔 `COMPLETED`) / 처리한 후보. `collection_rate` = 저장 / 처리.
+- `license_recognized_rate` = 라이선스가 인식된 수 / 준비 단계까지 간 수.
+- `scan`: `completed`, `partial`, `failed`, `analysis_incomplete_rate`(partial+failed / 저장).
+- `by_category`: 격리·실패 사유별 건수, `duplicates`, `retried`.
+- `files.total/excluded`: 저장 파일 수와 정책으로 제외된 파일 수. `secret_warnings`: 비밀값 경고 수.
+- `providers`: provider별 개수와 커버리지(저장된 모듈 중 provider가 있는 비율).
+
+비밀값은 리포트에 들어가지 않습니다(규칙 이름과 위치만). 미리보기 리포트에는 스캔 지표가 없습니다.
+
+### 실행 전 DB 백업 (`--apply` 전에 필수)
+
+```
+pg_dump "$DATABASE_URL" --format=custom --file backups/pre-collection-$(date +%Y%m%d-%H%M).dump
+# docker compose: docker compose exec db pg_dump -U <user> -Fc <db> > backups/pre-collection.dump
+# 복원 확인(별도 DB): createdb restore_check && pg_restore -d restore_check backups/pre-collection.dump
+```
+
+1. 백업을 만들고 별도 DB로 복원해 행 수를 확인합니다. 스냅샷 파일(`SNAPSHOT_ROOT`)도 같이 보관합니다.
+2. `run`(미리보기)을 먼저 실행해 리포트의 격리 사유를 확인합니다.
+3. `run --apply`를 실행합니다. 같은 manifest로 다시 실행하면 이미 저장된 커밋은 `unchanged`입니다(멱등).
+4. 문제가 있으면 백업으로 복원합니다. 이 도구는 데이터를 삭제하지 않습니다.
