@@ -15,7 +15,7 @@ permissions:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   backend:
@@ -195,3 +195,79 @@ jobs:
       - name: Tear down the stack
         if: always()
         run: $COMPOSE down -v --remove-orphans
+
+  deploy:
+    name: Deploy backend to Azure
+    needs: [backend, postgres, checkov, api-contract, e2e]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    permissions:
+      contents: read
+      id-token: write
+
+    env:
+      ACR_NAME: moduleguardregistry
+      IMAGE_REPOSITORY: module-guard-api
+      RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+      WEBAPP_NAME: ${{ vars.AZURE_WEBAPP_NAME }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and push image
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          az acr login --name "$ACR_NAME"
+
+          IMAGE="$ACR_NAME.azurecr.io/$IMAGE_REPOSITORY:$GITHUB_SHA"
+
+          docker build -t "$IMAGE" ./backend
+          docker push "$IMAGE"
+
+          echo "DEPLOY_IMAGE=$IMAGE" >> "$GITHUB_ENV"
+
+      - name: Deploy to App Service
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          az webapp config container set \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$WEBAPP_NAME" \
+            --container-image-name "$DEPLOY_IMAGE"
+
+      - name: Check backend health
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          HOST=$(az webapp show \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$WEBAPP_NAME" \
+            --query defaultHostName -o tsv)
+
+          for attempt in {1..30}; do
+            if curl --fail --silent --show-error \
+                --connect-timeout 5 --max-time 10 \
+                "https://$HOST/health" \
+                -o /tmp/health.json \
+              && jq -e '.status == "ok"' /tmp/health.json >/dev/null; then
+              echo "Backend is healthy"
+              exit 0
+            fi
+            sleep 10
+          done
+
+          echo "Backend health check failed"
+          exit 1
