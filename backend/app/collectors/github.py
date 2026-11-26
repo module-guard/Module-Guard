@@ -1,4 +1,5 @@
 import re
+from collections.abc import Callable
 from pathlib import Path
 
 from app.collectors.base import CollectedModule, SourceCollector
@@ -13,9 +14,17 @@ FULL_COMMIT = re.compile(r"[0-9a-f]{40}")
 
 
 class GitHubCollector(SourceCollector):
-    def __init__(self, settings: Settings, runner: ProcessRunner | None = None):
+    def __init__(
+        self,
+        settings: Settings,
+        runner: ProcessRunner | None = None,
+        guard: Callable[[str], None] | None = None,
+    ):
         self.settings = settings
         self.runner = runner or ProcessRunner()
+        # Allow/block check (#47). The Registry collector clones through this same instance,
+        # so guarding here also covers a Registry module's backing repository.
+        self.guard = guard
 
     def supports(self, source: str) -> bool:
         try:
@@ -28,6 +37,9 @@ class GitHubCollector(SourceCollector):
         identity = detect_source(normalize_github_url(source))
         if ref is not None and not (RELEASE_TAG.fullmatch(ref) or FULL_COMMIT.fullmatch(ref)):
             raise UnsupportedSourceError("Pin a release tag like v1.2.3 or a full commit hash.")
+        # Identity and ref are valid; nothing has been executed or written yet.
+        if self.guard is not None:
+            self.guard(identity.source_url)
         if destination.exists() or destination.is_symlink():
             raise RepositoryCloneError("Clone destination must not already exist.")
         env = isolated_environment(destination.parent)

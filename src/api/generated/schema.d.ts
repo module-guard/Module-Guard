@@ -4,6 +4,92 @@
  */
 
 export interface paths {
+    "/api/admin/allowblock/entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Entries */
+        get: operations["list_entries_api_admin_allowblock_entries_get"];
+        put?: never;
+        /** Create Entry */
+        post: operations["create_entry_api_admin_allowblock_entries_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/allowblock/entries/{entry_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Entry */
+        get: operations["get_entry_api_admin_allowblock_entries__entry_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/allowblock/entries/{entry_id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Entry History */
+        get: operations["entry_history_api_admin_allowblock_entries__entry_id__events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/allowblock/entries/{entry_id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revoke Entry */
+        post: operations["revoke_entry_api_admin_allowblock_entries__entry_id__revoke_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/allowblock/entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Public Entries */
+        get: operations["public_entries_api_allowblock_entries_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/github/callback": {
         parameters: {
             query?: never;
@@ -393,6 +479,23 @@ export interface paths {
         };
         /** Lineage Graph */
         get: operations["lineage_graph_api_repositories__owner___name__lineage_graph_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/repositories/{owner}/{name}/policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Repository Policy */
+        get: operations["repository_policy_api_repositories__owner___name__policy_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -946,6 +1049,91 @@ export interface components {
             /** Version */
             version: string | null;
         };
+        /** AdminEntry */
+        AdminEntry: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By Login */
+            created_by_login: string | null;
+            /**
+             * Effect
+             * @enum {string}
+             */
+            effect: "ALLOW" | "BLOCK";
+            /** Evidence Urls */
+            evidence_urls: string[];
+            /** Expires At */
+            expires_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Public Message */
+            public_message: string | null;
+            /** Reason */
+            reason: string;
+            /** Repository Id */
+            repository_id: string | null;
+            /** Revoke Evidence Urls */
+            revoke_evidence_urls: string[] | null;
+            /** Revoke Reason */
+            revoke_reason: string | null;
+            /** Revoked At */
+            revoked_at: string | null;
+            /** Revoked By Login */
+            revoked_by_login: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ACTIVE" | "REVOKED" | "EXPIRED";
+            /** Target Key */
+            target_key: string;
+            /**
+             * Target Kind
+             * @enum {string}
+             */
+            target_kind: "repository" | "github_repository" | "github_owner";
+        };
+        /** AdminEntryPage */
+        AdminEntryPage: {
+            /** Entries */
+            entries: components["schemas"]["AdminEntry"][];
+            /** Next Offset */
+            next_offset: number | null;
+        };
+        /** AdminEvent */
+        AdminEvent: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "CREATE" | "REVOKE" | "EXPIRE";
+            /** Actor Login */
+            actor_login: string | null;
+            /** Evidence Urls */
+            evidence_urls: string[];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /** Reason */
+            reason: string;
+            /** Snapshot */
+            snapshot: {
+                [key: string]: unknown;
+            };
+        };
         /** AnalysisStage */
         AnalysisStage: {
             /** Error Code */
@@ -1466,6 +1654,43 @@ export interface components {
          * @enum {string}
          */
         EntityType: "ROOT_MODULE" | "MODULE" | "RESOURCE" | "DATA" | "VARIABLE" | "OUTPUT" | "LOCAL" | "PROVIDER" | "REQUIRED_PROVIDER";
+        /** EntryCreate */
+        EntryCreate: {
+            /**
+             * Effect
+             * @enum {string}
+             */
+            effect: "ALLOW" | "BLOCK";
+            /** Evidence Urls */
+            evidence_urls?: string[];
+            /** Expires At */
+            expires_at?: string | null;
+            /** Public Message */
+            public_message?: string | null;
+            /** Reason */
+            reason: string;
+            /** Target */
+            target: string;
+            /**
+             * Target Kind
+             * @enum {string}
+             */
+            target_kind: "repository" | "github_repository" | "github_owner";
+        };
+        /** EntryRevoke */
+        EntryRevoke: {
+            /** Evidence Urls */
+            evidence_urls?: string[];
+            /** Reason */
+            reason: string;
+        };
+        /** EventPage */
+        EventPage: {
+            /** Events */
+            events: components["schemas"]["AdminEvent"][];
+            /** Next Offset */
+            next_offset: number | null;
+        };
         /** EvidenceLocation */
         EvidenceLocation: {
             /** Address */
@@ -2261,6 +2486,35 @@ export interface components {
             version_type: string;
         };
         /**
+         * PublicEntry
+         * @description What anyone may see: never the internal reason, evidence, actor or history.
+         */
+        PublicEntry: {
+            /**
+             * Effect
+             * @enum {string}
+             */
+            effect: "ALLOW" | "BLOCK";
+            /** Expires At */
+            expires_at: string | null;
+            /** Message */
+            message: string;
+            repository?: components["schemas"]["app__schemas__social__RepositoryRef"] | null;
+            /**
+             * Status
+             * @default ACTIVE
+             * @constant
+             */
+            status: "ACTIVE";
+        };
+        /** PublicEntryPage */
+        PublicEntryPage: {
+            /** Entries */
+            entries: components["schemas"]["PublicEntry"][];
+            /** Next Offset */
+            next_offset: number | null;
+        };
+        /**
          * Publisher
          * @description The account that published the version on this service.
          *
@@ -2412,6 +2666,17 @@ export interface components {
             /** Name */
             name?: string | null;
             visibility?: components["schemas"]["Visibility"] | null;
+        };
+        /** RepositoryPolicy */
+        RepositoryPolicy: {
+            /**
+             * Effect
+             * @enum {string}
+             */
+            effect: "ALLOW" | "BLOCK" | "NONE";
+            /** Entries */
+            entries: components["schemas"]["PublicEntry"][];
+            repository: components["schemas"]["app__schemas__social__RepositoryRef"];
         };
         /** ReputationEvaluation */
         ReputationEvaluation: {
@@ -3129,6 +3394,207 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    list_entries_api_admin_allowblock_entries_get: {
+        parameters: {
+            query?: {
+                status?: "active" | "inactive" | "all";
+                effect?: ("ALLOW" | "BLOCK") | null;
+                target_kind?: ("repository" | "github_repository" | "github_owner") | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminEntryPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_entry_api_admin_allowblock_entries_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EntryCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminEntry"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_entry_api_admin_allowblock_entries__entry_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminEntry"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    entry_history_api_admin_allowblock_entries__entry_id__events_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_entry_api_admin_allowblock_entries__entry_id__revoke_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EntryRevoke"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminEntry"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    public_entries_api_allowblock_entries_get: {
+        parameters: {
+            query?: {
+                effect?: ("ALLOW" | "BLOCK") | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicEntryPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     callback_api_auth_github_callback_get: {
         parameters: {
             query?: {
@@ -3887,6 +4353,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LineageGraph"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    repository_policy_api_repositories__owner___name__policy_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                owner: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RepositoryPolicy"];
                 };
             };
             /** @description Validation Error */

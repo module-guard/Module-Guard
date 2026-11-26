@@ -56,6 +56,7 @@ from app.scanners.scope import MODULE, finding_scope, scope_summary
 from app.scanners.severity_overrides import SEVERITY_OVERRIDES
 from app.schemas.analysis import AnalysisStage, AnalysisSummary, StageStatus
 from app.schemas.scan import ScanAccepted
+from app.services.allowblock_service import SourceGuard
 from app.services.analysis_service import StaticAnalysisResult, StaticAnalysisService
 from app.services.reuse_service import execution_context, try_reuse
 from app.storage.artifacts import wrapper
@@ -96,13 +97,15 @@ class ScanService:
         correlation_engine: CorrelationEngine | None = None,
         snapshot_store: SnapshotStore | None = None,
         staging: StagingStore | None = None,
+        guard: SourceGuard | None = None,
     ):
         self.session_factory = session_factory
         self.settings = settings
+        self.guard = guard or SourceGuard(session_factory)
         # Identifies this process as the owner of the scans it runs; a new value per start, so
         # recovery can tell this worker's own runs from those left by a process that died.
         self.worker_id = secrets.token_hex(8)
-        self.collector = collector or default_router(settings)
+        self.collector = collector or default_router(settings, self.guard)
         self.scanner = scanner or CheckovScanner(settings)
         self.normalizer = normalizer or CheckovNormalizer(SeverityMapper(SEVERITY_OVERRIDES))
         self.correlation_engine = correlation_engine or CorrelationEngine()
@@ -196,6 +199,9 @@ class ScanService:
         if staged is None:
             if scan.module_version_id is not None:
                 raise PreparedSourceMissingError("Prepared source is no longer available.")
+            # An injected or test collector is covered too: the check does not live only in the
+            # default router.
+            self.guard(scan.module.source_url)
             return self.collector.collect(scan.module.source_url, destination)
         tree, report = staged
         if (

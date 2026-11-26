@@ -44,6 +44,7 @@ STORED = ("added", "updated", "unchanged")
 TRANSIENT = ("RepositoryCloneError", "ScanTimeoutError", "TimeoutError", "ConnectionError")
 # reason prefix -> category. Order matters: the first match wins.
 CATEGORIES = (
+    ("SourceBlocked", "blocked"),
     ("license:", "license"),
     ("SecretsDetected", "secret"),
     ("SensitiveFile", "sensitive_file"),
@@ -344,15 +345,32 @@ class BatchCollector:
             record.category = "parser_failed"
         return record
 
+    def _account_user(self) -> User | None:
+        """The mirror account, when it exists yet (a preview may run before it does)."""
+        with self.seeder.session_factory() as session:
+            user = session.scalar(
+                select(User).where(func.lower(User.login) == self.account.login.lower())
+            )
+            if user is not None:
+                session.expunge(user)
+            return user
+
     def _one(self, module: MirrorModule, apply: bool) -> Record:
         key = f"{module.repository}@{module.commit}:{int(module.acknowledge_warnings)}"
-        previous = self._done.get(key)
-        if previous is not None:
-            return previous
-        outcome, attempts = self._attempt(module, apply)
+        # The current policy is looked at before a remembered result is reused, so a block
+        # added after a success is not hidden by the checkpoint.
+        blocked = self.seeder.policy_reason(self._account_user(), module)
+        if blocked:
+            outcome, attempts = Outcome(module.name, module.tag, "skipped", blocked), 1
+        else:
+            previous = self._done.get(key)
+            if previous is not None:
+                return previous
+            outcome, attempts = self._attempt(module, apply)
         record = self._record(module, outcome, attempts, apply)
-        # A failure that may pass on its own is retried by the next run, not remembered.
-        if not is_transient(record.reason):
+        # A failure that may pass on its own is retried by the next run, not remembered. A
+        # policy block is a decision that can be lifted: it is never written to the checkpoint.
+        if not is_transient(record.reason) and record.category != "blocked":
             with self._lock:
                 self._done[record.key] = record
                 self._save(apply)

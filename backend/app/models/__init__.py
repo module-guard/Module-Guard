@@ -1,3 +1,4 @@
+from app.models.allowblock import AllowBlockEntry, AllowBlockEvent
 from app.models.artifact import DownloadArtifact
 from app.models.finding import Finding
 from app.models.graph_edge import GraphEdge
@@ -14,6 +15,8 @@ from app.models.star import Star
 from app.models.user import User
 
 __all__ = [
+    "AllowBlockEntry",
+    "AllowBlockEvent",
     "DownloadArtifact",
     "Finding",
     "Module",
