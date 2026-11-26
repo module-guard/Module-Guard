@@ -118,6 +118,17 @@ def test_append_checkpoint_verify_tamper_revise_verify(published, sessions, run)
     assert [json.loads(line)["kind"] for line in lines] == ["SCAN", "REVISION"]
 
 
+def test_dry_run_creates_nothing_and_unchanged_scans_need_no_revision(published, run):
+    code, out = run("record-revisions", "--reason", "nothing logged yet")
+    assert code == 0 and "Would record 0" in out
+    assert not run.dir.exists()  # Not even the directory.
+    run("checkpoint")
+    code, out = run("record-revisions", "--reason", "nothing changed", "--apply")
+    assert code == 0 and out.startswith("Recorded 0")
+    lines = (run.dir / "leaves.jsonl").read_text().splitlines()
+    assert [json.loads(line)["kind"] for line in lines] == ["SCAN"]
+
+
 def test_modified_log_is_suspect_with_every_command(published, run):
     run("checkpoint")
     tamper(run.dir / "leaves.jsonl")

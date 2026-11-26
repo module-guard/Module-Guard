@@ -286,8 +286,11 @@ def main(argv: list[str] | None = None) -> int:
     except DomainError as error:
         print(getattr(error, "code", "UNAVAILABLE"))
         return ENVIRONMENT
-    except (SQLAlchemyError, OSError):
-        print("ENVIRONMENT_UNAVAILABLE")  # Driver and OS text can carry paths and credentials.
+    except SQLAlchemyError:
+        print("DATABASE_UNAVAILABLE")  # Driver text can carry credentials and paths.
+        return ENVIRONMENT
+    except OSError:
+        print("STORAGE_UNAVAILABLE")
         return ENVIRONMENT
 
 

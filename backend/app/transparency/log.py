@@ -16,6 +16,7 @@ import fcntl
 import os
 import re
 import stat
+import time
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -38,6 +39,8 @@ MAX_LINE = 4096
 MAX_ENTRIES = 1_000_000
 MAX_LOG_BYTES = 256 * 1024 * 1024
 MAX_REASON = 200
+# Looks at a half-written last line this many times (20 ms apart) before calling it tampering.
+TORN_LINE_ATTEMPTS = 3
 MAX_SMALL_FILE = 64 * 1024
 MAX_ANCHOR_FILE = 1024 * 1024
 MAX_FILES = 100_000
@@ -301,12 +304,16 @@ def _names(fd, pattern):
 
 
 def _read_leaves(fd, state):
-    data = _read_file(fd, "leaves.jsonl", MAX_LOG_BYTES)
-    if data is None:
-        return
-    state.exists = True
-    if data and not data.endswith(b"\n"):
+    for _ in range(TORN_LINE_ATTEMPTS):
+        data = _read_file(fd, "leaves.jsonl", MAX_LOG_BYTES)
+        if data is None:
+            return
+        if not data or data.endswith(b"\n"):
+            break
+        time.sleep(0.02)  # A write may be in flight right now; look again before judging.
+    else:
         raise LogInconsistent  # A torn final line: never guess what it was meant to say.
+    state.exists = True
     lines = data.split(b"\n")[:-1]
     if len(lines) > MAX_ENTRIES:
         raise LogUnavailable
@@ -325,14 +332,34 @@ def _read_leaves(fd, state):
         state.append(entry, len(line) + 1)
 
 
-def _read_checkpoints(fd, state, full):
-    previous = None
+def _load_checkpoints(fd) -> list[dict]:
+    loaded = []
     for name in _names(fd, _CHECKPOINT):
         data = _read_file(fd, name, MAX_SMALL_FILE)
         if data is None:
             raise LogInconsistent
         checkpoint = _parse(data)
         _check_checkpoint(checkpoint, name[:20])
+        loaded.append(checkpoint)
+    return loaded
+
+
+def _load_anchors(fd) -> list[tuple[int, str, dict]]:
+    loaded = []
+    for name in _names(fd, _ANCHOR):
+        size, kind = _ANCHOR.fullmatch(name).groups()
+        data = _read_file(fd, name, MAX_ANCHOR_FILE)
+        if data is None:
+            raise LogInconsistent
+        record = _parse(data)
+        _check_anchor(record, int(size), kind)
+        loaded.append((int(size), kind, record))
+    return loaded
+
+
+def _apply_checkpoints(state, loaded, full):
+    previous = None
+    for checkpoint in loaded:
         expected = (
             None
             if previous is None
@@ -348,18 +375,12 @@ def _read_checkpoints(fd, state, full):
             raise LogInconsistent
 
 
-def _read_anchors(fd, state):
+def _apply_anchors(state, loaded):
     sizes = {c["tree_size"] for c in state.checkpoints}
-    for name in _names(fd, _ANCHOR):
-        size, kind = _ANCHOR.fullmatch(name).groups()
-        data = _read_file(fd, name, MAX_ANCHOR_FILE)
-        if data is None:
+    for size, kind, record in loaded:
+        if size not in sizes:
             raise LogInconsistent
-        record = _parse(data)
-        _check_anchor(record, int(size), kind)
-        if int(size) not in sizes:
-            raise LogInconsistent
-        state.anchors[(int(size), kind)] = record
+        state.anchors[(size, kind)] = record
 
 
 def _read_state(dirs, full=False) -> LogState:
@@ -367,11 +388,14 @@ def _read_state(dirs, full=False) -> LogState:
     if dirs is None:
         return state
     root_fd, checkpoints_fd, anchors_fd = dirs
+    # A writer publishes leaves, then a checkpoint, then an anchor. Reading in the opposite
+    # order means everything a newer file refers to is already there: a reader never reports
+    # tampering just because it overlapped a `checkpoint` run.
+    anchors = _load_anchors(anchors_fd) if anchors_fd is not None else []
+    checkpoints = _load_checkpoints(checkpoints_fd) if checkpoints_fd is not None else []
     _read_leaves(root_fd, state)
-    if checkpoints_fd is not None:
-        _read_checkpoints(checkpoints_fd, state, full)
-    if anchors_fd is not None:
-        _read_anchors(anchors_fd, state)
+    _apply_checkpoints(state, checkpoints, full)
+    _apply_anchors(state, anchors)
     return state
 
 

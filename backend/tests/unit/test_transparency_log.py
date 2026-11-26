@@ -128,6 +128,62 @@ def test_torn_final_line_is_inconsistent_not_guessed(log):
         log.read()
 
 
+def test_a_reader_overlapping_a_checkpoint_run_does_not_report_tampering(log, monkeypatch):
+    fill(log, 2, checkpoints=(2,))
+    real, fired = tlog._read_leaves, []
+
+    def racing(fd, state):
+        # A cron run adds an entry and a checkpoint after this reader listed the checkpoints.
+        if not fired:
+            fired.append(True)
+            with log.writing() as writer:
+                writer.add("SCAN", commitment(9))
+                writer.checkpoint()
+        real(fd, state)
+
+    monkeypatch.setattr(tlog, "_read_leaves", racing)
+    state = log.read()
+    assert len(state.entries) == 3 and state.tree_head["tree_size"] == 2
+    monkeypatch.undo()
+    assert log.read(full=True).tree_head["tree_size"] == 3
+
+
+def test_a_torn_last_line_is_retried_a_bounded_number_of_times_then_reported(log, monkeypatch):
+    fill(log, 2, checkpoints=(2,))
+    with leaves(log).open("ab") as stream:
+        stream.write(b'{"format":1,"seq":2')  # Never finished.
+    reads = []
+    real = tlog._read_file
+
+    def counting(fd, name, cap):
+        reads.append(name)
+        return real(fd, name, cap)
+
+    monkeypatch.setattr(tlog, "_read_file", counting)
+    with pytest.raises(LogInconsistent):
+        log.read()
+    assert reads.count("leaves.jsonl") == tlog.TORN_LINE_ATTEMPTS == 3
+
+
+def test_a_last_line_that_completes_while_retrying_is_read_normally(log, monkeypatch):
+    fill(log, 2, checkpoints=(2,))
+    whole = leaves(log).read_bytes()
+    leaves(log).write_bytes(whole[:-10])  # The final line is half written...
+    real = tlog._read_file
+    calls = []
+
+    def finishing(fd, name, cap):
+        if name == "leaves.jsonl":
+            if calls:
+                leaves(log).write_bytes(whole)  # ...and the writer finishes before the next look.
+            calls.append(name)
+        return real(fd, name, cap)
+
+    monkeypatch.setattr(tlog, "_read_file", finishing)
+    assert len(log.read().entries) == 2
+    assert len(calls) == 2  # One torn look, then the finished file.
+
+
 def test_a_rewritten_older_checkpoint_fails_consistency_not_just_structure(log):
     fill(log, 4, checkpoints=(2, 4))
     first = log.root / "checkpoints" / f"{2:020d}.json"
