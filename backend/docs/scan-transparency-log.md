@@ -175,7 +175,7 @@ scans: ok=2 pending=0 mismatch=0 missing=0 not_logged=0
 
 ## API (읽기 전용, 추가만)
 
-모든 응답에 `Cache-Control: no-store`를 붙이고 `usage_service.preview_limiter`를 사용한다. `openapi.json`과 `src/api/generated/**`는 프런트 담당이 `npm run api:sync`로 갱신한다.
+모든 응답에 `Cache-Control: no-store`를 붙이고 `usage_service.preview_limiter`를 사용한다. 사용자 예외 승인으로 생성 API 계약 동기화: 이 PR에 한해 `npm run api:sync`로 `openapi.json`과 `src/api/generated/**`를 갱신해 별도 커밋(`chore: sync API contract for #62`)으로 넣었다(추가만, 삭제 없음). 이후 변경은 원칙대로 프런트 담당이 `npm run api:sync`로 갱신한다.
 
 ### GET `/api/transparency/checkpoint`
 
