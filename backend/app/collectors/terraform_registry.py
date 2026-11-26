@@ -1,6 +1,7 @@
 import json
 import re
 import shutil
+from collections.abc import Callable
 from pathlib import Path
 
 import httpx
@@ -35,9 +36,11 @@ class TerraformRegistryCollector(SourceCollector):
         settings: Settings,
         github: GitHubCollector | None = None,
         transport: httpx.BaseTransport | None = None,
+        guard: Callable[[str], None] | None = None,
     ):
         self.settings = settings
-        self.github = github or GitHubCollector(settings)
+        self.guard = guard
+        self.github = github or GitHubCollector(settings, guard=guard)
         # Tests inject an httpx.MockTransport; production uses httpx's default transport.
         self._transport = transport
 
@@ -55,6 +58,10 @@ class TerraformRegistryCollector(SourceCollector):
             raise UnsupportedSourceError("Pin a Registry version like 1.2.3.")
         metadata = self._lookup(identity.owner, identity.repository_name, identity.provider, ref)
         github_url = normalize_github_url(metadata["source"])
+        # Checked here as well, so an injected GitHub collector without a guard of its own
+        # cannot be used to reach a blocked backing repository.
+        if self.guard is not None:
+            self.guard(github_url)
         collected = self._clone(github_url, destination, metadata["version"])
         # The stored source is the Git clone, but the module is recorded as a Registry import.
         return CollectedModule(

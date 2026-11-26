@@ -40,6 +40,7 @@ from app.schemas.publish import (
 )
 from app.schemas.scan import LatestScanSummary
 from app.schemas.social import RepositoryRef
+from app.services.allowblock_service import SourceGuard, enforce_repository, enforce_source
 from app.services.lineage_service import record_new_version
 from app.storage.integrity import digest, manifest_bytes, manifest_for, read_tree, verify_tree
 from app.uploads.archive import ArchiveLimits, extract_zip
@@ -70,10 +71,13 @@ class PublishService:
         inspector: SecretInspector | None = None,
         staging: StagingStore | None = None,
         limiter: PreflightLimiter | None = None,
+        guard: SourceGuard | None = None,
     ):
         self.session_factory = session_factory
         self.settings = settings
-        self.collector = collector or default_router(settings)
+        # The allow/block list (#47). Every admission point below asks it; none decides alone.
+        self.guard = guard or SourceGuard(session_factory)
+        self.collector = collector or default_router(settings, self.guard)
         self.inspector = inspector or SecretInspector(settings)
         self.staging = staging or StagingStore(
             settings.upload_root, settings.upload_ttl_minutes * 60
@@ -118,6 +122,8 @@ class PublishService:
         that one: a tag that has been moved since it was reviewed is refused.
         """
         normalized = normalize_github_url(url)
+        # Before staging: a blocked source is never fetched.
+        self.guard(normalized)
         token, slot = self.staging.open(user_id)
         try:
             collected = self.collector.collect(normalized, slot / TREE, ref)
@@ -136,7 +142,9 @@ class PublishService:
         """Resolve a Terraform Registry address to its source, then inspect it like a repository.
 
         The backing repository is cloned and checked exactly as a GitHub import is; only the
-        way the source was named differs.
+        way the source was named differs. The block list is applied to the backing repository
+        by the GitHub collector before it clones, and again in `_finish_source`; a Registry
+        address has no separate way around it.
         """
         token, slot = self.staging.open(user_id)
         try:
@@ -159,6 +167,9 @@ class PublishService:
                 f"파일은 {self.archive_limits.max_files}개까지 올릴 수 있습니다.",
                 "TooManyFiles",
             )
+        # What the collector actually resolved to (a Registry backing repository, a redirect)
+        # is checked again before anything is sealed.
+        self.guard(collected.repository_url or collected.source_url)
         return self._finish(
             slot,
             token,
@@ -245,6 +256,7 @@ class PublishService:
         """
         report = self._checked_report(user.id, payload.upload_id, payload.acknowledge_warnings)
         with self.session_factory() as session:
+            self._enforce_policy(session, report)
             self._check_running_limit(session, user.id)
             existing = session.scalar(
                 select(Repository).where(
@@ -288,6 +300,7 @@ class PublishService:
             )
             if repository is None:
                 raise NotFoundError("Repository not found.")
+            self._enforce_policy(session, report, repository)
             if self._running_scans(session, repository.id):
                 raise ConflictError("검사가 진행 중입니다. 끝난 뒤 다시 올려 주세요.")
             self._check_running_limit(session, user.id)
@@ -317,6 +330,16 @@ class PublishService:
                 payload.upload_id,
                 scanner_name,
             )
+
+    @staticmethod
+    def _enforce_policy(
+        session: Session, report: dict, repository: Repository | None = None
+    ) -> None:
+        """Block-list check for a prepared source (and the repository it is added to)."""
+        if report.get("origin_type") == "GITHUB":
+            enforce_source(session, report.get("origin_url"))
+        if repository is not None:
+            enforce_repository(session, repository.id)
 
     def _checked_report(self, user_id: UUID, token: str, acknowledged: bool) -> dict:
         report = self.staging.peek(user_id, token)
@@ -351,6 +374,8 @@ class PublishService:
         scanner_name: str,
     ) -> RepositoryCreated:
         """Version row + scan for the prepared tree. The token is claimed last, atomically."""
+        # The final gate every path shares: before any row exists and before the token is spent.
+        self._enforce_policy(session, report, repository)
         version = ModuleVersion(
             repository_id=repository.id,
             version=label,
