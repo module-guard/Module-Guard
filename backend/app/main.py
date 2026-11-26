@@ -27,6 +27,7 @@ from app.api.routes import (
     risk_paths,
     scans,
     social,
+    transparency,
     trust,
     uploads,
     usage,
@@ -159,6 +160,7 @@ def create_app(
         reputation.router,
         risk_paths.router,
         dynamic.router,
+        transparency.router,
     ):
         app.include_router(router, prefix="/api")
 

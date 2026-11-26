@@ -923,6 +923,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/scans/{scan_id}/transparency": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Scan Transparency */
+        get: operations["scan_transparency_api_scans__scan_id__transparency_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/transparency/checkpoint": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Latest Checkpoint */
+        get: operations["latest_checkpoint_api_transparency_checkpoint_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/transparency/consistency": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Consistency */
+        get: operations["consistency_api_transparency_consistency_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/uploads/github": {
         parameters: {
             query?: never;
@@ -1225,6 +1276,26 @@ export interface components {
              */
             unresolved_references: number;
         };
+        /** AnchorInfo */
+        AnchorInfo: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Receipt Sha256 */
+            receipt_sha256?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "submitted" | "failed";
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "opentimestamps" | "rfc3161";
+        };
         /** ArtifactInfo */
         ArtifactInfo: {
             /**
@@ -1356,6 +1427,53 @@ export interface components {
              */
             kind: "resource" | "edge" | "finding";
         };
+        /** CheckpointInfo */
+        CheckpointInfo: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Root Hash */
+            root_hash: string;
+            /** Tree Size */
+            tree_size: number;
+        };
+        /** CheckpointResponse */
+        CheckpointResponse: {
+            /** Anchors */
+            anchors?: components["schemas"]["AnchorInfo"][];
+            checkpoint?: components["schemas"]["CheckpointInfo"] | null;
+            /**
+             * Enabled
+             * @default false
+             */
+            enabled: boolean;
+            /**
+             * Schema Version
+             * @default 1
+             * @constant
+             */
+            schema_version: 1;
+        };
+        /** Commitment */
+        Commitment: {
+            /** Manifest Sha256 */
+            manifest_sha256: string | null;
+            /** Module Version Id */
+            module_version_id: string | null;
+            /** Result Sha256 */
+            result_sha256: string;
+            /** Scan Id */
+            scan_id: string;
+            /** Snapshot Sha256 */
+            snapshot_sha256: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "COMPLETED" | "FAILED";
+        };
         /**
          * ComparisonSummary
          * @description This version against its parent, from the #9 manifests recorded for both.
@@ -1394,6 +1512,25 @@ export interface components {
          * @enum {string}
          */
         Confidence: "HIGH" | "MEDIUM" | "LOW";
+        /** ConsistencyResponse */
+        ConsistencyResponse: {
+            /** First */
+            first: number;
+            /** First Root */
+            first_root: string;
+            /** Proof */
+            proof: string[];
+            /**
+             * Schema Version
+             * @default 1
+             * @constant
+             */
+            schema_version: 1;
+            /** Second */
+            second: number;
+            /** Second Root */
+            second_root: string;
+        };
         /** CorrelationDetail */
         CorrelationDetail: {
             /** Attack Path */
@@ -2338,6 +2475,26 @@ export interface components {
             /** Url */
             url: string | null;
         };
+        /**
+         * LogEntry
+         * @description Exactly as stored: strings stay strings, because the leaf hash covers their bytes.
+         */
+        LogEntry: {
+            commitment: components["schemas"]["Commitment"];
+            /** Format */
+            format: number;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "SCAN" | "REVISION";
+            /** Reason */
+            reason: string | null;
+            /** Recorded At */
+            recorded_at: string;
+            /** Seq */
+            seq: number;
+        };
         /** MeResponse */
         MeResponse: {
             /** Login Available */
@@ -2980,6 +3137,49 @@ export interface components {
          * @enum {string}
          */
         ScanStatus: "QUEUED" | "COLLECTING" | "SCANNING" | "NORMALIZING" | "COMPLETED" | "FAILED";
+        /** ScanTransparencyResponse */
+        ScanTransparencyResponse: {
+            checkpoint?: components["schemas"]["TreeHead"] | null;
+            /** Current Commitment Sha256 */
+            current_commitment_sha256?: string | null;
+            entry?: components["schemas"]["LogEntry"] | null;
+            /** Inclusion Proof */
+            inclusion_proof?: string[];
+            /** Leaf Hash */
+            leaf_hash?: string | null;
+            /** Leaf Index */
+            leaf_index?: number | null;
+            /** Logged Commitment Sha256 */
+            logged_commitment_sha256?: string | null;
+            /** Reasons */
+            reasons?: string[];
+            /**
+             * Revisions
+             * @default 0
+             */
+            revisions: number;
+            /**
+             * Scan Id
+             * Format: uuid
+             */
+            scan_id: string;
+            /**
+             * Schema Version
+             * @default 1
+             * @constant
+             */
+            schema_version: 1;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "included" | "pending" | "mismatch" | "not_logged";
+            /**
+             * Version Id
+             * Format: uuid
+             */
+            version_id: string;
+        };
         /**
          * ScopeSummary
          * @description Findings outside the module body (examples, tests), and per-scanner counts by scope.
@@ -3029,6 +3229,13 @@ export interface components {
             star_count: number;
             /** Starred */
             starred: boolean;
+        };
+        /** TreeHead */
+        TreeHead: {
+            /** Root Hash */
+            root_hash: string;
+            /** Tree Size */
+            tree_size: number;
         };
         /** TrustEvent */
         TrustEvent: {
@@ -5280,6 +5487,91 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RiskPaths"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    scan_transparency_api_scans__scan_id__transparency_get: {
+        parameters: {
+            query: {
+                version_id: string;
+            };
+            header?: never;
+            path: {
+                scan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScanTransparencyResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    latest_checkpoint_api_transparency_checkpoint_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckpointResponse"];
+                };
+            };
+        };
+    };
+    consistency_api_transparency_consistency_get: {
+        parameters: {
+            query: {
+                first: number;
+                second: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConsistencyResponse"];
                 };
             };
             /** @description Validation Error */

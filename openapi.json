@@ -453,6 +453,49 @@
         "title": "AnalysisSummary",
         "type": "object"
       },
+      "AnchorInfo": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "receipt_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Receipt Sha256"
+          },
+          "status": {
+            "enum": [
+              "submitted",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "opentimestamps",
+              "rfc3161"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "status",
+          "created_at"
+        ],
+        "title": "AnchorInfo",
+        "type": "object"
+      },
       "ArtifactInfo": {
         "properties": {
           "artifact_id": {
@@ -771,6 +814,127 @@
         "title": "Change",
         "type": "object"
       },
+      "CheckpointInfo": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "root_hash": {
+            "title": "Root Hash",
+            "type": "string"
+          },
+          "tree_size": {
+            "title": "Tree Size",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "tree_size",
+          "root_hash",
+          "created_at"
+        ],
+        "title": "CheckpointInfo",
+        "type": "object"
+      },
+      "CheckpointResponse": {
+        "properties": {
+          "anchors": {
+            "items": {
+              "$ref": "#/components/schemas/AnchorInfo"
+            },
+            "title": "Anchors",
+            "type": "array"
+          },
+          "checkpoint": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CheckpointInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "enabled": {
+            "default": false,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "title": "CheckpointResponse",
+        "type": "object"
+      },
+      "Commitment": {
+        "properties": {
+          "manifest_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manifest Sha256"
+          },
+          "module_version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Module Version Id"
+          },
+          "result_sha256": {
+            "title": "Result Sha256",
+            "type": "string"
+          },
+          "scan_id": {
+            "title": "Scan Id",
+            "type": "string"
+          },
+          "snapshot_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Sha256"
+          },
+          "status": {
+            "enum": [
+              "COMPLETED",
+              "FAILED"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scan_id",
+          "module_version_id",
+          "status",
+          "result_sha256",
+          "manifest_sha256",
+          "snapshot_sha256"
+        ],
+        "title": "Commitment",
+        "type": "object"
+      },
       "ComparisonSummary": {
         "description": "This version against its parent, from the #9 manifests recorded for both.",
         "properties": {
@@ -834,6 +998,48 @@
         ],
         "title": "Confidence",
         "type": "string"
+      },
+      "ConsistencyResponse": {
+        "properties": {
+          "first": {
+            "title": "First",
+            "type": "integer"
+          },
+          "first_root": {
+            "title": "First Root",
+            "type": "string"
+          },
+          "proof": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Proof",
+            "type": "array"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "second": {
+            "title": "Second",
+            "type": "integer"
+          },
+          "second_root": {
+            "title": "Second Root",
+            "type": "string"
+          }
+        },
+        "required": [
+          "first",
+          "second",
+          "first_root",
+          "second_root",
+          "proof"
+        ],
+        "title": "ConsistencyResponse",
+        "type": "object"
       },
       "CorrelationDetail": {
         "properties": {
@@ -3222,6 +3428,55 @@
         "title": "LineageSource",
         "type": "object"
       },
+      "LogEntry": {
+        "description": "Exactly as stored: strings stay strings, because the leaf hash covers their bytes.",
+        "properties": {
+          "commitment": {
+            "$ref": "#/components/schemas/Commitment"
+          },
+          "format": {
+            "title": "Format",
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "SCAN",
+              "REVISION"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "recorded_at": {
+            "title": "Recorded At",
+            "type": "string"
+          },
+          "seq": {
+            "title": "Seq",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "format",
+          "seq",
+          "kind",
+          "reason",
+          "recorded_at",
+          "commitment"
+        ],
+        "title": "LogEntry",
+        "type": "object"
+      },
       "MeResponse": {
         "properties": {
           "login_available": {
@@ -5067,6 +5322,126 @@
         "title": "ScanStatus",
         "type": "string"
       },
+      "ScanTransparencyResponse": {
+        "properties": {
+          "checkpoint": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TreeHead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "current_commitment_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Commitment Sha256"
+          },
+          "entry": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LogEntry"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "inclusion_proof": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Inclusion Proof",
+            "type": "array"
+          },
+          "leaf_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Leaf Hash"
+          },
+          "leaf_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Leaf Index"
+          },
+          "logged_commitment_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logged Commitment Sha256"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "revisions": {
+            "default": 0,
+            "title": "Revisions",
+            "type": "integer"
+          },
+          "scan_id": {
+            "format": "uuid",
+            "title": "Scan Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "included",
+              "pending",
+              "mismatch",
+              "not_logged"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "version_id": {
+            "format": "uuid",
+            "title": "Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scan_id",
+          "version_id",
+          "status"
+        ],
+        "title": "ScanTransparencyResponse",
+        "type": "object"
+      },
       "ScopeSummary": {
         "description": "Findings outside the module body (examples, tests), and per-scanner counts by scope.",
         "properties": {
@@ -5180,6 +5555,24 @@
           "star_count"
         ],
         "title": "StarState",
+        "type": "object"
+      },
+      "TreeHead": {
+        "properties": {
+          "root_hash": {
+            "title": "Root Hash",
+            "type": "string"
+          },
+          "tree_size": {
+            "title": "Tree Size",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "tree_size",
+          "root_hash"
+        ],
+        "title": "TreeHead",
         "type": "object"
       },
       "TrustEvent": {
@@ -9983,6 +10376,135 @@
         "summary": "Risk Paths",
         "tags": [
           "risk-paths"
+        ]
+      }
+    },
+    "/api/scans/{scan_id}/transparency": {
+      "get": {
+        "operationId": "scan_transparency_api_scans__scan_id__transparency_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "scan_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Scan Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScanTransparencyResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Scan Transparency",
+        "tags": [
+          "transparency"
+        ]
+      }
+    },
+    "/api/transparency/checkpoint": {
+      "get": {
+        "operationId": "latest_checkpoint_api_transparency_checkpoint_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckpointResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Latest Checkpoint",
+        "tags": [
+          "transparency"
+        ]
+      }
+    },
+    "/api/transparency/consistency": {
+      "get": {
+        "operationId": "consistency_api_transparency_consistency_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "first",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775808,
+              "minimum": 1,
+              "title": "First",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "second",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775808,
+              "minimum": 1,
+              "title": "Second",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsistencyResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Consistency",
+        "tags": [
+          "transparency"
         ]
       }
     },
