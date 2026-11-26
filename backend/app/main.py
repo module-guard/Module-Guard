@@ -13,6 +13,7 @@ from starlette.concurrency import run_in_threadpool
 
 from app.api.dependencies import SessionDep
 from app.api.routes import (
+    allowblock,
     auth,
     correlations,
     dynamic,
@@ -43,6 +44,7 @@ from app.services.scan_service import ScanService
 from app.services.social_service import SocialService
 from app.services.usage_service import UsageService
 from app.storage.retention import sweep_unreferenced
+from app.uploads.limits import HourlyLimiter
 
 logger = logging.getLogger(__name__)
 
@@ -107,6 +109,7 @@ def create_app(
     app.state.social_service = SocialService(factory, settings)
     app.state.home_service = HomeService(factory, app.state.social_service)
     app.state.usage_service = UsageService(factory, settings, service.snapshot_store)
+    app.state.allowblock_limiter = HourlyLimiter(settings.allowblock_writes_per_hour)
     app.add_middleware(
         CORSMiddleware,
         # Cookies are sent cross-origin, so origins are always an explicit list (never "*").
@@ -140,6 +143,7 @@ def create_app(
 
     for router in (
         integrity.router,
+        allowblock.router,
         auth.router,
         uploads.router,
         social.router,

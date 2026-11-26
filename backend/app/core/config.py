@@ -39,6 +39,10 @@ class Settings(BaseSettings):
         "system",
     ]
     downloads_per_hour: int = Field(default=30, ge=1)
+    # Logins allowed to manage the allow/block list (compared without case).
+    admin_logins: list[str] = []
+    # Per admin, per process (like the other hourly limiters), not cluster-wide.
+    allowblock_writes_per_hour: int = Field(default=30, ge=1)
     usage_previews_per_hour: int = Field(default=600, ge=1)
     max_repositories_per_user: int = Field(default=100, ge=1)
     upload_purge_interval_seconds: int = Field(default=300, ge=1)
