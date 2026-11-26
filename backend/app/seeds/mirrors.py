@@ -130,11 +130,37 @@ class MirrorSeeder:
             )
         )
 
+    def policy_reason(self, user: User | None, module: MirrorModule) -> str | None:
+        """Why the allow/block list refuses this module right now, or None.
+
+        Looks at the source and at the stored repository (if any). A missing account (a preview
+        before the first apply) only means there is no repository to look up.
+        """
+        try:
+            with self.session_factory() as session:
+                repository_id = None
+                if user is not None:
+                    repository_id = session.scalar(
+                        select(Repository.id).where(
+                            Repository.owner_id == user.id, Repository.name == module.name
+                        )
+                    )
+            self.publish.guard(module.url, repository_id)
+        except DomainError as error:
+            return f"{getattr(error, 'code', type(error).__name__)}: {error}"
+        return None
+
     def _drop(self, user_id: UUID) -> None:
         self.publish.staging.discard_all(user_id)  # One prepared source per owner at a time.
 
     def _one(self, user: User | None, module: MirrorModule, apply: bool) -> Outcome:
         outcome = Outcome(module.name, module.tag, "skipped")
+        # Before anything else, including the "already stored" shortcut: a block applies to
+        # modules that are stored too (what is stored is kept, but nothing new is admitted).
+        blocked = self.policy_reason(user, module)
+        if blocked:
+            outcome.reason = blocked
+            return outcome
         with self.session_factory() as session:
             stored = self._stored_commits(session, user, module.name)
         if stored is not None and module.commit in stored:
