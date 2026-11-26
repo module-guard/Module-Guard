@@ -103,3 +103,21 @@ class ConflictError(DomainError):
 
 class PreparedSourceMissingError(DomainError):
     status_code = 410
+
+
+class AdminRequiredError(DomainError):
+    status_code = 403
+
+
+class InvalidPolicyEntryError(DomainError):
+    status_code = 422
+
+
+class SourceBlockedError(DomainError):
+    """The source is on the block list. The message never says why or who decided."""
+
+    status_code = 403
+    code = "SourceBlocked"
+
+    def __init__(self):
+        super().__init__("이 소스는 정책에 따라 등록하거나 수집할 수 없습니다.")
