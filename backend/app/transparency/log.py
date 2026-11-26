@@ -768,10 +768,13 @@ def shown_to(session, entry, version_id, viewer_id) -> bool:
 
 def describe_scan(session, scan, state, *, show_entry=True) -> dict:
     reasons, current = [], None
-    try:
-        current = current_commitment(session, scan)
-    except NotLogged as error:
-        reasons.append(error.code)
+    if scan.status not in LOGGED:
+        reasons.append("SCAN_NOT_FINISHED")
+    else:
+        try:
+            current = current_commitment(session, scan)
+        except NotLogged as error:
+            reasons.append(error.code)
     result = {
         "schema_version": 1,
         "scan_id": str(scan.id),

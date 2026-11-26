@@ -5,9 +5,11 @@ import pytest
 from conftest import publish, sign_in
 from sqlalchemy import select
 
-from app.models import Finding, ModuleVersion
+from app.models import Finding, ModuleVersion, Scan
+from app.models.enums import ScanStatus
 from app.services.attestation_service import AttestationService, result_export_digest
 from app.transparency import log as tlog
+from app.transparency import merkle
 from app.transparency.cli import main
 
 
@@ -231,3 +233,269 @@ def test_anchor_failure_keeps_the_checkpoint_and_exits_two_until_it_succeeds(
     assert "OTS_NOT_VERIFIED" in report["warnings"]
     monkeypatch.setenv("MODULEGUARD_TRANSPARENCY_ANCHOR", "ethereum")
     assert run("checkpoint")[0] == 2
+
+
+# ------------------------------------------------------------------------- HTTP API
+
+
+def transparency_path(scan_id, version_id):
+    return f"/api/scans/{scan_id}/transparency?version_id={version_id}"
+
+
+@pytest.fixture
+def api(published):
+    client, scan_id, version_id = published
+    log = tlog.TransparencyLog(client.scans.snapshot_store.root / "transparency")
+    return client, scan_id, version_id, log, transparency_path(scan_id, version_id)
+
+
+def log_scans(sessions, log, *, checkpoint=True):
+    with sessions() as session, log.writing() as writer:
+        tlog.append_scans(session, writer)
+        if checkpoint:
+            writer.checkpoint()
+
+
+def test_checkpoint_without_a_log_is_disabled(api):
+    client, *_ = api
+    response = client.get("/api/transparency/checkpoint")
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+    assert response.json() == {
+        "schema_version": 1,
+        "enabled": False,
+        "checkpoint": None,
+        "anchors": [],
+    }
+
+
+def test_checkpoint_shows_only_public_tree_head_data(api, sessions):
+    client, _, _, log, _ = api
+    log_scans(sessions, log)
+    head = log.read().tree_head
+    with log.writing() as writer:
+        writer.put_anchor(
+            {
+                "type": "opentimestamps",
+                "status": "submitted",
+                "tree_size": 1,
+                "root_hash": head["root_hash"],
+                "receipts_b64": ["c2VjcmV0LXJlY2VpcHQ="],
+                "receipt_sha256": tlog.receipt_sha256(["c2VjcmV0LXJlY2VpcHQ="]),
+                "created_at": "2026-11-26T05:00:03+00:00",
+            }
+        )
+    response = client.get("/api/transparency/checkpoint")
+    body = response.json()
+    assert response.status_code == 200 and body["enabled"] is True
+    assert body["checkpoint"] == {
+        "tree_size": 1,
+        "root_hash": head["root_hash"],
+        "created_at": head["created_at"].replace("+00:00", "Z"),
+    }
+    [anchor] = body["anchors"]
+    assert anchor["type"] == "opentimestamps" and anchor["status"] == "submitted"
+    assert anchor["receipt_sha256"] == tlog.receipt_sha256(["c2VjcmV0LXJlY2VpcHQ="])
+    assert "c2VjcmV0LXJlY2VpcHQ" not in response.text  # The receipt itself is not served.
+
+
+def test_consistency_proof_verifies_with_the_published_roots(api, sessions):
+    client, _, _, log, _ = api
+    log_scans(sessions, log)
+    with log.writing() as writer:
+        for i in range(4):
+            writer.add("SCAN", commitment(i))
+        writer.checkpoint()
+    response = client.get("/api/transparency/consistency?first=1&second=5")
+    body = response.json()
+    assert response.status_code == 200 and response.headers["cache-control"] == "no-store"
+    assert body["schema_version"] == 1 and (body["first"], body["second"]) == (1, 5)
+    assert merkle.verify_consistency(
+        1,
+        5,
+        bytes.fromhex(body["first_root"]),
+        bytes.fromhex(body["second_root"]),
+        [bytes.fromhex(p) for p in body["proof"]],
+    )
+    assert client.get("/api/transparency/consistency?first=5&second=5").json()["proof"] == []
+    for query in ("first=2&second=5", "first=1&second=9", "first=5&second=1"):
+        assert client.get(f"/api/transparency/consistency?{query}").status_code == 404
+    for query in ("first=0&second=5", "first=x&second=5", "second=5"):
+        assert client.get(f"/api/transparency/consistency?{query}").status_code == 422
+
+
+def test_scan_status_moves_from_not_logged_to_pending_to_included(api, sessions):
+    client, scan_id, version_id, log, path = api
+    response = client.get(path)
+    assert response.status_code == 200 and response.headers["cache-control"] == "no-store"
+    body = response.json()
+    assert body["status"] == "not_logged" and body["reasons"] == []
+    assert body["entry"] is None and body["leaf_index"] is None and body["checkpoint"] is None
+    assert body["current_commitment_sha256"]
+
+    log_scans(sessions, log, checkpoint=False)
+    body = client.get(path).json()
+    assert body["status"] == "pending" and body["reasons"] == ["NOT_IN_CHECKPOINT"]
+    assert body["leaf_index"] == 0 and body["checkpoint"] is None and body["inclusion_proof"] == []
+
+    with log.writing() as writer:
+        writer.checkpoint()
+    body = client.get(path).json()
+    assert body["status"] == "included" and body["reasons"] == []
+    assert body["scan_id"] == str(scan_id) and body["version_id"] == str(version_id)
+    assert body["entry"]["kind"] == "SCAN" and body["entry"]["seq"] == 0
+    assert body["entry"]["commitment"]["scan_id"] == str(scan_id)
+    assert body["entry"]["commitment"]["module_version_id"] == str(version_id)
+    assert body["current_commitment_sha256"] == body["logged_commitment_sha256"]
+    assert body["revisions"] == 0
+    # An independent verifier needs nothing but this response and the checkpoint root.
+    from app.attestations.signing import canonical
+
+    leaf = merkle.leaf_hash(canonical(body["entry"]))
+    assert leaf.hex() == body["leaf_hash"]
+    assert merkle.verify_inclusion(
+        leaf,
+        body["leaf_index"],
+        body["checkpoint"]["tree_size"],
+        [bytes.fromhex(p) for p in body["inclusion_proof"]],
+        bytes.fromhex(body["checkpoint"]["root_hash"]),
+    )
+    assert (
+        body["checkpoint"]["root_hash"]
+        == client.get("/api/transparency/checkpoint").json()["checkpoint"]["root_hash"]
+    )
+
+
+def test_changed_result_is_a_mismatch_and_a_declared_revision_clears_it(api, sessions):
+    client, scan_id, _, log, path = api
+    log_scans(sessions, log)
+    with sessions() as session:
+        finding = session.scalar(select(Finding).where(Finding.scan_id == scan_id))
+        finding.raw_data = {**finding.raw_data, "private": "SECRET_RAW_FINDING"}
+        finding.guideline = "SECRET_GUIDELINE_TEXT"
+        session.commit()
+    response = client.get(path)
+    body = response.json()
+    assert body["status"] == "mismatch" and body["reasons"] == ["COMMITMENT_MISMATCH"]
+    assert body["current_commitment_sha256"] != body["logged_commitment_sha256"]
+    assert body["inclusion_proof"] == [] and body["checkpoint"]["tree_size"] == 1
+    for secret in ("SECRET_RAW_FINDING", "SECRET_GUIDELINE_TEXT", "guideline", "findings"):
+        assert secret not in response.text
+    assert (
+        main(
+            [
+                "record-revisions",
+                "--reason",
+                "reapply",
+                "--apply",
+                "--log-dir",
+                str(log.root),
+                "--database-url",
+                client.app.state.settings.database_url,
+            ]
+        )
+        == 0
+    )
+    with log.writing() as writer:
+        writer.checkpoint()
+    body = client.get(path).json()
+    assert body["status"] == "included" and body["revisions"] == 1
+    assert body["entry"]["kind"] == "REVISION" and body["entry"]["reason"] == "reapply"
+
+
+def test_result_too_large_and_unfinished_scans_report_fixed_reasons(api, sessions, monkeypatch):
+    from app.core.exceptions import ConflictError
+
+    client, scan_id, _, log, path = api
+
+    def too_large(session, scan):
+        raise ConflictError("SECRET_RESULT_TEXT")
+
+    monkeypatch.setattr(tlog, "result_export_digest", too_large)
+    response = client.get(path)
+    assert response.json()["status"] == "not_logged" and response.json()["reasons"] == ["TOO_LARGE"]
+    assert "SECRET_RESULT_TEXT" not in response.text
+    monkeypatch.undo()
+    with sessions() as session:
+        scan = session.get(Scan, scan_id)
+        scan.status, scan.finished_at = ScanStatus.SCANNING, None
+        session.commit()
+    assert client.get(path).json()["reasons"] == ["SCAN_NOT_FINISHED"]
+
+
+def test_visibility_is_the_same_as_attestations(api, sessions):
+    client, scan_id, version_id, log, path = api
+    log_scans(sessions, log)
+    other = f"/api/scans/{scan_id}/transparency?version_id={uuid4()}"
+    assert client.get(other).status_code == 404  # Another version of nothing.
+    assert client.get(transparency_path(uuid4(), version_id)).status_code == 404
+    assert client.get(f"/api/scans/{scan_id}/transparency").status_code == 422
+    assert client.patch("/api/repositories/demo", json={"visibility": "PRIVATE"}).status_code == 204
+    assert client.get(path).status_code == 200  # The owner still sees it.
+    client.cookies.clear()
+    hidden = client.get(path)
+    assert hidden.status_code == 404
+    assert hidden.json() == client.get(transparency_path(uuid4(), version_id)).json()
+    assert client.get("/api/transparency/checkpoint").status_code == 200  # Public tree head.
+
+
+def test_a_forks_view_never_names_a_hidden_original(api, sessions):
+    client, scan_id, version_id, log, _ = api
+    sign_in(client, sessions, "bob", 2)
+    forked = client.post("/api/repositories/alice/demo/fork", json={"visibility": "PUBLIC"})
+    assert forked.status_code == 201, forked.text
+    with sessions() as session:
+        versions = list(
+            session.scalars(select(ModuleVersion).where(ModuleVersion.scan_id == scan_id))
+        )
+        fork_id = next(v.id for v in versions if v.id != version_id)
+    log_scans(sessions, log)
+    path = transparency_path(scan_id, fork_id)
+    shown = client.get(path).json()  # The original is still public: bob may see its id.
+    assert shown["entry"]["commitment"]["module_version_id"] == str(version_id)
+    sign_in(client, sessions)
+    assert client.patch("/api/repositories/demo", json={"visibility": "PRIVATE"}).status_code == 204
+    client.cookies.clear()
+    response = client.get(path)
+    body = response.json()
+    assert response.status_code == 200 and body["version_id"] == str(fork_id)
+    assert body["status"] == "included" and body["entry"] is None
+    assert body["leaf_hash"] and body["checkpoint"]  # The proof is still served.
+    assert str(version_id) not in response.text
+    assert client.get(transparency_path(scan_id, version_id)).status_code == 404
+
+
+def test_a_broken_log_is_reported_without_affecting_other_endpoints(api, sessions):
+    client, scan_id, version_id, log, path = api
+    log_scans(sessions, log)
+    tamper(log.root / "leaves.jsonl")
+    body = client.get(path).json()
+    assert body["status"] == "mismatch" and "LOG_INCONSISTENT" in body["reasons"]
+    response = client.get("/api/transparency/checkpoint")
+    assert response.status_code == 503 and response.headers["cache-control"] == "no-store"
+    assert response.json()["error"]["code"] == "LOG_INCONSISTENT"
+    assert "COMPLETED" not in response.text
+    assert client.get("/api/transparency/consistency?first=1&second=1").status_code == 503
+    # Scans, graphs and attestations do not depend on the log at all.
+    assert client.get(f"/api/scans/{scan_id}").status_code == 200
+    assert client.get(f"/api/scans/{scan_id}/graph").status_code == 200
+    attest = client.get(f"/api/scans/{scan_id}/attestations?version_id={version_id}")
+    assert attest.status_code == 200 and attest.json()["status"] == "unsigned"
+
+
+def test_an_unreadable_log_directory_is_unavailable_not_inconsistent(api, tmp_path):
+    client, scan_id, version_id, log, path = api
+    log.root.parent.mkdir(parents=True, exist_ok=True)
+    log.root.symlink_to(tmp_path, target_is_directory=True)
+    body = client.get(path).json()
+    assert body["status"] == "not_logged" and body["reasons"] == ["LOG_UNAVAILABLE"]
+    response = client.get("/api/transparency/checkpoint")
+    assert response.status_code == 503 and response.json()["error"]["code"] == "LOG_UNAVAILABLE"
+    assert str(tmp_path) not in response.text
+
+
+def test_transparency_reads_are_rate_limited(api):
+    client, *_ = api
+    client.app.state.usage_service.preview_limiter.per_hour = 2
+    codes = [client.get("/api/transparency/checkpoint").status_code for _ in range(4)]
+    assert codes[:2] == [200, 200] and 429 in codes
