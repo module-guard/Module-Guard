@@ -71,6 +71,40 @@ def _rows(session, model, scan_id):
     return result
 
 
+def result_export_digest(session, scan) -> str:
+    """SHA-256 of the stored result export (format 1) that attestations commit to."""
+    analysis = scan.analysis or {}
+    # Hash stored result bytes without returning raw findings, expressions or stderr.
+    export = {
+        "format": 1,
+        "scan_id": str(scan.id),
+        "status": scan.status.value,
+        "partial_result": scan.partial_result,
+        "counts": {
+            name: getattr(scan, name)
+            for name in (
+                "total_findings",
+                "critical_count",
+                "high_count",
+                "medium_count",
+                "low_count",
+                "info_count",
+                "unknown_count",
+            )
+        },
+        "analysis": AnalysisSummary.model_validate(analysis).model_dump(mode="json"),
+        "scope_summary": scan.scope_summary,
+        "postprocessing": analysis.get("postprocessing"),
+        "findings": _rows(session, Finding, scan.id),
+        "entities": _rows(session, ParsedEntity, scan.id),
+        "edges": _rows(session, GraphEdge, scan.id),
+    }
+    exported = signing.canonical(export)
+    if len(exported) > 16 * 1024 * 1024:
+        raise ConflictError("검사 결과가 증명 크기 상한을 초과했습니다.")
+    return digest(exported)
+
+
 class AttestationService:
     def __init__(self, session, store, policy=None):
         self.session, self.store, self.policy = session, store, policy
@@ -128,35 +162,7 @@ class AttestationService:
         ):
             raise IntegrityError()
         analysis = scan.analysis or {}
-        # Hash stored result bytes without returning raw findings, expressions or stderr.
-        export = {
-            "format": 1,
-            "scan_id": str(scan.id),
-            "status": scan.status.value,
-            "partial_result": scan.partial_result,
-            "counts": {
-                name: getattr(scan, name)
-                for name in (
-                    "total_findings",
-                    "critical_count",
-                    "high_count",
-                    "medium_count",
-                    "low_count",
-                    "info_count",
-                    "unknown_count",
-                )
-            },
-            "analysis": AnalysisSummary.model_validate(analysis).model_dump(mode="json"),
-            "scope_summary": scan.scope_summary,
-            "postprocessing": analysis.get("postprocessing"),
-            "findings": _rows(self.session, Finding, scan.id),
-            "entities": _rows(self.session, ParsedEntity, scan.id),
-            "edges": _rows(self.session, GraphEdge, scan.id),
-        }
-        exported = signing.canonical(export)
-        if len(exported) > 16 * 1024 * 1024:
-            raise ConflictError("검사 결과가 증명 크기 상한을 초과했습니다.")
-        result_digest = digest(exported)
+        result_digest = result_export_digest(self.session, scan)
         subjects = [
             {"name": f"manifest:{version.id}", "digest": {"sha256": version.manifest_sha256}},
             {"name": f"snapshot:{version.id}", "digest": {"sha256": version.snapshot_sha256}},
